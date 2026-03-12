@@ -7,7 +7,7 @@
 
 # 2. Thiết kế hệ thống 
 - [ ]  C4 (Context, Container, Component, ko cần Code)
-- [ ] ERD
+- [x] ERD
 - [ ] State diagram cho Game server
 - [ ] API Design
 - [ ] Websocket Design

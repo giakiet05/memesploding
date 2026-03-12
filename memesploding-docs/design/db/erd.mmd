@@ -1,0 +1,140 @@
+erDiagram
+    User {
+        uuid id PK
+        varchar username "Unique username (nullable for Guest)"
+        varchar provider "Auth provider: guest, google, facebook"
+        varchar provider_id "External provider identifier"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    Profile {
+        uuid user_id PK, FK "1:1 link to User table"
+        varchar nickname "Display name in game"
+        text avatar_url "URL to avatar image"
+        int level "Current player level"
+        bigint xp "Accumulated experience points"
+        int score "Ranking/ELO score"
+        int total_matches "Total matches played"
+        int total_wins "Total matches won"
+        varchar bio "Short player introduction"
+    }
+
+    Friendship {
+        uuid user_id_1 PK, FK "Requester user ID"
+        uuid user_id_2 PK, FK "Addressee user ID"
+        varchar status "Status: pending, accepted, blocked"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    CardSet {
+        int id PK
+        varchar name "Name of the card set (e.g., Base, Imploding)"
+        text description "Description of the set content"
+        boolean is_active "Whether this set is available for use"
+        timestamp created_at
+    }
+
+    Card {
+        int id PK
+        int card_set_id FK "Link to the parent CardSet"
+        varchar code "Unique action identifier for Game Engine (e.g., NOPE, SKIP)"
+        varchar name "Display name of the card"
+        text description "Functional description of the card"
+        varchar type "Card category: action, bomb, defuse, cat"
+        text image_url "URL to the main meme art asset"
+        text icon_url "URL to the small corner icon asset"
+    }
+
+    Room {
+        uuid id PK
+        uuid host_id FK "User ID of the room owner"
+        varchar code "Unique 6-8 character shareable room code"
+        varchar password "Optional password for private access (nullable)"
+        varchar status "Room state: waiting, playing, finished"
+        jsonb settings "All configs: max_players, selected_card_set_ids, turn_timer, etc."
+        timestamp created_at
+    }
+
+    RoomParticipant {
+        uuid room_id PK, FK "Link to the parent Room"
+        uuid user_id PK, FK "Link to the participating User"
+        varchar role "Participant role: player, spectator"
+        boolean is_ready "Readiness status for starting the game"
+        timestamp joined_at
+    }
+
+    Match {
+        uuid id PK
+        varchar room_code "Reference to the original room code"
+        jsonb settings "Snapshot of room settings at match start"
+        int total_players "Number of players in this match"
+        uuid winner_id FK "User ID of the winner"
+        timestamp started_at
+        timestamp ended_at
+    }
+
+    MatchParticipant {
+        uuid match_id PK, FK "Link to the Match"
+        uuid user_id PK, FK "Link to the User"
+        int final_rank "Final ranking in the match (1-6)"
+        int xp_earned "XP gained in this match"
+        int score_change "Score delta (+/-) from the match"
+    }
+
+    MatchSpectator {
+        uuid match_id PK, FK "Link to the Match"
+        uuid user_id PK, FK "Link to the User (spectator)"
+        timestamp joined_at
+    }
+
+    MatchEvent {
+        uuid id PK
+        uuid match_id FK "Link to the Match"
+        uuid player_id FK "The player who triggered the event (nullable for system)"
+        int sequence "Chronological order of actions in the match"
+        varchar event_type "Action type: PLAY_CARD, DRAW_CARD, EXPLODE, etc."
+        jsonb data "Dynamic action details (card_id, target, etc.)"
+        timestamp created_at
+    }
+
+    MatchSnapshot {
+        uuid id PK
+        uuid match_id FK "Link to the Match"
+        int sequence "Last event sequence captured in this snapshot"
+        jsonb state "Full game state (Hands, Deck, Active timers, etc.)"
+        timestamp created_at
+    }
+
+    Notification {
+        uuid id PK
+        uuid receiver_id FK "Receiver ID"
+        uuid sender_id FK "Sender ID (nullable)"
+        varchar type "Type: friend_request, room_invite, system_alert"
+        jsonb payload "Context data (e.g., room_id, old_level, new_rank)"
+        varchar status "Status: unread, read"
+        varchar action_status "Action taken: pending, accepted, rejected"
+        timestamp expires_at "Expiration time for time-sensitive notifications (nullable)"
+        timestamp created_at
+    }
+
+    User ||--|| Profile : "has"
+    User ||--o{ Friendship : "initiates/receives"
+    User ||--o{ Room : "hosts"
+    User ||--o{ RoomParticipant : "joins"
+    User ||--o{ MatchParticipant : "participates"
+    User ||--o{ MatchSpectator : "watches"
+    User ||--o{ Match : "wins"
+    User ||--o{ Notification : "receives (via receiver_id)"
+    User ||--o{ Notification : "sends"
+
+    Room ||--|{ RoomParticipant : "contains"
+    Room ||--o{ Match : "hosts (linked via room_code)"
+
+    Match ||--|{ MatchParticipant : "includes"
+    Match ||--o{ MatchSpectator : "watched_by"
+    Match ||--o{ MatchEvent : "records"
+    Match ||--o{ MatchSnapshot : "saves_state"
+
+    CardSet ||--|{ Card : "contains"
