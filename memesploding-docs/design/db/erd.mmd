@@ -15,6 +15,7 @@ erDiagram
         int level "Current player level"
         bigint xp "Accumulated experience points"
         int score "Ranking/ELO score"
+        int highest_score "Highest score ever reached"
         int total_matches "Total matches played"
         int total_wins "Total matches won"
         varchar bio "Short player introduction"
@@ -29,7 +30,7 @@ erDiagram
     }
 
     CardSet {
-        int id PK
+        uuid id PK
         varchar name "Name of the card set (e.g., Base, Imploding)"
         text description "Description of the set content"
         boolean is_active "Whether this set is available for use"
@@ -37,8 +38,8 @@ erDiagram
     }
 
     Card {
-        int id PK
-        int card_set_id FK "Link to the parent CardSet"
+        uuid id PK
+        uuid card_set_id FK "Link to the parent CardSet"
         varchar code "Unique action identifier for Game Engine (e.g., NOPE, SKIP)"
         varchar name "Display name of the card"
         text description "Functional description of the card"
@@ -111,23 +112,36 @@ erDiagram
         uuid id PK
         uuid receiver_id FK "Receiver ID"
         uuid sender_id FK "Sender ID (nullable)"
-        varchar type "Type: friend_request, room_invite, system_alert"
-        jsonb payload "Context data (e.g., room_id, old_level, new_rank)"
+        varchar type "Type: system_alert, level_up, match_ended"
+        jsonb payload "Context data (e.g., old_level, new_rank)"
         varchar status "Status: unread, read"
-        varchar action_status "Action taken: pending, accepted, rejected"
-        timestamp expires_at "Expiration time for time-sensitive notifications (nullable)"
+        timestamp created_at
+    }
+
+    RoomInvitation {
+        uuid id PK
+        uuid sender_id FK "Sender ID"
+        uuid receiver_id FK "Receiver ID"
+        varchar room_code "The code of the room to join"
+        varchar status "Status: pending, accepted, rejected, expired"
+        timestamp expires_at "Invitation validity (e.g., 60 seconds)"
         timestamp created_at
     }
 
     User ||--|| Profile : "has"
     User ||--o{ Friendship : "initiates/receives"
+   
     User ||--o{ Room : "hosts"
     User ||--o{ RoomParticipant : "joins"
     User ||--o{ MatchParticipant : "participates"
     User ||--o{ MatchSpectator : "watches"
     User ||--o{ Match : "wins"
+
     User ||--o{ Notification : "receives (via receiver_id)"
     User ||--o{ Notification : "sends"
+
+     User ||--o{ RoomInvitation : "sends"
+     User ||--o{ RoomInvitation : "receives"
 
     Room ||--|{ RoomParticipant : "contains"
     Room ||--o{ Match : "hosts (linked via room_code)"
