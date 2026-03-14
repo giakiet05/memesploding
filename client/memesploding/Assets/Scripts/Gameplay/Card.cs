@@ -1,0 +1,176 @@
+﻿using Managers;
+using System;
+using System.Collections;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using Image = UnityEngine.UI.Image;
+
+namespace Gameplay
+{
+    public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        public RectTransform RectTransform { get; private set; }
+        public string Id { get; private set; }
+        public CardData Data { get; set; }
+
+        [SerializeField] private Image artwork;
+
+        [Header("Drag Settings")]
+        [SerializeField] private float holdThreshold = 0.4f;
+
+        [SerializeField] private Vector3 dragScale = new Vector3(1.2f, 1.2f, 1.2f);
+
+        private Canvas _rootCanvas;
+        private RectTransform _canvasRect;
+        private RectTransform _dragLayer;
+        private ScrollRect _scrollRect;
+        private HandLayout _handLayout;
+        private Vector3 _originalScale;
+
+        private bool _isDragging;
+        private bool _isHoldReady;
+        private PointerEventData _pendingDragEvent;
+
+        void Start()
+        {
+            RectTransform = GetComponent<RectTransform>();
+            _rootCanvas = GetComponentInParent<Canvas>();
+            _canvasRect = _rootCanvas.GetComponent<RectTransform>();
+            _scrollRect = GetComponentInParent<ScrollRect>();
+            _handLayout = CardManager.Instance.handLayout;
+            _originalScale = RectTransform.localScale;
+            _dragLayer = CardManager.Instance.dragLayer;
+        }
+
+        public void Initialize(CardData data)
+        {
+            Data = data;
+            GenerateId();
+            UpdateVisuals();
+        }
+
+        public void GenerateId()
+        {
+            Id = Guid.NewGuid().ToString();
+        }
+
+        void UpdateVisuals()
+        {
+            if (Data == null) 
+                return;
+            artwork.sprite = Data.artwork;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            _isHoldReady = false;
+            StartCoroutine(HoldTimer());
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            StopAllCoroutines();
+
+            if (_isDragging)
+            {
+                _isDragging = false;
+                _isHoldReady = false;
+                ReturnToHand();
+            }
+            else
+            {
+                _isHoldReady = false;
+                _pendingDragEvent = null;
+            }
+        }
+
+        IEnumerator HoldTimer()
+        {
+            yield return new WaitForSeconds(holdThreshold);
+            _isHoldReady = true;
+
+            if (_pendingDragEvent != null)
+            {
+                BeginCardDrag(_pendingDragEvent);
+                _pendingDragEvent = null;
+            }
+        }
+
+        // Drag
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (!_isHoldReady)
+            {
+                _pendingDragEvent = eventData;
+                if (_scrollRect != null)
+                    _scrollRect.OnBeginDrag(eventData);
+                return;
+            }
+
+            BeginCardDrag(eventData);
+        }
+
+        void BeginCardDrag(PointerEventData eventData)
+        {
+            _isDragging = true;
+            RectTransform.localScale = dragScale;
+
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                _canvasRect,
+                eventData.position,
+                eventData.pressEventCamera,
+                out Vector3 worldPoint);
+            _handLayout.RemoveCard(this);
+
+            transform.SetParent(_dragLayer, true);
+            transform.SetAsLastSibling();
+            RectTransform.position = worldPoint;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!_isDragging)
+            {
+                if (_scrollRect != null)
+                    _scrollRect.OnDrag(eventData);
+                return;
+            }
+
+            MoveToPointer(eventData);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!_isDragging)
+            {
+                if (_scrollRect != null)
+                    _scrollRect.OnEndDrag(eventData);
+                return;
+            }
+
+            _isDragging = false;
+            _isHoldReady = false;
+            ReturnToHand();
+        }
+
+        void MoveToPointer(PointerEventData eventData)
+        {
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                    _canvasRect,
+                    eventData.position,
+                    eventData.pressEventCamera,
+                    out Vector3 worldPoint))
+            {
+                RectTransform.position = worldPoint;
+            }
+        }
+
+        void ReturnToHand()
+        {
+            _handLayout.AddCard(this);
+            _handLayout.UpdateVisual();
+            RectTransform.localScale = _originalScale;
+        }
+    }
+}
