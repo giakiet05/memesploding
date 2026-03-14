@@ -1,0 +1,23 @@
+@startuml System Context Diagram for Memesploding Game System
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context Diagram for Memesploding Game System
+
+Person(player, "Player", "A user who plays the game, manages their profile, and interacts with friends.")
+
+System(memesploding, "Memesploding System", "An online card game system that handles match logic, ranking, and social features.")
+
+System_Ext(google, "Google OAuth", "Authenticates users via Google accounts.")
+System_Ext(facebook, "Facebook Login", "Authenticates users via Facebook accounts.")
+System_Ext(email_service, "Email Service", "Sends notification and verification emails (e.g., SendGrid, AWS SES).")
+System_Ext(cdn, "CDN", "Delivers game assets and meme card images.")
+
+Rel(player, memesploding, "Plays game, chats, and manages friends", "Web/Mobile App")
+Rel(memesploding, google, "Requests authentication", "OAuth 2.0")
+Rel(memesploding, facebook, "Requests authentication", "OAuth 2.0")
+Rel(memesploding, email_service, "Sends notifications", "SMTP/API")
+Rel(memesploding, cdn, "Fetches game assets", "HTTPS")
+
+@enduml
