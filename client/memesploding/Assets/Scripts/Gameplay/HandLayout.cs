@@ -17,7 +17,6 @@ namespace Gameplay
         private readonly List<Card> _slots = new();
         private readonly List<Card> _targetOrder = new();
         private readonly Dictionary<string, Card> _cardById = new();
-
         private readonly Dictionary<string, int> _previousSlot = new();
 
         private RectTransform _rect;

@@ -10,15 +10,14 @@ namespace Gameplay
 {
     public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
     {
-        public RectTransform RectTransform { get; private set; }
         public string Id { get; private set; }
         public CardData Data { get; set; }
-
-        [SerializeField] private Image artwork;
+        public RectTransform RectTransform { get; private set; }
+        private CanvasGroup _canvasGroup;
+        private Image _cardImage;
 
         [Header("Drag Settings")]
         [SerializeField] private float holdThreshold = 0.4f;
-
         [SerializeField] private Vector3 dragScale = new Vector3(1.2f, 1.2f, 1.2f);
 
         private Canvas _rootCanvas;
@@ -35,6 +34,9 @@ namespace Gameplay
         void Start()
         {
             RectTransform = GetComponent<RectTransform>();
+            _canvasGroup = GetComponent<CanvasGroup>();
+            _cardImage = GetComponent<Image>();
+
             _rootCanvas = GetComponentInParent<Canvas>();
             _canvasRect = _rootCanvas.GetComponent<RectTransform>();
             _scrollRect = GetComponentInParent<ScrollRect>();
@@ -57,9 +59,9 @@ namespace Gameplay
 
         void UpdateVisuals()
         {
-            if (Data == null) 
+            if (Data == null)
                 return;
-            artwork.sprite = Data.artwork;
+            _cardImage.sprite = Data.artwork;
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -85,7 +87,7 @@ namespace Gameplay
             }
         }
 
-        IEnumerator HoldTimer()
+        private IEnumerator HoldTimer()
         {
             yield return new WaitForSeconds(holdThreshold);
             _isHoldReady = true;
@@ -111,23 +113,6 @@ namespace Gameplay
             BeginCardDrag(eventData);
         }
 
-        void BeginCardDrag(PointerEventData eventData)
-        {
-            _isDragging = true;
-            RectTransform.localScale = dragScale;
-
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(
-                _canvasRect,
-                eventData.position,
-                eventData.pressEventCamera,
-                out Vector3 worldPoint);
-            _handLayout.RemoveCard(this);
-
-            transform.SetParent(_dragLayer, true);
-            transform.SetAsLastSibling();
-            RectTransform.position = worldPoint;
-        }
-
         public void OnDrag(PointerEventData eventData)
         {
             if (!_isDragging)
@@ -151,7 +136,29 @@ namespace Gameplay
 
             _isDragging = false;
             _isHoldReady = false;
+
+            _canvasGroup.blocksRaycasts = true;
+
             ReturnToHand();
+        }
+
+        void BeginCardDrag(PointerEventData eventData)
+        {
+            _canvasGroup.blocksRaycasts = false;
+
+            _isDragging = true;
+            RectTransform.localScale = dragScale;
+
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                _canvasRect,
+                eventData.position,
+                eventData.pressEventCamera,
+                out Vector3 worldPoint);
+            _handLayout.RemoveCard(this);
+
+            transform.SetParent(_dragLayer, true);
+            transform.SetAsLastSibling();
+            RectTransform.position = worldPoint;
         }
 
         void MoveToPointer(PointerEventData eventData)
