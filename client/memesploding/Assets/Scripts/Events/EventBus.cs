@@ -43,6 +43,11 @@ namespace Events
                 _instance = this;
                 DontDestroyOnLoad(gameObject);
             }
+            private void OnApplicationQuit()
+            {
+                if (_instance != null)
+                    Destroy(_instance.gameObject);
+            }
 
             private readonly Dictionary<EventType, Delegate> _listeners
                 = new Dictionary<EventType, Delegate>();

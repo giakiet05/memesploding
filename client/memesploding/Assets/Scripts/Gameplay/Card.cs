@@ -31,6 +31,16 @@ namespace Gameplay
         private bool _isHoldReady;
         private PointerEventData _pendingDragEvent;
 
+        public bool Draggable { get; private set; } = true;
+
+        public void DisableDrag()
+        {
+            Draggable = false;
+        }
+
+        public Color normalColor = Color.white;
+        public Color inactiveColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+
         void Start()
         {
             RectTransform = GetComponent<RectTransform>();
@@ -102,6 +112,9 @@ namespace Gameplay
         // Drag
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (!Draggable) 
+                return;
+
             if (!_isHoldReady)
             {
                 _pendingDragEvent = eventData;
@@ -115,6 +128,9 @@ namespace Gameplay
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (!Draggable)
+                return;
+
             if (!_isDragging)
             {
                 if (_scrollRect != null)
@@ -178,6 +194,14 @@ namespace Gameplay
             _handLayout.AddCard(this);
             _handLayout.UpdateVisual();
             RectTransform.localScale = _originalScale;
+        }
+
+        public void SetNewest(bool newest)
+        {
+            if (_cardImage == null)
+                return;
+
+            _cardImage.color = newest ? normalColor : inactiveColor;
         }
     }
 }

@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using Events;
+using Events.GameEvents;
 using UnityEngine;
+using EventType = Events.EventType;
 
 namespace Gameplay
 {
@@ -25,10 +29,9 @@ namespace Gameplay
 
         [SerializeField] public CardData defaultCardData;
 
-        void Awake()
+        void Start()
         {
             _rect = GetComponent<RectTransform>();
-
             for (int i = 0; i < transform.childCount; i++)
             {
                 Card card = transform.GetChild(i).GetComponent<Card>();
@@ -46,6 +49,24 @@ namespace Gameplay
                 _cardById[card.Id] = card;
                 _previousSlot[card.Id] = i;
             }
+
+            //Event
+            EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+        }
+
+        private void OnCardPlayed(CardPlayedEventPayload payload)
+        {
+            Card card = GetCardById(payload.CardId);
+
+            if (card != null)
+                RemoveCard(card);
+
+            UpdateVisual();
         }
 
         void LateUpdate()

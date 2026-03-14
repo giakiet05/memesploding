@@ -13,5 +13,8 @@ namespace Managers
             else
                 Instance = this;
         }
+
+
+        public Player player = new Player("", "Vak0506");
     }
 }
