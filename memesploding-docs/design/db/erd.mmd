@@ -33,6 +33,7 @@ erDiagram
         uuid id PK
         varchar name "Name of the card set (e.g., Base, Imploding)"
         text description "Description of the set content"
+        text image_url "URL to the card set's representative image"
         boolean is_active "Whether this set is available for use"
         timestamp created_at
     }
@@ -54,6 +55,7 @@ erDiagram
         varchar code "Unique 6-8 character shareable room code"
         varchar password "Optional password for private access (nullable)"
         varchar status "Room state: waiting, playing, finished"
+        boolean is_public "Whether the room is listed in public lobby"
         jsonb settings "All configs: max_players, selected_card_set_ids, turn_timer, etc."
         timestamp created_at
     }
@@ -118,15 +120,6 @@ erDiagram
         timestamp created_at
     }
 
-    RoomInvitation {
-        uuid id PK
-        uuid sender_id FK "Sender ID"
-        uuid receiver_id FK "Receiver ID"
-        varchar room_code "The code of the room to join"
-        varchar status "Status: pending, accepted, rejected, expired"
-        timestamp expires_at "Invitation validity (e.g., 60 seconds)"
-        timestamp created_at
-    }
 
     User ||--|| Profile : "has"
     User ||--o{ Friendship : "initiates/receives"
@@ -140,8 +133,6 @@ erDiagram
     User ||--o{ Notification : "receives (via receiver_id)"
     User ||--o{ Notification : "sends"
 
-     User ||--o{ RoomInvitation : "sends"
-     User ||--o{ RoomInvitation : "receives"
 
     Room ||--|{ RoomParticipant : "contains"
     Room ||--o{ Match : "hosts (linked via room_code)"
