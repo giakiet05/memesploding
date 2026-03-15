@@ -1,7 +1,5 @@
 using Events;
 using Events.GameEvents;
-using ScriptableObjects;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,8 +15,9 @@ namespace Gameplay
         public float baseFanAngle = 30f;
         public float minFanAngle = 6f;
 
-        public float moveSpeed = 12f;
+        public float cardMoveSpeed = 12f;
         public float reorderSpeed = 8f;
+        public float scrollSpeed = 10f;
 
         public float extraSpace = 250f;
 
@@ -38,11 +37,7 @@ namespace Gameplay
             // Get the parent ScrollRect and boost sensitivity
             ScrollRect sr = GetComponentInParent<ScrollRect>();
             if (sr != null)
-            {
-                sr.scrollSensitivity = 10f;   // default is ~1, raise to taste
-                sr.horizontal = true;
-                sr.vertical = false;
-            }
+                sr.scrollSensitivity = scrollSpeed;
 
             //Event
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
@@ -96,12 +91,12 @@ namespace Gameplay
                 Vector2 targetPos = new Vector2(x, 0);
 
                 card.RectTransform.anchoredPosition =
-                    Vector2.Lerp(card.RectTransform.anchoredPosition, targetPos, Time.deltaTime * moveSpeed);
+                    Vector2.Lerp(card.RectTransform.anchoredPosition, targetPos, Time.deltaTime * cardMoveSpeed);
 
                 Quaternion targetRot = Quaternion.Euler(0, 0, -angle);
 
                 card.RectTransform.localRotation =
-                    Quaternion.Lerp(card.RectTransform.localRotation, targetRot, Time.deltaTime * moveSpeed);
+                    Quaternion.Lerp(card.RectTransform.localRotation, targetRot, Time.deltaTime * cardMoveSpeed);
             }
 
             float pivotSpan = (count - 1) * dynamicSpacing;

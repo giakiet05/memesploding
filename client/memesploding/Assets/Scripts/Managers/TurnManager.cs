@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using Gameplay;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Managers
 {
@@ -13,5 +15,7 @@ namespace Managers
             else
                 Instance = this;
         }
+
+        [SerializeField] private Timer turnTimer;
     }
 }
