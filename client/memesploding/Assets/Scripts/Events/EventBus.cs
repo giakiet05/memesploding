@@ -45,6 +45,7 @@ namespace Events
             }
             private void OnApplicationQuit()
             {
+                ClearAllListeners();
                 if (_instance != null)
                     Destroy(_instance.gameObject);
             }

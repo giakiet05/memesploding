@@ -31,6 +31,10 @@ namespace Managers
         private void Start()
         {
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+
+            ValidateReferences();
+
+            InitStartingHand(30, "DEFUSE");
         }
 
         private void OnDestroy()
@@ -41,6 +45,16 @@ namespace Managers
         public void SetCardDatabase(CardDatabase database)
         {
             cardDatabase = database;
+        }
+
+        //For testing
+        private void InitStartingHand(int amount, string cardName)
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                Card card = CreateCard(cardName);
+                handLayout.AddCard(card);
+            }
         }
 
         public Card CreateCard(string cardName, Transform parent = null)
@@ -80,6 +94,24 @@ namespace Managers
         {
             //TODO: Handle when a card is play
             Debug.Log("Card played event receive");
+        }
+
+        private void ValidateReferences()
+        {
+            if (!canvas)
+                Debug.LogError("Canvas not assigned in CardManager", this);
+
+            if (!cardDatabase)
+                Debug.LogError("CardDatabase not assigned in CardManager", this);
+
+            if (!cardPrefab)
+                Debug.LogError("CardPrefab not assigned in CardManager", this);
+
+            if (!handLayout)
+                Debug.LogError("HandLayout not assigned in CardManager", this);
+
+            if (!dragLayer)
+                Debug.LogError("DragLayer not assigned in CardManager", this);
         }
     }
 }

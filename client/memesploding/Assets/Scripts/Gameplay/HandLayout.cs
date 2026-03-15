@@ -1,9 +1,10 @@
-using System;
-using System.Collections.Generic;
 using Events;
 using Events.GameEvents;
 using ScriptableObjects;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using EventType = Events.EventType;
 
 namespace Gameplay
@@ -19,6 +20,8 @@ namespace Gameplay
         public float moveSpeed = 12f;
         public float reorderSpeed = 8f;
 
+        public float extraSpace = 250f;
+
         private readonly List<Card> _slots = new();
         private readonly List<Card> _targetOrder = new();
         private readonly Dictionary<string, Card> _cardById = new();
@@ -28,27 +31,17 @@ namespace Gameplay
 
         private float _reorderTimer;
 
-        [SerializeField] public CardData defaultCardData;
-
         void Start()
         {
             _rect = GetComponent<RectTransform>();
-            for (int i = 0; i < transform.childCount; i++)
+
+            // Get the parent ScrollRect and boost sensitivity
+            ScrollRect sr = GetComponentInParent<ScrollRect>();
+            if (sr != null)
             {
-                Card card = transform.GetChild(i).GetComponent<Card>();
-
-                if (!card)
-                    continue;
-
-                if (string.IsNullOrEmpty(card.Id))
-                    card.GenerateId();
-
-                if (card.Data == null)
-                    card.Data = defaultCardData;
-
-                _slots.Add(card);
-                _cardById[card.Id] = card;
-                _previousSlot[card.Id] = i;
+                sr.scrollSensitivity = 10f;   // default is ~1, raise to taste
+                sr.horizontal = true;
+                sr.vertical = false;
             }
 
             //Event
@@ -112,7 +105,7 @@ namespace Gameplay
             }
 
             float pivotSpan = (count - 1) * dynamicSpacing;
-            float totalWidth = pivotSpan + cardWidth;
+            float totalWidth = pivotSpan + cardWidth + extraSpace;
 
             _rect.sizeDelta = new Vector2(totalWidth, _rect.sizeDelta.y);
 
@@ -179,11 +172,18 @@ namespace Gameplay
             }
 
             if (preferredIndex >= 0)
+            {
                 _slots[preferredIndex] = card;
+                _previousSlot[card.Id] = preferredIndex;
+            }
             else
+            {
                 _slots.Add(card);
+                _previousSlot[card.Id] = _slots.Count - 1;
+            }
 
             _cardById[card.Id] = card;
+
             RefreshRenderOrder();
         }
 

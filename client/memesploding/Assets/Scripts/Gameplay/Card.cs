@@ -31,6 +31,7 @@ namespace Gameplay
 
         private bool _isDragging;
         private bool _isHoldReady;
+        private bool _scrollForwarded;
         private PointerEventData _pendingDragEvent;
 
         public bool Draggable { get; private set; } = true;
@@ -51,9 +52,8 @@ namespace Gameplay
             _rootCanvas = GetComponentInParent<Canvas>();
             _canvasRect = _rootCanvas.GetComponent<RectTransform>();
             _scrollRect = GetComponentInParent<ScrollRect>();
-            
+
             _originalScale = RectTransform.localScale;
-            
         }
 
         void Start()
@@ -95,6 +95,13 @@ namespace Gameplay
         {
             StopAllCoroutines();
 
+            // Clean up any forwarded scroll on pointer up (tap without a full drag)
+            if (_scrollForwarded && _scrollRect != null && !_isDragging)
+            {
+                _scrollRect.OnEndDrag(eventData);
+                _scrollForwarded = false;
+            }
+
             if (_isDragging)
             {
                 _isDragging = false;
@@ -123,14 +130,17 @@ namespace Gameplay
         // Drag
         public void OnBeginDrag(PointerEventData eventData)
         {
-            if (!Draggable) 
+            if (!Draggable)
                 return;
 
             if (!_isHoldReady)
             {
                 _pendingDragEvent = eventData;
                 if (_scrollRect != null)
+                {
                     _scrollRect.OnBeginDrag(eventData);
+                    _scrollForwarded = true; // Track that ScrollRect started a drag
+                }
                 return;
             }
 
@@ -156,13 +166,18 @@ namespace Gameplay
         {
             if (!_isDragging)
             {
-                if (_scrollRect != null)
+                // Always deliver the matching OnEndDrag to ScrollRect if we forwarded to it
+                if (_scrollRect != null && _scrollForwarded)
+                {
                     _scrollRect.OnEndDrag(eventData);
+                    _scrollForwarded = false;
+                }
                 return;
             }
 
             _isDragging = false;
             _isHoldReady = false;
+            _scrollForwarded = false;
 
             _canvasGroup.blocksRaycasts = true;
 
@@ -171,6 +186,13 @@ namespace Gameplay
 
         void BeginCardDrag(PointerEventData eventData)
         {
+            // If ScrollRect was already told about a drag, cancel it cleanly before reparenting
+            if (_scrollForwarded && _scrollRect != null)
+            {
+                _scrollRect.OnEndDrag(eventData);
+                _scrollForwarded = false;
+            }
+
             _canvasGroup.blocksRaycasts = false;
 
             _isDragging = true;
@@ -181,6 +203,7 @@ namespace Gameplay
                 eventData.position,
                 eventData.pressEventCamera,
                 out Vector3 worldPoint);
+
             _handLayout.RemoveCard(this);
 
             transform.SetParent(_dragLayer, true);
@@ -202,6 +225,12 @@ namespace Gameplay
 
         void ReturnToHand()
         {
+            if (_handLayout == null)
+            {
+                Debug.Log("Hand layout is not assign for card");
+                return;
+            }
+
             _handLayout.AddCard(this);
             _handLayout.UpdateVisual();
             RectTransform.localScale = _originalScale;
