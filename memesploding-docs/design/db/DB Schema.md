@@ -1,5 +1,8 @@
 # Tài liệu Thiết kế Cơ sở Dữ liệu - Dự án Memesploding
 
+
+#######NOTE: Liên quan đến room và match chỉ làm trong redis thôi############
+
 ## `users`
 
 Lưu trữ thông tin định danh và xác thực cốt lõi.

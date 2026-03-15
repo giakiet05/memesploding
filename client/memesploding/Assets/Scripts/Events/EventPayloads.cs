@@ -13,7 +13,17 @@ namespace Events
             PlayerName = playerName;
         }
 
-        public Card PlayedCard;
+        public Card PlayedCard { get; }
         public string PlayerName { get; }
+    }
+
+    public class CardDrawEventPayload : BaseEventPayload
+    {
+        public CardDrawEventPayload(string cardName)
+        {
+            CardName = cardName;
+        }
+
+        public string CardName { get; }
     }
 }
