@@ -1,8 +1,10 @@
 ﻿using Managers;
 using System;
 using System.Collections;
+using ScriptableObjects;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Image = UnityEngine.UI.Image;
 
@@ -14,7 +16,7 @@ namespace Gameplay
         public CardData Data { get; set; }
         public RectTransform RectTransform { get; private set; }
         private CanvasGroup _canvasGroup;
-        private Image _cardImage;
+        [SerializeField] private Image cardImage;
 
         [Header("Drag Settings")]
         [SerializeField] private float holdThreshold = 0.4f;
@@ -41,18 +43,23 @@ namespace Gameplay
         public Color normalColor = Color.white;
         public Color inactiveColor = new Color(0.6f, 0.6f, 0.6f, 1f);
 
-        void Start()
+        void Awake()
         {
             RectTransform = GetComponent<RectTransform>();
             _canvasGroup = GetComponent<CanvasGroup>();
-            _cardImage = GetComponent<Image>();
 
             _rootCanvas = GetComponentInParent<Canvas>();
             _canvasRect = _rootCanvas.GetComponent<RectTransform>();
             _scrollRect = GetComponentInParent<ScrollRect>();
-            _handLayout = CardManager.Instance.handLayout;
+            
             _originalScale = RectTransform.localScale;
-            _dragLayer = CardManager.Instance.dragLayer;
+            
+        }
+
+        void Start()
+        {
+            _handLayout = CardManager.Instance.HandLayout;
+            _dragLayer = CardManager.Instance.DragLayer;
         }
 
         public void Initialize(CardData data)
@@ -71,7 +78,11 @@ namespace Gameplay
         {
             if (Data == null)
                 return;
-            _cardImage.sprite = Data.artwork;
+
+            if (Data.artwork == null)
+                return;
+
+            cardImage.sprite = Data.artwork;
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -196,12 +207,12 @@ namespace Gameplay
             RectTransform.localScale = _originalScale;
         }
 
-        public void SetNewest(bool newest)
+        public void SetNewest(bool isNewest)
         {
-            if (_cardImage == null)
+            if (cardImage == null)
                 return;
 
-            _cardImage.color = newest ? normalColor : inactiveColor;
+            cardImage.color = isNewest ? normalColor : inactiveColor;
         }
     }
 }

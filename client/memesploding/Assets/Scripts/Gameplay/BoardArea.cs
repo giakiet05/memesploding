@@ -1,3 +1,4 @@
+using System;
 using Events;
 using Events.GameEvents;
 using Managers;
@@ -11,6 +12,16 @@ namespace Gameplay
     {
         private Card _newestCard;
 
+        private void Start()
+        {
+            EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+        }
+
         //Handle when player play a card
         public void OnDrop(PointerEventData eventData)
         {
@@ -19,7 +30,7 @@ namespace Gameplay
                 return;
 
             Debug.Log("Card is play");
-            CardPlayedEventPayload payload = new CardPlayedEventPayload(card.Id, card.name, "Vak0506");
+            CardPlayedEventPayload payload = new CardPlayedEventPayload(card, "Vak0506");
             EventBus.Publish(EventType.CardPlayedEvent, payload);
 
             if (_newestCard != null)
@@ -30,6 +41,12 @@ namespace Gameplay
             card.DisableDrag();
         }
 
-        //TODO: Handle when opponent play a card
+        //Handle when opponent play a card
+        private void OnCardPlayed(CardPlayedEventPayload payload)
+        {
+            if (_newestCard != null)
+                _newestCard.SetNewest(false);
+            _newestCard = payload.PlayedCard;
+        }
     }
 }

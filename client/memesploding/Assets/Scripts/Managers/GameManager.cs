@@ -15,6 +15,6 @@ namespace Managers
         }
 
 
-        public Player player = new Player("", "Vak0506");
+        public PlayerModel player = new PlayerModel("", "Vak0506");
     }
 }

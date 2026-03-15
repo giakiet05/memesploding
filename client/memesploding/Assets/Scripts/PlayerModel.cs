@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 
 
-public class Player : MonoBehaviour
+public class PlayerModel : MonoBehaviour
 {
-    public Player(string id, string username)
+    public PlayerModel(string id, string username)
     {
         ID = id;
         Username = username;

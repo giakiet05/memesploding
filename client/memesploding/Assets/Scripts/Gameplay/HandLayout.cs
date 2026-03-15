@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Events;
 using Events.GameEvents;
+using ScriptableObjects;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -61,7 +62,7 @@ namespace Gameplay
 
         private void OnCardPlayed(CardPlayedEventPayload payload)
         {
-            Card card = GetCardById(payload.CardId);
+            Card card = GetCardById(payload.PlayedCard.Id);
 
             if (card != null)
                 RemoveCard(card);

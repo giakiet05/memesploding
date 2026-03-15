@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 
-namespace Gameplay
+namespace ScriptableObjects
 {
-    [CreateAssetMenu(fileName = "CardData", menuName = "Gameplay/Card Data", order = 0)]
+    [CreateAssetMenu(fileName = "CardData", menuName = "Cards/Card Data", order = 0)]
     public class CardData : ScriptableObject
     {
         public string cardName;

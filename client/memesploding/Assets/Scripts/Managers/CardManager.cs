@@ -1,9 +1,8 @@
-﻿using System;
-using Events;
+﻿using Events;
 using Events.GameEvents;
 using Gameplay;
+using ScriptableObjects;
 using UnityEngine;
-using UnityEngine.Serialization;
 using EventType = Events.EventType;
 
 namespace Managers
@@ -20,6 +19,15 @@ namespace Managers
                 Instance = this;
         }
 
+        [SerializeField] private Canvas canvas;
+        [SerializeField] private CardDatabase cardDatabase;
+        [SerializeField] private Card cardPrefab;
+        [SerializeField] private HandLayout handLayout;
+        [SerializeField] private RectTransform dragLayer;
+
+        public HandLayout HandLayout => handLayout;
+        public RectTransform DragLayer => dragLayer;
+
         private void Start()
         {
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
@@ -30,14 +38,35 @@ namespace Managers
             EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
         }
 
-        [SerializeField] public HandLayout handLayout;
-        [SerializeField] public Card cardPrefab;
-        [SerializeField] public RectTransform dragLayer;
-
-        public void DealCard(CardData data)
+        public void SetCardDatabase(CardDatabase database)
         {
-            Card card = Instantiate(cardPrefab);
+            cardDatabase = database;
+        }
+
+        public Card CreateCard(string cardName, Transform parent = null)
+        {
+            CardData data = cardDatabase.Get(cardName);
+
+            if (data == null)
+            {
+                Debug.LogError($"Card not found: {cardName}");
+                return null;
+            }
+
+            if (parent == null)
+                parent = canvas.transform;
+
+            Card card = Instantiate(cardPrefab, parent, false);
             card.Initialize(data);
+
+            return card;
+        }
+
+        public void DealCard(string cardName)
+        {
+            Card card = CreateCard(cardName);
+            if (card == null) return;
+
             handLayout.AddCard(card);
         }
 
