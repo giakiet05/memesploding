@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
+  m_Name: SeeTheFuture
+  m_EditorClassIdentifier: 
+  cardName: SEE_THE_FUTURE
+  description: "Xem ba l\xE1 b\xE0i tr\xEAn c\xF9ng c\u1EE7a b\u1ED9 b\xE0i"
+  artwork: {fileID: -1941167871159462604, guid: b8bc339b2106fe7469c897098d965542, type: 3}
