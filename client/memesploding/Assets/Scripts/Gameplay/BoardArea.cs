@@ -14,6 +14,8 @@ namespace Gameplay
 
         private void Start()
         {
+            _newestCard = null;
+
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
         }
 
@@ -33,7 +35,7 @@ namespace Gameplay
             CardPlayedEventPayload payload = new CardPlayedEventPayload(card, "Vak0506");
             EventBus.Publish(EventType.CardPlayedEvent, payload);
 
-            if (_newestCard != null)
+            if (_newestCard != null && _newestCard != card)
                 _newestCard.SetNewest(false);
             _newestCard = card;
 

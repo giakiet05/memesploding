@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace Gameplay
 {
-    public class DrawCard : MonoBehaviour
+    public class PlayerDrawCard : MonoBehaviour
     {
         public CardData Data { get; private set; }
 

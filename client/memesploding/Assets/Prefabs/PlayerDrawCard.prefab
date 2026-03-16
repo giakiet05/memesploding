@@ -87,8 +87,9 @@ GameObject:
   - component: {fileID: 3996205356822778874}
   - component: {fileID: 8507507186584071974}
   - component: {fileID: 4177429112779293155}
+  - component: {fileID: 9219544648235848551}
   m_Layer: 5
-  m_Name: DrawCard
+  m_Name: PlayerDrawCard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -175,6 +176,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &9219544648235848551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7412030727162016220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e71f451a24a3ec4b937ac22cb7b24cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  frontImage: {fileID: 9071529862854748539}
 --- !u!1 &7937696537398616272
 GameObject:
   m_ObjectHideFlags: 0

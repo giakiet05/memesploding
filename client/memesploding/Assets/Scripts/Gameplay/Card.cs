@@ -4,7 +4,6 @@ using System.Collections;
 using ScriptableObjects;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Image = UnityEngine.UI.Image;
 
