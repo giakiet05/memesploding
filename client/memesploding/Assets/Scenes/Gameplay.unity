@@ -2717,8 +2717,8 @@ MonoBehaviour:
   minSpacing: 130
   baseFanAngle: 30
   minFanAngle: 6
-  cardMoveSpeed: 12
-  reorderSpeed: 8
+  cardMoveSpeed: 15
+  reorderSpeed: 10
   scrollSpeed: 10
   extraSpace: 600
 --- !u!1 &2139770465

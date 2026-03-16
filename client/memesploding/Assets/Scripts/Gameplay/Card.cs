@@ -18,7 +18,8 @@ namespace Gameplay
         [SerializeField] private Image cardImage;
 
         [Header("Drag Settings")]
-        [SerializeField] private float holdThreshold = 0.4f;
+        [SerializeField] private float holdThreshold = 0.2f;
+        [SerializeField] private float verticalDragThreshold = 30f;
         [SerializeField] private Vector3 dragScale = new Vector3(1.2f, 1.2f, 1.2f);
 
         private Canvas _rootCanvas;
@@ -32,6 +33,7 @@ namespace Gameplay
         private bool _isHoldReady;
         private bool _scrollForwarded;
         private PointerEventData _pendingDragEvent;
+        private Vector2 _pointerDownPosition;
 
         public bool Draggable { get; private set; } = true;
 
@@ -87,6 +89,7 @@ namespace Gameplay
         public void OnPointerDown(PointerEventData eventData)
         {
             _isHoldReady = false;
+            _pointerDownPosition = eventData.position;
             StartCoroutine(HoldTimer());
         }
 
@@ -132,13 +135,27 @@ namespace Gameplay
             if (!Draggable)
                 return;
 
+            Vector2 dragDelta = eventData.position - _pointerDownPosition;
+            float verticalDrag = Mathf.Abs(dragDelta.y);
+            float horizontalDrag = Mathf.Abs(dragDelta.x);
+
+            // If dragging vertically more than threshold, immediately start card drag
+            if (verticalDrag > verticalDragThreshold && verticalDrag > horizontalDrag)
+            {
+                StopAllCoroutines();
+                _isHoldReady = true;
+                BeginCardDrag(eventData);
+                return;
+            }
+
+            // If not ready and dragging horizontally, allow scroll
             if (!_isHoldReady)
             {
                 _pendingDragEvent = eventData;
                 if (_scrollRect != null)
                 {
                     _scrollRect.OnBeginDrag(eventData);
-                    _scrollForwarded = true; // Track that ScrollRect started a drag
+                    _scrollForwarded = true;
                 }
                 return;
             }
@@ -153,6 +170,19 @@ namespace Gameplay
 
             if (!_isDragging)
             {
+                // Check if user drags vertically enough to switch from scroll to card drag
+                Vector2 dragDelta = eventData.position - _pointerDownPosition;
+                float verticalDrag = Mathf.Abs(dragDelta.y);
+                float horizontalDrag = Mathf.Abs(dragDelta.x);
+
+                if (verticalDrag > verticalDragThreshold && verticalDrag > horizontalDrag && !_scrollForwarded)
+                {
+                    StopAllCoroutines();
+                    _isHoldReady = true;
+                    BeginCardDrag(eventData);
+                    return;
+                }
+
                 if (_scrollRect != null)
                     _scrollRect.OnDrag(eventData);
                 return;
@@ -203,7 +233,8 @@ namespace Gameplay
                 eventData.pressEventCamera,
                 out Vector3 worldPoint);
 
-            _handLayout.RemoveCard(this);
+            if (_handLayout != null)
+                _handLayout.RemoveCard(this);
 
             transform.SetParent(_dragLayer, true);
             transform.SetAsLastSibling();

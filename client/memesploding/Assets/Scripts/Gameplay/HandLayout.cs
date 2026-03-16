@@ -102,7 +102,11 @@ namespace Gameplay
             float pivotSpan = (count - 1) * dynamicSpacing;
             float totalWidth = pivotSpan + cardWidth + extraSpace;
 
+            // Center the pivot so cards span correctly
             _rect.sizeDelta = new Vector2(totalWidth, _rect.sizeDelta.y);
+            _rect.pivot = new Vector2(0.5f, 0.5f);
+            _rect.anchorMin = new Vector2(0.5f, 0.5f);
+            _rect.anchorMax = new Vector2(0.5f, 0.5f);
 
             _reorderTimer += Time.deltaTime;
 
@@ -115,8 +119,15 @@ namespace Gameplay
 
         void StepTowardTarget()
         {
-            if (_targetOrder.Count == 0)
+            if (_targetOrder.Count == 0 || _slots.Count == 0)
                 return;
+
+            // Ensure both lists are in sync
+            if (_targetOrder.Count != _slots.Count)
+            {
+                UpdateVisual();
+                return;
+            }
 
             for (int i = 0; i < _targetOrder.Count; i++)
             {
@@ -125,7 +136,7 @@ namespace Gameplay
 
                 int j = _slots.IndexOf(_targetOrder[i]);
 
-                if (j > i)
+                if (j > i && j < _slots.Count)
                 {
                     Card temp = _slots[j - 1];
                     _slots[j - 1] = _slots[j];
@@ -158,25 +169,8 @@ namespace Gameplay
         {
             card.RectTransform.SetParent(transform, false);
 
-            int preferredIndex = -1;
-
-            if (_previousSlot.TryGetValue(card.Id, out int old))
-            {
-                if (old < _slots.Count && _slots[old] == null)
-                    preferredIndex = old;
-            }
-
-            if (preferredIndex >= 0)
-            {
-                _slots[preferredIndex] = card;
-                _previousSlot[card.Id] = preferredIndex;
-            }
-            else
-            {
-                _slots.Add(card);
-                _previousSlot[card.Id] = _slots.Count - 1;
-            }
-
+            _slots.Add(card);
+            _previousSlot[card.Id] = _slots.Count - 1;
             _cardById[card.Id] = card;
 
             RefreshRenderOrder();
@@ -188,11 +182,15 @@ namespace Gameplay
 
             if (index >= 0)
             {
-                _slots[index] = null;
-                _previousSlot[card.Id] = index;
+                _slots.RemoveAt(index);
+                _previousSlot.Remove(card.Id);
             }
 
             _cardById.Remove(card.Id);
+            
+            // Immediately update _targetOrder to stay in sync with _slots
+            _targetOrder.Remove(card);
+            
             RefreshRenderOrder();
         }
 
