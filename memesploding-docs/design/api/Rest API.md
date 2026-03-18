@@ -1,6 +1,6 @@
 # Base URL
 - Local: `http://localhost:8080/api/v1`
-- Remote: chưa biết
+- Remote: `https://api.memesploding.com/api/v1`
 
 # Success response format
 
