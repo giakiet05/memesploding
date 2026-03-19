@@ -70,45 +70,18 @@ Quản lý mối quan hệ bạn bè và chặn giữa những người dùng.
 | `image_url`   | TEXT         |                   | Đường dẫn tới ảnh meme chính của lá bài.       |
 | `icon_url`    | TEXT         |                   | Đường dẫn tới biểu tượng nhỏ ở góc lá bài.     |
 
-## `rooms`
-
-Quản lý các phòng chơi đang hoạt động.
-
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc        | Mô tả                                                                      |
-| :----------- | :----------- | :--------------- | :------------------------------------------------------------------------- |
-| `id`         | UUID         | PK               | Mã định danh duy nhất của phòng.                                           |
-| `host_id`    | UUID         | FK (users.id)    | ID của người chủ phòng.                                                    |
-| `code`       | VARCHAR(10)  | UNIQUE, NOT NULL | Mã 6-8 ký tự dùng để chia sẻ phòng.                                        |
-| `status`     | VARCHAR(20)  | NOT NULL         | Trạng thái: `waiting` (chờ), `playing` (đang chơi), `finished` (kết thúc). |
-| `is_public`  | BOOLEAN      | NOT NULL         | Visibility của phòng (public/private).                                     |
-| `settings`   | JSONB        | NOT NULL         | Cấu hình: `max_players`, `selected_card_set_ids`, v.v.                     |
-| `created_at` | TIMESTAMP    | NOT NULL         | Thời điểm tạo phòng.                                                       |
-
-## `room_participants`
-
-Theo dõi người chơi và khán giả hiện đang có mặt trong một phòng.
-
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc         | Mô tả                                                   |
-| :----------- | :----------- | :---------------- | :------------------------------------------------------ |
-| `room_id`    | UUID         | PK, FK (rooms.id) | Liên kết tới phòng chơi.                                |
-| `user_id`    | UUID         | PK, FK (users.id) | Liên kết tới người dùng.                                |
-| `role`       | VARCHAR(20)  | NOT NULL          | Vai trò: `player` (người chơi), `spectator` (khán giả). |
-| `is_ready`   | BOOLEAN      | DEFAULT FALSE     | Trạng thái sẵn sàng để bắt đầu trận đấu.                |
-| `joined_at`  | TIMESTAMP    | NOT NULL          | Thời điểm tham gia phòng.                               |
-
 ## `matches`
 
 Lưu trữ thông tin tổng quát của các trận đấu đã kết thúc.
 
-| Cột (Column)    | Kiểu dữ liệu | Ràng buộc     | Mô tả                                              |
-| :-------------- | :----------- | :------------ | :------------------------------------------------- |
-| `id`            | UUID         | PK            | Mã định danh duy nhất của trận đấu.                |
-| `room_code`     | VARCHAR(10)  | NOT NULL      | Tham chiếu tới mã phòng gốc.                       |
-| `settings`      | JSONB        | NOT NULL      | Bản sao cấu hình phòng tại thời điểm bắt đầu trận. |
-| `total_players` | INT          | NOT NULL      | Số lượng người chơi trong trận đấu.                |
-| `winner_id`     | UUID         | FK (users.id) | ID của người thắng cuộc.                           |
-| `started_at`    | TIMESTAMP    | NOT NULL      | Thời điểm bắt đầu trận đấu.                        |
-| `ended_at`      | TIMESTAMP    |               | Thời điểm kết thúc trận đấu.                       |
+| Cột (Column) | Kiểu dữ liệu | Ràng buộc     | Mô tả                                                                        |
+| :----------- | :----------- | :------------ | :--------------------------------------------------------------------------- |
+| `id`         | UUID         | PK            | Mã định danh duy nhất của trận đấu.                                          |
+| `settings`   | JSONB        | NOT NULL      | Bản sao cấu hình phòng tại thời điểm bắt đầu trận.                           |
+| `stats`      | JSONB        | NOT NULL      | Thống số của trận đấu như: số người chơi, tỉ lệ trúng nổ, thời gian chơi,... |
+| `winner_id`  | UUID         | FK (users.id) | ID của người thắng cuộc.                                                     |
+| `started_at` | TIMESTAMP    | NOT NULL      | Thời điểm bắt đầu trận đấu.                                                  |
+| `ended_at`   | TIMESTAMP    |               | Thời điểm kết thúc trận đấu.                                                 |
 
 ## `match_participants`
 
@@ -121,42 +94,6 @@ Lưu kết quả cuối cùng cho từng người chơi trong một trận đấ
 | `final_rank`   | INT          | NOT NULL            | Thứ hạng cuối cùng (1-6).                 |
 | `xp_earned`    | INT          | DEFAULT 0           | Kinh nghiệm nhận được từ trận đấu này.    |
 | `score_change` | INT          | DEFAULT 0           | Điểm Rank thay đổi (+/-) từ trận đấu này. |
-
-## `match_spectators`
-
-Ghi lại danh sách những người đã xem trận đấu.
-
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc           | Mô tả                           |
-| :----------- | :----------- | :------------------ | :------------------------------ |
-| `match_id`   | UUID         | PK, FK (matches.id) | Liên kết tới trận đấu.          |
-| `user_id`    | UUID         | PK, FK (users.id)   | Liên kết tới khán giả.          |
-| `joined_at`  | TIMESTAMP    | NOT NULL            | Thời điểm khán giả bắt đầu xem. |
-
-## `match_events`
-
-Nhật ký chi tiết từng hành động trong trận đấu phục vụ Replay.
-
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc       | Mô tả                                                     |
-| :----------- | :----------- | :-------------- | :-------------------------------------------------------- |
-| `id`         | UUID         | PK              | Mã định danh duy nhất của sự kiện.                        |
-| `match_id`   | UUID         | FK (matches.id) | Liên kết tới trận đấu.                                    |
-| `player_id`  | UUID         | FK (users.id)   | Người thực hiện hành động (có thể trống nếu là hệ thống). |
-| `sequence`   | INT          | NOT NULL        | Thứ tự thời gian của sự kiện (1, 2, 3...).                |
-| `event_type` | VARCHAR(50)  | NOT NULL        | Loại: `PLAY_CARD`, `DRAW_CARD`, `EXPLODE`, v.v.           |
-| `data`       | JSONB        |                 | Dữ liệu chi tiết: card_id, target_id, v.v.                |
-| `created_at` | TIMESTAMP    | NOT NULL        | Thời điểm xảy ra sự kiện.                                 |
-
-## `match_snapshots`
-
-Lưu trữ toàn bộ trạng thái bàn chơi để phục vụ kết nối lại (Reconnect).
-
-| Cột (Column) | Kiểu dữ liệu | Ràng buộc       | Mô tả                                                  |
-| :----------- | :----------- | :-------------- | :----------------------------------------------------- |
-| `id`         | UUID         | PK              | Mã định danh duy nhất của bản chụp.                    |
-| `match_id`   | UUID         | FK (matches.id) | Liên kết tới trận đấu.                                 |
-| `sequence`   | INT          | NOT NULL        | Khớp với số thứ tự trong `match_events`.               |
-| `state`      | JSONB        | NOT NULL        | Trạng thái đầy đủ: Bài trên tay, bộ bài, bộ đếm giờ... |
-| `created_at` | TIMESTAMP    | NOT NULL        | Thời điểm tạo bản chụp.                                |
 
 ## `notifications`
 
