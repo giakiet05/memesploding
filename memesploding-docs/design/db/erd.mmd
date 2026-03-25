@@ -49,30 +49,30 @@ erDiagram
         text icon_url "URL to the small corner icon asset"
     }
 
-    Room {
-        uuid id PK
-        uuid host_id FK "User ID of the room owner"
-        varchar code "Unique 6-8 character shareable room code"
-        varchar password "Optional password for private access (nullable)"
-        varchar status "Room state: waiting, playing, finished"
-        boolean is_public "Whether the room is listed in public lobby"
-        jsonb settings "All configs: max_players, selected_card_set_ids, turn_timer, etc."
-        timestamp created_at
-    }
+    %% Room {
+    %%     uuid id PK
+    %%     uuid host_id FK "User ID of the room owner"
+    %%     varchar code "Unique 6-8 character shareable room code"
+    %%     varchar password "Optional password for private access (nullable)"
+    %%     varchar status "Room state: waiting, playing, finished"
+    %%     boolean is_public "Whether the room is listed in public lobby"
+    %%     jsonb settings "All configs: max_players, selected_card_set_ids, turn_timer, etc."
+    %%     timestamp created_at
+    %% }
 
-    RoomParticipant {
-        uuid room_id PK, FK "Link to the parent Room"
-        uuid user_id PK, FK "Link to the participating User"
-        varchar role "Participant role: player, spectator"
-        boolean is_ready "Readiness status for starting the game"
-        timestamp joined_at
-    }
+    %% RoomParticipant {
+    %%     uuid room_id PK, FK "Link to the parent Room"
+    %%     uuid user_id PK, FK "Link to the participating User"
+    %%     varchar role "Participant role: player, spectator"
+    %%     boolean is_ready "Readiness status for starting the game"
+    %%     timestamp joined_at
+    %% }
 
     Match {
         uuid id PK
-        varchar room_code "Reference to the original room code"
+        %% varchar room_code "Reference to the original room code"
         jsonb settings "Snapshot of room settings at match start"
-        int total_players "Number of players in this match"
+        jsonb stats "Match stats: total_players, duration, explode_hit_rate, turns_played,..."
         uuid winner_id FK "User ID of the winner"
         timestamp started_at
         timestamp ended_at
@@ -86,29 +86,29 @@ erDiagram
         int score_change "Score delta (+/-) from the match"
     }
 
-    MatchSpectator {
-        uuid match_id PK, FK "Link to the Match"
-        uuid user_id PK, FK "Link to the User (spectator)"
-        timestamp joined_at
-    }
+    %% MatchSpectator {
+    %%     uuid match_id PK, FK "Link to the Match"
+    %%     uuid user_id PK, FK "Link to the User
+    %%     timestamp joined_at
+    %% }
 
-    MatchEvent {
-        uuid id PK
-        uuid match_id FK "Link to the Match"
-        uuid player_id FK "The player who triggered the event (nullable for system)"
-        int sequence "Chronological order of actions in the match"
-        varchar event_type "Action type: PLAY_CARD, DRAW_CARD, EXPLODE, etc."
-        jsonb data "Dynamic action details (card_id, target, etc.)"
-        timestamp created_at
-    }
+    %% MatchEvent {
+    %%     uuid id PK
+    %%     uuid match_id FK "Link to the Match"
+    %%     uuid player_id FK "The player who triggered the event (nullable for system)"
+    %%     int sequence "Chronological order of actions in the match"
+    %%     varchar event_type "Action type: PLAY_CARD, DRAW_CARD, EXPLODE, etc."
+    %%     jsonb data "Dynamic action details (card_id, target, etc.)"
+    %%     timestamp created_at
+    %% }
 
-    MatchSnapshot {
-        uuid id PK
-        uuid match_id FK "Link to the Match"
-        int sequence "Last event sequence captured in this snapshot"
-        jsonb state "Full game state (Hands, Deck, Active timers, etc.)"
-        timestamp created_at
-    }
+    %% MatchSnapshot {
+    %%     uuid id PK
+    %%     uuid match_id FK "Link to the Match"
+    %%     int sequence "Last event sequence captured in this snapshot"
+    %%     jsonb state "Full game state (Hands, Deck, Active timers, etc.)"
+    %%     timestamp created_at
+    %% }
 
     Notification {
         uuid id PK
@@ -124,22 +124,22 @@ erDiagram
     User ||--|| Profile : "has"
     User ||--o{ Friendship : "initiates/receives"
    
-    User ||--o{ Room : "hosts"
-    User ||--o{ RoomParticipant : "joins"
+    %% User ||--o{ Room : "hosts"
+    %% User ||--o{ RoomParticipant : "joins"
     User ||--o{ MatchParticipant : "participates"
-    User ||--o{ MatchSpectator : "watches"
+    %% User ||--o{ MatchSpectator : "watches"
     User ||--o{ Match : "wins"
 
     User ||--o{ Notification : "receives (via receiver_id)"
     User ||--o{ Notification : "sends"
 
 
-    Room ||--|{ RoomParticipant : "contains"
-    Room ||--o{ Match : "hosts (linked via room_code)"
+    %% Room ||--|{ RoomParticipant : "contains"
+    %% Room ||--o{ Match : "hosts (linked via room_code)"
 
     Match ||--|{ MatchParticipant : "includes"
-    Match ||--o{ MatchSpectator : "watched_by"
-    Match ||--o{ MatchEvent : "records"
-    Match ||--o{ MatchSnapshot : "saves_state"
+    %% Match ||--o{ MatchSpectator : "watched_by"
+    %% Match ||--o{ MatchEvent : "records"
+    %% Match ||--o{ MatchSnapshot : "saves_state"
 
     CardSet ||--|{ Card : "contains"
