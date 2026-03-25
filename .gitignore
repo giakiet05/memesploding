@@ -1,1 +1,36 @@
-.obsidian/
+# IDEs & Tools
+.idea/
+.vscode/
+.gemini/
+.claude/
+*.user
+*.userosscache
+*.sln.docuser
+
+# .NET / C# (Bản chuẩn 2026)
+[Bb]in/
+[Oo]bj/
+out/
+.dotnet/
+.library-cache/
+.vs/
+UserSecrets/
+appsettings.Development.json
+appsettings.Local.json
+*.db
+*.db-journal
+
+# Linux/Mac/Windows rác
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.nfs*
+
+# Secrets & Environments
+.env
+.env.*
+!.env.example    # Cho phép push file mẫu để người khác biết cần config gì
+secrets.json
+*.pem
+*.key

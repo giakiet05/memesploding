@@ -1,0 +1,6 @@
+@Memesploding.Game_HostAddress = http://localhost:5204
+
+GET {{Memesploding.Game_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
