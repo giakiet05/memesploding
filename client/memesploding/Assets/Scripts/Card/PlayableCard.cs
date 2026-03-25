@@ -1,21 +1,15 @@
-﻿using Managers;
-using System;
 using System.Collections;
-using ScriptableObjects;
+using Gameplay;
+using Managers;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using Image = UnityEngine.UI.Image;
 
-namespace Gameplay
+namespace Card
 {
-    public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
+    public class PlayableCard : BaseCard, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
     {
-        public string Id { get; private set; }
-        public CardData Data { get; set; }
-        public RectTransform RectTransform { get; private set; }
         private CanvasGroup _canvasGroup;
-        [SerializeField] private Image cardImage;
 
         [Header("Drag Settings")]
         [SerializeField] private float holdThreshold = 0.2f;
@@ -42,12 +36,10 @@ namespace Gameplay
             Draggable = false;
         }
 
-        public Color normalColor = Color.white;
-        public Color inactiveColor = new Color(0.6f, 0.6f, 0.6f, 1f);
-
-        void Awake()
+        protected override void Awake()
         {
-            RectTransform = GetComponent<RectTransform>();
+            base.Awake();
+            
             _canvasGroup = GetComponent<CanvasGroup>();
 
             _rootCanvas = GetComponentInParent<Canvas>();
@@ -61,29 +53,6 @@ namespace Gameplay
         {
             _handLayout = CardManager.Instance.HandLayout;
             _dragLayer = CardManager.Instance.DragLayer;
-        }
-
-        public void Initialize(CardData data)
-        {
-            Data = data;
-            GenerateId();
-            UpdateVisuals();
-        }
-
-        public void GenerateId()
-        {
-            Id = Guid.NewGuid().ToString();
-        }
-
-        void UpdateVisuals()
-        {
-            if (Data == null)
-                return;
-
-            if (Data.artwork == null)
-                return;
-
-            cardImage.sprite = Data.artwork;
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -264,14 +233,6 @@ namespace Gameplay
             _handLayout.AddCard(this);
             _handLayout.UpdateVisual();
             RectTransform.localScale = _originalScale;
-        }
-
-        public void SetNewest(bool isNewest)
-        {
-            if (cardImage == null)
-                return;
-
-            cardImage.color = isNewest ? normalColor : inactiveColor;
         }
     }
 }

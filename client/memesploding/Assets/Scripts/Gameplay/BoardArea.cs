@@ -1,4 +1,5 @@
 using System;
+using Card;
 using Events;
 using Events.GameEvents;
 using Managers;
@@ -10,7 +11,7 @@ namespace Gameplay
 {
     public class BoardArea : MonoBehaviour, IDropHandler
     {
-        private Card _newestCard;
+        private BaseCard _newestCard;
 
         private void Start()
         {
@@ -27,7 +28,7 @@ namespace Gameplay
         //Handle when player play a card
         public void OnDrop(PointerEventData eventData)
         {
-            Card card = eventData.pointerDrag?.GetComponent<Card>();
+            PlayableCard card = eventData.pointerDrag?.GetComponent<PlayableCard>();
             if (card == null) 
                 return;
 

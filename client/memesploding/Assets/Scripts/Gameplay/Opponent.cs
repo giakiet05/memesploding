@@ -1,10 +1,10 @@
 using Events;
 using Managers;
-using ScriptableObjects;
-using System;
 using System.Collections;
+using Card;
 using Events.GameEvents;
 using UnityEngine;
+using UnityEngine.UI;
 using EventType = Events.EventType;
 using Random = UnityEngine.Random;
 
@@ -17,6 +17,8 @@ namespace Gameplay
 
         [SerializeField] private float jumpHeight = 150f;
         [SerializeField] private float duration = 0.5f;
+
+        [SerializeField] private Image selectArrow;
 
         //For testing only
         [SerializeField] private bool autoPlay = false;
@@ -36,7 +38,6 @@ namespace Gameplay
             }
         }
 
-
         public void PlayCard(string cardName)
         {
             StartCoroutine(PlayCardRoutine(cardName));
@@ -44,7 +45,7 @@ namespace Gameplay
 
         private IEnumerator PlayCardRoutine(string cardName)
         {
-            Card card = CardManager.Instance.CreateCard(cardName, playArea.transform);
+            PlayableCard card = CardManager.Instance.CreatePlayableCard(cardName, playArea.transform);
 
             RectTransform rect = card.RectTransform;
             rect.localScale = Vector3.zero;

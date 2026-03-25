@@ -1,5 +1,7 @@
+using Card;
 using Events;
 using Events.GameEvents;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,23 +23,27 @@ namespace Gameplay
 
         public float extraSpace = 250f;
 
-        private readonly List<Card> _slots = new();
-        private readonly List<Card> _targetOrder = new();
-        private readonly Dictionary<string, Card> _cardById = new();
+        private readonly List<BaseCard> _slots = new();
+        private readonly List<BaseCard> _targetOrder = new();
+        private readonly Dictionary<string, BaseCard> _cardById = new();
         private readonly Dictionary<string, int> _previousSlot = new();
 
         private RectTransform _rect;
+        private ScrollRect _scrollRect;
 
         private float _reorderTimer;
 
         void Start()
         {
             _rect = GetComponent<RectTransform>();
+            _scrollRect = GetComponentInParent<ScrollRect>();
 
             // Get the parent ScrollRect and boost sensitivity
             ScrollRect sr = GetComponentInParent<ScrollRect>();
             if (sr != null)
                 sr.scrollSensitivity = scrollSpeed;
+
+            RegisterExistingCards();
 
             //Event
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
@@ -50,7 +56,7 @@ namespace Gameplay
 
         private void OnCardPlayed(CardPlayedEventPayload payload)
         {
-            Card card = GetCardById(payload.PlayedCard.Id);
+            BaseCard card = GetCardById(payload.PlayedCard.Id);
 
             if (card != null)
                 RemoveCard(card);
@@ -80,7 +86,7 @@ namespace Gameplay
 
             for (int i = 0; i < count; i++)
             {
-                Card card = _slots[i];
+                BaseCard card = _slots[i];
                 if (!card)
                     continue;
 
@@ -138,7 +144,7 @@ namespace Gameplay
 
                 if (j > i && j < _slots.Count)
                 {
-                    Card temp = _slots[j - 1];
+                    BaseCard temp = _slots[j - 1];
                     _slots[j - 1] = _slots[j];
                     _slots[j] = temp;
 
@@ -157,7 +163,7 @@ namespace Gameplay
             }
         }
 
-        void SaveSlot(Card card, int index)
+        void SaveSlot(BaseCard card, int index)
         {
             if (card == null)
                 return;
@@ -165,7 +171,7 @@ namespace Gameplay
             _previousSlot[card.Id] = index;
         }
 
-        public void AddCard(Card card)
+        public void AddCard(BaseCard card)
         {
             card.RectTransform.SetParent(transform, false);
 
@@ -176,7 +182,7 @@ namespace Gameplay
             RefreshRenderOrder();
         }
 
-        public void RemoveCard(Card card)
+        public void RemoveCard(BaseCard card)
         {
             int index = _slots.IndexOf(card);
 
@@ -222,9 +228,39 @@ namespace Gameplay
             }
         }
 
-        public Card GetCardById(string id)
+        void RegisterExistingCards()
         {
-            _cardById.TryGetValue(id, out Card card);
+            if (transform.childCount <= 0)
+                return;
+
+            _slots.Clear();
+            _cardById.Clear();
+            _previousSlot.Clear();
+
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                BaseCard card = transform.GetChild(i).GetComponent<BaseCard>();
+
+                if (card == null)
+                    continue;
+
+                if (string.IsNullOrEmpty(card.Id))
+                    card.GenerateId();
+
+                _slots.Add(card);
+                _cardById[card.Id] = card;
+                _previousSlot[card.Id] = i;
+
+                card.RectTransform.SetParent(transform, false);
+            }
+
+            UpdateVisual();
+            RefreshRenderOrder();
+        }
+
+        public BaseCard GetCardById(string id)
+        {
+            _cardById.TryGetValue(id, out BaseCard card);
             return card;
         }
     }

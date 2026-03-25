@@ -13,5 +13,7 @@ namespace Managers
             else
                 Instance = this;
         }
+
+        [SerializeField] private RectTransform uiArea;
     }
 }

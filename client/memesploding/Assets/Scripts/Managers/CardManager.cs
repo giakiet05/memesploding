@@ -1,8 +1,10 @@
-﻿using Events;
+﻿using Card;
+using Events;
 using Events.GameEvents;
 using Gameplay;
 using ScriptableObjects;
 using UnityEngine;
+using UnityEngine.Serialization;
 using EventType = Events.EventType;
 
 namespace Managers
@@ -21,7 +23,8 @@ namespace Managers
 
         [SerializeField] private Canvas canvas;
         [SerializeField] private CardDatabase cardDatabase;
-        [SerializeField] private Card cardPrefab;
+        [SerializeField] private DisplayCard displayCardPrefab;
+        [SerializeField] private PlayableCard playableCardPrefab;
         [SerializeField] private HandLayout handLayout;
         [SerializeField] private RectTransform dragLayer;
 
@@ -52,12 +55,12 @@ namespace Managers
         {
             for (int i = 0; i < amount; i++)
             {
-                Card card = CreateCard(cardName);
+                PlayableCard card = CreatePlayableCard(cardName);
                 handLayout.AddCard(card);
             }
         }
 
-        public Card CreateCard(string cardName, Transform parent = null)
+        public PlayableCard CreatePlayableCard(string cardName, Transform parent = null)
         {
             CardData data = cardDatabase.Get(cardName);
 
@@ -70,24 +73,29 @@ namespace Managers
             if (parent == null)
                 parent = canvas.transform;
 
-            Card card = Instantiate(cardPrefab, parent, false);
+            PlayableCard card = Instantiate(playableCardPrefab, parent, false);
             card.Initialize(data);
 
             return card;
         }
 
-        public void DealCard(string cardName)
+        public DisplayCard CreateDisplayCard(string cardName, Transform parent = null)
         {
-            Card card = CreateCard(cardName);
-            if (card == null) return;
+            CardData data = cardDatabase.Get(cardName);
 
-            handLayout.AddCard(card);
-        }
+            if (data == null)
+            {
+                Debug.LogError($"Card not found: {cardName}");
+                return null;
+            }
 
-        public void RemoveCard(Card card)
-        {
-            handLayout.RemoveCard(card);
-            Destroy(card.gameObject);
+            if (parent == null)
+                parent = canvas.transform;
+
+            DisplayCard card = Instantiate(displayCardPrefab, parent, false);
+            card.Initialize(data);
+
+            return card;
         }
 
         private void OnCardPlayed(CardPlayedEventPayload payload)
@@ -104,7 +112,7 @@ namespace Managers
             if (!cardDatabase)
                 Debug.LogError("CardDatabase not assigned in CardManager", this);
 
-            if (!cardPrefab)
+            if (!playableCardPrefab)
                 Debug.LogError("CardPrefab not assigned in CardManager", this);
 
             if (!handLayout)

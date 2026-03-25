@@ -1,4 +1,5 @@
-﻿using Gameplay;
+﻿using Card;
+using Gameplay;
 using UnityEngine;
 
 namespace Events
@@ -7,13 +8,13 @@ namespace Events
 
     public class CardPlayedEventPayload : BaseEventPayload
     {
-        public CardPlayedEventPayload(Card card, string playerName)
+        public CardPlayedEventPayload(BaseCard card, string playerName)
         {
             PlayedCard = card;
             PlayerName = playerName;
         }
 
-        public Card PlayedCard { get; }
+        public BaseCard PlayedCard { get; }
         public string PlayerName { get; }
     }
 
