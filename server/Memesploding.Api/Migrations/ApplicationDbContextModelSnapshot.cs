@@ -209,15 +209,24 @@ namespace Memesploding.Api.Migrations
                     b.ToTable("notifications", (string)null);
                 });
 
-            modelBuilder.Entity("Memesploding.Shared.Entities.Profile", b =>
+            modelBuilder.Entity("Memesploding.Shared.Entities.User", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("AvatarUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Bio")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -226,37 +235,6 @@ namespace Memesploding.Api.Migrations
 
                     b.Property<int>("Level")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Nickname")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalMatches")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalWins")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("Xp")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("profiles", (string)null);
-                });
-
-            modelBuilder.Entity("Memesploding.Shared.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -267,14 +245,30 @@ namespace Memesploding.Api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalMatches")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalWins")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Username")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<long>("Xp")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -359,17 +353,6 @@ namespace Memesploding.Api.Migrations
                     b.Navigation("Sender");
                 });
 
-            modelBuilder.Entity("Memesploding.Shared.Entities.Profile", b =>
-                {
-                    b.HasOne("Memesploding.Shared.Entities.User", "User")
-                        .WithOne("Profile")
-                        .HasForeignKey("Memesploding.Shared.Entities.Profile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Memesploding.Shared.Entities.CardSet", b =>
                 {
                     b.Navigation("Cards");
@@ -385,8 +368,6 @@ namespace Memesploding.Api.Migrations
                     b.Navigation("InitiatedFriendships");
 
                     b.Navigation("MatchParticipants");
-
-                    b.Navigation("Profile");
 
                     b.Navigation("ReceivedFriendships");
 

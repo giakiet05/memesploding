@@ -32,9 +32,18 @@ namespace Memesploding.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Username = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Provider = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     ProviderId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Username = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    AvatarUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Bio = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Level = table.Column<int>(type: "integer", nullable: false),
+                    Xp = table.Column<long>(type: "bigint", nullable: false),
+                    Score = table.Column<int>(type: "integer", nullable: false),
+                    HighestScore = table.Column<int>(type: "integer", nullable: false),
+                    TotalMatches = table.Column<int>(type: "integer", nullable: false),
+                    TotalWins = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -146,32 +155,6 @@ namespace Memesploding.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "profiles",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Nickname = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    AvatarUrl = table.Column<string>(type: "text", nullable: true),
-                    Level = table.Column<int>(type: "integer", nullable: false),
-                    Xp = table.Column<long>(type: "bigint", nullable: false),
-                    Score = table.Column<int>(type: "integer", nullable: false),
-                    HighestScore = table.Column<int>(type: "integer", nullable: false),
-                    TotalMatches = table.Column<int>(type: "integer", nullable: false),
-                    TotalWins = table.Column<int>(type: "integer", nullable: false),
-                    Bio = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_profiles", x => x.UserId);
-                    table.ForeignKey(
-                        name: "FK_profiles_users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "match_participants",
                 columns: table => new
                 {
@@ -235,6 +218,12 @@ namespace Memesploding.Api.Migrations
                 column: "SenderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_users_Email",
+                table: "users",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_users_Username",
                 table: "users",
                 column: "Username",
@@ -255,9 +244,6 @@ namespace Memesploding.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "notifications");
-
-            migrationBuilder.DropTable(
-                name: "profiles");
 
             migrationBuilder.DropTable(
                 name: "card_sets");

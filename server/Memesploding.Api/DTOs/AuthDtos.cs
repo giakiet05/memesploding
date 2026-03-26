@@ -10,3 +10,11 @@ public record AuthResponseDto(
     string AccessToken,
     string RefreshToken
 );
+
+public record LoginGoogleRequestDto(
+    string Code
+);
+
+public record RefreshTokenRequestDto(
+    string RefreshToken
+);

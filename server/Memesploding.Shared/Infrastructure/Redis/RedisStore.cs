@@ -3,14 +3,7 @@ using StackExchange.Redis;
 
 namespace Memesploding.Shared.Infrastructure.Redis;
 
-public interface IRedisStore
-{
-    Task SetAsync<T>(string key, T data, TimeSpan? expiry = null);
-    Task<T?> GetAsync<T>(string key);
-    Task RemoveAsync(string key);
-}
-
-public class RedisStore : IRedisStore
+public class RedisStore : ICacheStore
 {
     private readonly IDatabase _db;
 

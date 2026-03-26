@@ -20,7 +20,7 @@ public class AuthController : ControllerBase
 
     // Endpoint: POST /api/auth/guest
     [HttpPost("guest")]
-    public async Task<IActionResult> RegisterGuest([FromBody] RegisterGuestRequestDto request)
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RegisterGuest([FromBody] RegisterGuestRequestDto request)
     {
         // Kiểm tra đầu vào thô (Validation)
         if (string.IsNullOrWhiteSpace(request.Nickname))
@@ -28,10 +28,45 @@ public class AuthController : ControllerBase
             return BadRequest("Nickname is required");
         }
 
-        // Chuyền bóng cho tầng Service xử lý database và logic
-        var result = await _authService.RegisterGuestAsync(request);
+        var responseData = await _authService.RegisterGuestAsync(request);
         
-        // Trả HTTP Mã 200 (Thành công) nguyên cục JSON
-        return Ok(result);
+        // Đóng gói data bằng ApiResponse chuẩn thiết kế
+        return Ok(new ApiResponse<AuthResponseDto>("Login successful", responseData));
+    }
+
+    [HttpPost("google")]
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> LoginGoogle([FromBody] LoginGoogleRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest("Authorization code is required");
+        }
+
+        var responseData = await _authService.LoginGoogleAsync(request);
+        return Ok(new ApiResponse<AuthResponseDto>("Login successful", responseData));
+    }
+
+    [HttpPost("refresh")]
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RefreshToken([FromBody] RefreshTokenRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest("Refresh token is required");
+        }
+
+        var responseData = await _authService.RefreshAsync(request);
+        return Ok(new ApiResponse<AuthResponseDto>("Token refreshed", responseData));
+    }
+
+    [HttpPost("logout")]
+    public async Task<ActionResult<ApiResponse<object?>>> Logout([FromBody] RefreshTokenRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest("Refresh token is required");
+        }
+
+        await _authService.LogoutAsync(request.RefreshToken);
+        return Ok(new ApiResponse<object?>("Logged out successfully", null));
     }
 }

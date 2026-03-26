@@ -10,7 +10,6 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Profile> Profiles { get; set; } = null!;
     public DbSet<Friendship> Friendships { get; set; } = null!;
     public DbSet<CardSet> CardSets { get; set; } = null!;
     public DbSet<Card> Cards { get; set; } = null!;
@@ -22,32 +21,22 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // 1. User Mapping
+        // 1. User Mapping (bao gồm các trường game stats sau khi gộp Profile)
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("users");
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Username).HasMaxLength(50);
-            entity.HasIndex(e => e.Username).IsUnique();
+            entity.Property(e => e.Email).HasMaxLength(255);
+            entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.Provider).HasConversion<string>().HasMaxLength(20).IsRequired();
             entity.Property(e => e.ProviderId).HasMaxLength(255);
-        });
-
-        // 2. Profile Mapping (1-1 with User)
-        modelBuilder.Entity<Profile>(entity =>
-        {
-            entity.ToTable("profiles");
-            entity.HasKey(e => e.UserId);
-            entity.Property(e => e.Nickname).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Username).HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
             entity.Property(e => e.Bio).HasMaxLength(255);
-            
-            entity.HasOne(p => p.User)
-                  .WithOne(u => u.Profile)
-                  .HasForeignKey<Profile>(p => p.UserId)
-                  .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // 3. Friendship Mapping (Composite Key User1 + User2)
+        // 2. Friendship Mapping (Composite Key User1 + User2)
         modelBuilder.Entity<Friendship>(entity =>
         {
             entity.ToTable("friendships");
@@ -65,7 +54,7 @@ public class ApplicationDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // 4. CardSet & Card Mapping
+        // 3. CardSet & Card Mapping
         modelBuilder.Entity<CardSet>(entity =>
         {
             entity.ToTable("card_sets");
@@ -88,7 +77,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         });
 
-        // 5. Match & MatchParticipant Mapping
+        // 4. Match & MatchParticipant Mapping
         modelBuilder.Entity<Match>(entity =>
         {
             entity.ToTable("matches");
@@ -118,7 +107,7 @@ public class ApplicationDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // 6. Notification Mapping
+        // 5. Notification Mapping
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.ToTable("notifications");
