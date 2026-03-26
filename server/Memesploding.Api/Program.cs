@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Memesploding.Api.Data;
 using Memesploding.Shared.Infrastructure.Redis;
 using Memesploding.Api.Services;
+using Scalar.AspNetCore;
 using StackExchange.Redis;
 
 namespace Memesploding.Api;
@@ -34,6 +35,9 @@ public class Program
         // Thêm mảng Controller tĩnh (mở nhà hàng tiếp khách)
         builder.Services.AddControllers();
 
+        // Ép toàn bộ đường dẫn API tự động chuyển thành chữ thường (lowercase)
+        builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
         // Add services to the container.
         builder.Services.AddAuthorization();
 
@@ -46,6 +50,7 @@ public class Program
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference(); // Bật giao diện Web xịn xò của Scalar lên!
         }
 
         app.UseHttpsRedirection();
