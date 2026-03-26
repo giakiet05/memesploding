@@ -1,10 +1,38 @@
-namespace Memesloding.Api;
+using Microsoft.EntityFrameworkCore;
+using Memesploding.Api.Data;
+using Memesploding.Shared.Infrastructure.Redis;
+using Memesploding.Api.Services;
+using StackExchange.Redis;
+
+namespace Memesploding.Api;
 
 public class Program
 {
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // Setup Entity Framework Core with PostgreSQL
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+        // Setup Redis
+        var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
+        if (string.IsNullOrEmpty(redisConnectionString))
+        {
+            throw new InvalidOperationException("RedisConnection string is missing in appsettings.json!");
+        }
+        
+        builder.Services.AddSingleton<IConnectionMultiplexer>(
+            ConnectionMultiplexer.Connect(redisConnectionString));
+        builder.Services.AddSingleton<IRedisStore, RedisStore>();
+
+        // Thêm DI cho Service rẽ nhánh Bếp Trưởng (Auth)
+        // Dùng AddScoped vì AuthService có nhúng tay vào DbContext (vốn nằm ở Scoped)
+        builder.Services.AddScoped<IAuthService, AuthService>();
+
+        // Thêm mảng Controller tĩnh (mở nhà hàng tiếp khách)
+        builder.Services.AddControllers();
 
         // Add services to the container.
         builder.Services.AddAuthorization();
@@ -23,25 +51,9 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
-
-        var summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
-
-        app.MapGet("/weatherforecast", (HttpContext httpContext) =>
-            {
-                var forecast = Enumerable.Range(1, 5).Select(index =>
-                        new WeatherForecast
-                        {
-                            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                            TemperatureC = Random.Shared.Next(-20, 55),
-                            Summary = summaries[Random.Shared.Next(summaries.Length)]
-                        })
-                    .ToArray();
-                return forecast;
-            })
-            .WithName("GetWeatherForecast");
+        
+        // Mapping đường dẫn của tất cả các Class nhãn [ApiController]
+        app.MapControllers();
 
         app.Run();
     }
