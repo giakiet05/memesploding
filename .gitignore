@@ -35,3 +35,11 @@ Thumbs.db
 secrets.json
 *.pem
 *.key
+
+
+# Google OAuth Client Secrets
+Secret/
+**/client_secret_*.json
+**/HttpTests/*.html
+
+

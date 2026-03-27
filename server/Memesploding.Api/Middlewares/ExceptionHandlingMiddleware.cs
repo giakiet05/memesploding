@@ -1,9 +1,10 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Memesploding.Api.DTOs;
+using Memesploding.Shared.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Memesploding.Api.DTOs;
 
 namespace Memesploding.Api.Middlewares;
 
@@ -28,7 +29,7 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             // Bẫy sập bẫy! Server quăng Lỗi rùi, ghi log đỏ cất đi
-            _logger.LogError(ex, "Lỗi vỡ mặt Server: {Message}", ex.Message);
+            _logger.LogError(ex, "Unhandled Server Exception: {Message}", ex.Message);
             
             // Xoay trục rẽ nhánh bọc lại thành DTO Lỗi Chuẩn Chỉ trả về Client
             await HandleExceptionAsync(context, ex);
@@ -38,21 +39,30 @@ public class ExceptionHandlingMiddleware
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
-        // Luôn là lỗi 500 do kịch bản sập ngầm
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-        // Vứt ra 1 mặt phẳng cái format Error như trong File MD chỉ định
-        var errorResponse = new ApiErrorResponse(
-            Message: "Internal error happened!",
-            ErrorCode: Memesploding.Shared.Enums.ErrorCode.InternalError
-        );
+        ApiErrorResponse errorResponse;
 
-        // Chuyển đối tượng C# thành chữ JSON (Nhớ kẹp luật Snake_Case nha)
-        var result = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions 
-        { 
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
-        });
-        
+        if (exception is Memesploding.Api.Exceptions.AppException appEx)
+        {
+            // Lỗi có chủ ý (4xx): Dùng status code và error code của AppException
+            context.Response.StatusCode = appEx.StatusCode;
+            errorResponse = new ApiErrorResponse(appEx.Message, appEx.ErrorCode);
+        }
+        else
+        {
+            // Lỗi bất ngờ (5xx): Ẩn chi tiết, chỉ trả về INTERNAL_ERROR
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            errorResponse = new ApiErrorResponse("Internal error happened!", ErrorCode.InternalError);
+        }
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        };
+
+        var result = JsonSerializer.Serialize(errorResponse, options);
+
         return context.Response.WriteAsync(result);
     }
 }

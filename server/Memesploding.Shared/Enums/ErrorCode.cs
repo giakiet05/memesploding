@@ -1,24 +1,51 @@
+using System.Text.Json.Serialization;
+
 namespace Memesploding.Shared.Enums;
 
-public static class ErrorCode
+/// <summary>
+/// Error codes dùng cho API response.
+/// Enum name dùng trong C# (PascalCase), JSON output là SCREAMING_SNAKE_CASE.
+/// </summary>
+public enum ErrorCode
 {
     // Hệ thống
-    public const string InternalError = "INTERNAL_ERROR";
-    public const string ValidationFailed = "VALIDATION_FAILED";
+    [JsonStringEnumMemberName("INTERNAL_ERROR")]
+    InternalError,
 
-    // Người dùng và Xác thực (Auth/User)
-    public const string Unauthorized = "UNAUTHORIZED";
-    public const string TokenExpired = "TOKEN_EXPIRED";
-    public const string UserNotFound = "USER_NOT_FOUND";
-    public const string PlayerAlreadyInRoom = "PLAYER_ALREADY_IN_ROOM";
+    [JsonStringEnumMemberName("VALIDATION_FAILED")]
+    ValidationFailed,
 
-    // Phòng chơi (Room/Match)
-    public const string RoomNotFound = "ROOM_NOT_FOUND";
-    public const string RoomIsFull = "ROOM_IS_FULL";
-    public const string NotRoomHost = "NOT_ROOM_HOST";
-    public const string MatchAlreadyStarted = "MATCH_ALREADY_STARTED";
+    // Xác thực (Auth)
+    [JsonStringEnumMemberName("UNAUTHORIZED")]
+    Unauthorized,
+
+    [JsonStringEnumMemberName("TOKEN_EXPIRED")]
+    TokenExpired,
+
+    // Người dùng (User)
+    [JsonStringEnumMemberName("USER_NOT_FOUND")]
+    UserNotFound,
+
+    // Phòng chơi (Room)
+    [JsonStringEnumMemberName("ROOM_NOT_FOUND")]
+    RoomNotFound,
+
+    [JsonStringEnumMemberName("ROOM_IS_FULL")]
+    RoomIsFull,
+
+    [JsonStringEnumMemberName("NOT_ROOM_HOST")]
+    NotRoomHost,
+
+    [JsonStringEnumMemberName("MATCH_ALREADY_STARTED")]
+    MatchAlreadyStarted,
+
+    [JsonStringEnumMemberName("PLAYER_ALREADY_IN_ROOM")]
+    PlayerAlreadyInRoom,
 
     // Bạn bè (Friendship)
-    public const string FriendshipNotFound = "FRIENDSHIP_NOT_FOUND";
-    public const string AlreadyFriends = "ALREADY_FRIENDS";
+    [JsonStringEnumMemberName("FRIENDSHIP_NOT_FOUND")]
+    FriendshipNotFound,
+
+    [JsonStringEnumMemberName("ALREADY_FRIENDS")]
+    AlreadyFriends,
 }

@@ -11,4 +11,4 @@ public record ListResponseData<T>(IEnumerable<T> Items, PaginationMeta Paginatio
 public record ApiListResponse<T>(string Message, ListResponseData<T> Data);
 
 // 3. Định dạng Trả về Lỗi
-public record ApiErrorResponse(string Message, string ErrorCode);
+public record ApiErrorResponse(string Message, Memesploding.Shared.Enums.ErrorCode ErrorCode);

@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Infrastructure.Redis;
+namespace Memesploding.Shared.Infrastructure.Cache;
 
 public interface ICacheStore
 {

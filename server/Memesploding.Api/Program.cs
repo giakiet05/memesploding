@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Memesploding.Api.Data;
-using Memesploding.Shared.Infrastructure.Redis;
+using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
 using Memesploding.Api.Services;
 using Memesploding.Api.Middlewares;
@@ -9,6 +9,7 @@ using StackExchange.Redis;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Memesploding.Api;
 
@@ -36,11 +37,11 @@ public class Program
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
-        // Thêm mảng Controller tĩnh và ĐỔI TẤT CẢ JSON VỀ SNAKE_CASE (Giống tụi Python/Go)
+        // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
         // Ép toàn bộ đường dẫn API tự động chuyển thành chữ thường (lowercase)
@@ -86,6 +87,10 @@ public class Program
 
         // 2 ông thần An ninh - BẮT BUỘC thằng Authentication (Soi thẻ) phải đứng trước Authorization (Cấp quyền)
         app.UseAuthentication();
+        
+        // Kiểm tra xem token có nằm trong danh sách đen (blacklist) không
+        app.UseMiddleware<TokenBlacklistMiddleware>();
+        
         app.UseAuthorization();
         
         // Mapping đường dẫn của tất cả các Class nhãn [ApiController]

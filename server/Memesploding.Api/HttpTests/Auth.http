@@ -7,12 +7,12 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("API trả về thành công 200 OK", function() {
-        client.assert(response.status === 200, "Lỗi cmnr, mã trả về không phải 200, coi chừng sập DB!");
+    client.test("API returns successful 200 OK", function() {
+        client.assert(response.status === 200, "Error: status code is not 200, check database connection!");
     });
-    client.test("Kiểm tra nội dung DTO trả về đúng chuẩn", function() {
-        client.assert(response.body.hasOwnProperty("userId"), "Thiếu mất cột UserId trong JSON trả về");
-        client.assert(response.body.nickname === "GiaKietVipPro", "Server lưu sai Nickname của tao rồi!");
+    client.test("Check DTO response format", function() {
+        client.assert(response.body.hasOwnProperty("userId"), "Missing UserId in JSON response");
+        client.assert(response.body.nickname === "GiaKietVipPro", "Server stored incorrect nickname!");
     });
 %}
 
@@ -25,8 +25,8 @@ Content-Type: application/json
 }
 
 > {%
-    client.test("Server chặn cửa báo 400 Bad Request kịp thời", function() {
-        client.assert(response.status === 400, "Khoan đã, tao truyền rỗng mà mày vẫn cho vào là mày ngu rồi server ơi!");
+    client.test("Server blocks with 400 Bad Request", function() {
+        client.assert(response.status === 400, "Should have failed due to empty payload!");
     });
 %}
 
@@ -37,7 +37,7 @@ Content-Type: application/json
 {}
 
 > {%
-    client.test("Server chặn chát chúa vì thiếu Body", function() {
-        client.assert(response.status === 400, "Chết rồi thằng server, mài định cho nó xài Nickname NULL à?");
+    client.test("Server blocks missing body", function() {
+        client.assert(response.status === 400, "Should have failed: Null nickname is not allowed!");
     });
 %}

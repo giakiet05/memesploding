@@ -17,15 +17,15 @@ public class TokenService : ITokenService
     public TokenService(IConfiguration config)
     {
         _config = config;
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("Thiếu Jwt Key!")));
+        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt Key!")));
     }
 
-    public string GenerateAccessToken(User user, string nickname)
+    public string GenerateAccessToken(User user, string username)
     {
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, nickname),
+            new Claim(JwtRegisteredClaimNames.UniqueName, username),
             new Claim("provider", user.Provider.ToString())
         };
 
@@ -52,5 +52,17 @@ public class TokenService : ITokenService
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
+    }
+
+    public TimeSpan? GetRemainingTime(string accessToken)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        if (!handler.CanReadToken(accessToken)) return null;
+
+        var jwt = handler.ReadJwtToken(accessToken);
+        var remaining = jwt.ValidTo - DateTime.UtcNow;
+
+        // Trả về null nếu token đã hết hạn rồi
+        return remaining > TimeSpan.Zero ? remaining : null;
     }
 }

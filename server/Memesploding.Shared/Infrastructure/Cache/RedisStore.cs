@@ -1,7 +1,7 @@
 using System.Text.Json;
 using StackExchange.Redis;
 
-namespace Memesploding.Shared.Infrastructure.Redis;
+namespace Memesploding.Shared.Infrastructure.Cache;
 
 public class RedisStore : ICacheStore
 {

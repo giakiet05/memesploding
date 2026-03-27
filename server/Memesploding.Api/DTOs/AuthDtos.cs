@@ -1,18 +1,18 @@
 namespace Memesploding.Api.DTOs;
 
 public record RegisterGuestRequestDto(
-    string Nickname
+    string DeviceId     // Client tự sinh 1 lần, lưu vào máy mãi mãi
 );
 
 public record AuthResponseDto(
-    Guid UserId,
-    string Nickname,
+    UserDto User,
     string AccessToken,
-    string RefreshToken
+    string RefreshToken,
+    bool IsNewUser  // True nếu lần đầu đăng nhập → Client hiện màn hình chọn Username
 );
 
 public record LoginGoogleRequestDto(
-    string Code
+    string IdToken
 );
 
 public record RefreshTokenRequestDto(
