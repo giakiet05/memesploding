@@ -1,0 +1,101 @@
+using Microsoft.EntityFrameworkCore;
+using Memesploding.Api.Data;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Infrastructure.Security;
+using Memesploding.Api.Services;
+using Memesploding.Api.Middlewares;
+using Scalar.AspNetCore;
+using StackExchange.Redis;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Text.Json.Serialization;
+
+namespace Memesploding.Api;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Setup Entity Framework Core with PostgreSQL
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+        // Setup Redis
+        var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
+        if (string.IsNullOrEmpty(redisConnectionString))
+            throw new InvalidOperationException("Missing RedisConnection in appsettings.json");
+
+        // Trì hoãn mở kết nối Redis ngay lúc khởi tạo DI Server bằng cách dùng (sp => ...)
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
+            ConnectionMultiplexer.Connect(redisConnectionString));
+        builder.Services.AddSingleton<ICacheStore, RedisStore>();
+
+        // Thêm DI cho Service rẽ nhánh
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+
+        // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
+        builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
+        // Ép toàn bộ đường dẫn API tự động chuyển thành chữ thường (lowercase)
+        builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
+        // Add services to the container.
+        
+        // Thiết lập bộ lọc cửa: Bắt buộc dùng thẻ xông nhà là JWT Bearer
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true, // Phải kiểm tra chữ ký do mình đóng mộc
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+                    ValidateIssuer = true,           // Kiểm tra xem có đúng là Server mình làm ra không
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    ValidateAudience = true,         // Phải chắc chắn cấp cho thằng App nào xài
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    ValidateLifetime = true,         // Hết hạn Token thì đá đít văng ra
+                    ClockSkew = TimeSpan.Zero        // Không cho dây dưa quá hạn 5 phút ảo (đá sấp mặt liền)
+                };
+            });
+
+        builder.Services.AddAuthorization();
+
+        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+        builder.Services.AddOpenApi();
+
+        var app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+            app.MapScalarApiReference(); // Bật giao diện Web xịn xò của Scalar lên!
+        }
+
+        app.UseHttpsRedirection();
+
+        // Gắn Lưới Bắt Lỗi Xịn Xò Ngay Cửa Khẩu (Middleware Chặn Mọi Exception)
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+        // 2 ông thần An ninh - BẮT BUỘC thằng Authentication (Soi thẻ) phải đứng trước Authorization (Cấp quyền)
+        app.UseAuthentication();
+        
+        // Kiểm tra xem token có nằm trong danh sách đen (blacklist) không
+        app.UseMiddleware<TokenBlacklistMiddleware>();
+        
+        app.UseAuthorization();
+        
+        // Mapping đường dẫn của tất cả các Class nhãn [ApiController]
+        app.MapControllers();
+
+        app.Run();
+    }
+}
