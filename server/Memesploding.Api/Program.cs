@@ -15,7 +15,7 @@ namespace Memesploding.Api;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -36,11 +36,19 @@ public class Program
         // Thêm DI cho Service rẽ nhánh
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IFriendshipService, FriendshipService>();
+        builder.Services.AddScoped<ICardSetService, CardSetService>();
+        builder.Services.AddScoped<IRoomService, RoomService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
+        builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+        builder.Services.AddScoped<IMatchService, MatchService>();
 
         // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
+                //options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
@@ -78,6 +86,19 @@ public class Program
         {
             app.MapOpenApi();
             app.MapScalarApiReference(); // Bật giao diện Web xịn xò của Scalar lên!
+        }
+
+        // === Migration & Database Seeding ===
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            // Apply pending migrations
+            dbContext.Database.Migrate();
+            
+            // Seed card sets from YAML
+            var yamlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Seeds", "cards.yaml");
+            await CardSetSeeder.SeedAsync(dbContext, yamlPath);
         }
 
         app.UseHttpsRedirection();

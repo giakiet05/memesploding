@@ -20,12 +20,27 @@ public class AppException : Exception
 
     // --- Factory methods ---
 
+    /// <summary>
+    /// 401 - Authentication issue: token missing/invalid/expired, chưa đăng nhập
+    /// </summary>
     public static AppException Unauthorized(string message = "Unauthorized")
         => new(401, ErrorCode.Unauthorized, message);
 
-    public static AppException NotFound(ErrorCode errorCode, string message)
-        => new(404, errorCode, message);
+    /// <summary>
+    /// 403 - Authorization issue: đã đăng nhập nhưng không có quyền
+    /// </summary>
+    public static AppException Forbidden(string message = "Forbidden")
+        => new(403, ErrorCode.Forbidden, message);
 
+    /// <summary>
+    /// 404 - Resource not found. Message nên specific (e.g., "User not found")
+    /// </summary>
+    public static AppException NotFound(string message = "Not found")
+        => new(404, ErrorCode.NotFound, message);
+
+    /// <summary>
+    /// 400 - Bad request với specific error code cho business logic
+    /// </summary>
     public static AppException BadRequest(ErrorCode errorCode, string message)
         => new(400, errorCode, message);
 }

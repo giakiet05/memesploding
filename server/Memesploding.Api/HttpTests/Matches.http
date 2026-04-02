@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:5217/api/v1
+
+### 1. Login to get token
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "test-matches-device"
+}
+
+### 2. Get my match history (should be empty initially)
+GET {{baseUrl}}/me/match-history?page=1&pageSize=10
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 3. Get my match history page 2
+GET {{baseUrl}}/me/match-history?page=2&pageSize=10
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 4. Get another user's match history (replace with actual user ID)
+GET {{baseUrl}}/users/00000000-0000-0000-0000-000000000000/match-history?page=1&pageSize=10
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 5. Get match detail (replace with actual match ID)
+GET {{baseUrl}}/matches/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 6. Get match history without auth (401)
+GET {{baseUrl}}/me/match-history
+
+### 7. Get invalid user's match history (404)
+GET {{baseUrl}}/users/00000000-0000-0000-0000-000000000000/match-history
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 8. Get invalid match detail (404)
+GET {{baseUrl}}/matches/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}

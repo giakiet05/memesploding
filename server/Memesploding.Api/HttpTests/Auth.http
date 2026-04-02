@@ -1,43 +1,48 @@
-### 1. Test Case Tốt (Mọi thứ suôn sẻ) - Mong đợi 200 OK
+### 1. Test Case: Register Guest (Success) - Expected 200 OK
+# @name loginGuest
 POST {{host}}/api/v1/auth/guest
 Content-Type: application/json
 
 {
-  "nickname": "GiaKietVipPro"
+  "deviceId": "{{deviceId}}"
 }
 
 > {%
     client.test("API returns successful 200 OK", function() {
-        client.assert(response.status === 200, "Error: status code is not 200, check database connection!");
+        client.assert(response.status === 200, "Error: status code is not 200");
     });
     client.test("Check DTO response format", function() {
-        client.assert(response.body.hasOwnProperty("userId"), "Missing UserId in JSON response");
-        client.assert(response.body.nickname === "GiaKietVipPro", "Server stored incorrect nickname!");
+        client.assert(response.body.data.hasOwnProperty("user"), "Missing user in JSON response");
+        client.assert(response.body.data.hasOwnProperty("accessToken"), "Missing accessToken in JSON response");
+        client.global.set("accessToken", response.body.data.accessToken);
     });
 %}
 
-### 2. Test Case Sai (Cố tình chèn Nickname rỗng) - Mong đợi 400 Bad Request
+
+### 2. Test Case: Missing DeviceId (Bad Request) - Expected 400 Bad Request
 POST {{host}}/api/v1/auth/guest
 Content-Type: application/json
 
 {
-  "nickname": "    "
+  "deviceId": ""
 }
 
 > {%
-    client.test("Server blocks with 400 Bad Request", function() {
-        client.assert(response.status === 400, "Should have failed due to empty payload!");
+    client.test("Server blocks empty deviceId with 400", function() {
+        client.assert(response.status === 400, "Should have failed due to empty deviceId!");
     });
 %}
 
-### 3. Test Case Sai (Đéo xì Data Nickname ra luôn) - Mong đợi 400 Bad Request
-POST {{host}}/api/v1/auth/guest
+### 3. Test Case: Invalid Google Token (Unauthorized) - Expected 401 Unauthorized
+POST {{host}}/api/v1/auth/google
 Content-Type: application/json
 
-{}
+{
+  "idToken": "invalid-token-blah-blah"
+}
 
 > {%
-    client.test("Server blocks missing body", function() {
-        client.assert(response.status === 400, "Should have failed: Null nickname is not allowed!");
+    client.test("Server blocks invalid google token", function() {
+        client.assert(response.status === 401, "Should have failed with 401!");
     });
 %}

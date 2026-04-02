@@ -8,7 +8,7 @@ public class Friendship
     public Guid UserId1 { get; set; }
     public Guid UserId2 { get; set; }
     public FriendshipStatus Status { get; set; }
-    
+    public Guid RequesterId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

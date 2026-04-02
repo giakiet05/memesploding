@@ -14,6 +14,15 @@ public enum FriendshipStatus
     Blocked
 }
 
+public enum RelationshipType
+{
+    None,            // Người lạ
+    PendingSent,     // Lời mời do mình gửi
+    PendingReceived, // Lời mời do đối phương gửi
+    Accepted,        // Đã là bạn
+    Blocked          // Đã block hoặc bị block
+}
+
 public enum CardType 
 {
     Action,

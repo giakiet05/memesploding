@@ -388,17 +388,6 @@ Hủy kết bạn (chỉ dành cho status='accepted')
 }
 ```
 
-### DELETE /friends/:id
-Hủy kết bạn (chỉ dành cho status='accepted')
-
-**Response (200 OK):**
-```json
-{
-	"message": "Friendship removed successfully",
-	"data": null
-}
-```
-
 
 # 4. Rooms
 
