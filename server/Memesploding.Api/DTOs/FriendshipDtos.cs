@@ -2,10 +2,11 @@ using Memesploding.Shared.Enums;
 
 namespace Memesploding.Api.DTOs;
 
-public record FriendshipQueryDto(
-    FriendshipStatus? Status = null,
-    PaginationQueryDto? Pagination = null
-);
+public record FriendshipQueryDto
+{
+    public FriendshipStatus? Status { get; init; } = null;
+    public PaginationQueryDto Pagination { get; init; } = new();
+}
 
 public record FriendshipRequestDto(
     Guid UserId

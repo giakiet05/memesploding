@@ -1,8 +1,8 @@
 using Memesploding.Api.DTOs;
+using Memesploding.Api.Extensions;
 using Memesploding.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Memesploding.Api.Controllers;
 
@@ -21,8 +21,8 @@ public class MatchesController : ControllerBase
     [HttpGet("me/match-history")]
     public async Task<IActionResult> GetMyMatchHistory([FromQuery] PaginationQueryDto query)
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var matches = await _matchService.GetMyMatchHistoryAsync(userId, query);
+        var userId = User.GetUserId();
+        var matches = await _matchService.GetUserMatchHistoryAsync(userId, query);
         return Ok(new ApiResponse<ListResponseData<MatchSummaryDto>>("Successfully!", matches));
     }
 

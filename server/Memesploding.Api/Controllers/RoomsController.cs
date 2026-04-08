@@ -1,8 +1,8 @@
 using Memesploding.Api.DTOs;
+using Memesploding.Api.Extensions;
 using Memesploding.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Memesploding.Api.Controllers;
 
@@ -21,7 +21,7 @@ public class RoomsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateRoom([FromBody] CreateRoomDto dto)
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var room = await _roomService.CreateRoomAsync(userId, dto);
         
         return CreatedAtAction(

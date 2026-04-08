@@ -3,10 +3,13 @@ using System.ComponentModel.DataAnnotations;
 namespace Memesploding.Api.DTOs;
 
 public record CreateRoomDto(
-    [Range(2, 10)] int MaxPlayers,
+    [Range(2, 6)] int MaxPlayers,
     bool IsPublic,
     List<Guid> CardSetIds
 );
+
+// Quick Play không cần input - random vào phòng public bất kỳ
+public record QuickPlayDto;
 
 public record RoomQueryDto : PaginationQueryDto
 {

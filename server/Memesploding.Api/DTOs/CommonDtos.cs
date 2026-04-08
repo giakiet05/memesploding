@@ -8,7 +8,11 @@ namespace Memesploding.Api.DTOs;
 public record ApiResponse<T>(string Message, T Data);
 
 // 2. Định dạng Trả về Data Danh Sách (Kèm Nhảy Trang)
-public record PaginationQueryDto(int Page = 1, int PageSize = 20);
+public record PaginationQueryDto
+{
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 20;
+}
 public record PaginationMeta(int Page, int PageSize, int TotalCount, bool HasMore);
 public record ListResponseData<T>(IEnumerable<T> Items, PaginationMeta Pagination);
 public record ApiListResponse<T>(string Message, ListResponseData<T> Data);

@@ -67,7 +67,7 @@ public class UserController(IUserService userService) : ControllerBase
     public async Task<ActionResult<ApiListResponse<UserProfileDto>>> GetLeaderboard([FromQuery] PaginationQueryDto pagination)
     {
         var currentUserId = User.GetUserId(); // Leaderboard cũng nên thấy quan hệ xã hội
-        var result = await userService.GetUsersAsync(currentUserId, new UserQueryDto(null, pagination));
+        var result = await userService.GetUsersAsync(currentUserId, new UserQueryDto { Pagination = pagination });
         return Ok(new ApiListResponse<UserProfileDto>("Leaderboard retrieved successfully", result));
     }
 }

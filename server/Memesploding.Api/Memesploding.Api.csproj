@@ -11,6 +11,7 @@
         <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="*" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="*">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -1,0 +1,12 @@
+### Matchmaking Quick Play - No filter, truly quick!
+POST {{Memesploding.Api_HostAddress}}/api/v1/matchmaking/quick-play
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+### Matchmaking Quick Play - Already in room error
+# Create a room first, then try quick play again
+POST {{Memesploding.Api_HostAddress}}/api/v1/matchmaking/quick-play
+Accept: application/json
+Authorization: Bearer {{authToken}}
+

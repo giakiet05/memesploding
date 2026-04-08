@@ -3,6 +3,7 @@ using Memesploding.Api.Data;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
 using Memesploding.Api.Services;
+using Memesploding.Api.Workers;
 using Memesploding.Api.Middlewares;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
@@ -41,14 +42,25 @@ public class Program
         builder.Services.AddScoped<ICardSetService, CardSetService>();
         builder.Services.AddScoped<IRoomService, RoomService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
-        builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
         builder.Services.AddScoped<IMatchService, MatchService>();
+        builder.Services.AddScoped<IMatchmakingService, MatchmakingService>();
+        builder.Services.AddScoped<IPresenceService, PresenceService>();
+        builder.Services.AddScoped<IInvitationService, InvitationService>();
+
+        // SignalR for WebSocket
+        builder.Services.AddSignalR()
+            .AddJsonProtocol(options => {
+                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
+        // Background services
+        builder.Services.AddHostedService<RoomUpdateListenerService>();
 
         // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
-                //options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
@@ -71,6 +83,23 @@ public class Program
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     ValidateLifetime = true,         // Hết hạn Token thì đá đít văng ra
                     ClockSkew = TimeSpan.Zero        // Không cho dây dưa quá hạn 5 phút ảo (đá sấp mặt liền)
+                };
+
+                // SignalR: JWT từ query string (WebSocket không support Authorization header)
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/ws"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
@@ -116,6 +145,10 @@ public class Program
         
         // Mapping đường dẫn của tất cả các Class nhãn [ApiController]
         app.MapControllers();
+
+        // SignalR WebSocket endpoint
+        app.MapHub<Memesploding.Api.Hubs.PresenceHub>("/ws")
+            .RequireAuthorization();
 
         app.Run();
     }

@@ -6,7 +6,11 @@ namespace Memesploding.Api.DTOs;
 
 public record UpdateUserRequestDto(string? Username, string? Bio, string? AvatarUrl);
 
-public record UserQueryDto(string? SearchQuery, PaginationQueryDto Pagination);
+public record UserQueryDto
+{
+    public string? SearchQuery { get; init; }
+    public PaginationQueryDto Pagination { get; init; } = new();
+}
 
 public record UserStatsDto(
     long Xp,

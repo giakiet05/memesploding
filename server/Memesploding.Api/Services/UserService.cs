@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Memesploding.Api.Services;
 
-public class UserService(ApplicationDbContext db, ICacheStore cache) : IUserService
+public class UserService(ApplicationDbContext db) : IUserService
 {
     public async Task<MeDto> GetMeAsync(Guid userId)
     {

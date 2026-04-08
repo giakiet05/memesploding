@@ -1,13 +1,17 @@
 using Memesploding.Api.Data;
 using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
+using Memesploding.Api.Hubs;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Memesploding.Api.Services;
 
-public class FriendshipService(ApplicationDbContext db) : IFriendshipService
+public class FriendshipService(
+    ApplicationDbContext db, 
+    IHubContext<PresenceHub> hubContext) : IFriendshipService
 {
     public async Task<ListResponseData<UserProfileDto>> GetFriendsAsync(Guid userId, FriendshipQueryDto query)
     {
@@ -21,9 +25,9 @@ public class FriendshipService(ApplicationDbContext db) : IFriendshipService
 
         var totalCount = await baseQuery.CountAsync();
         
-        var pagination = query.Pagination ?? new PaginationQueryDto();
-        var page = pagination.Page;
-        var pageSize = pagination.PageSize;
+        // Sử dụng trực tiếp từ DTO vì đã có mặc định
+        var page = query.Pagination.Page;
+        var pageSize = query.Pagination.PageSize;
 
         var friendships = await baseQuery
             .OrderByDescending(f => f.UpdatedAt)
@@ -59,8 +63,9 @@ public class FriendshipService(ApplicationDbContext db) : IFriendshipService
         if (senderId == receiverId)
             throw AppException.BadRequest(ErrorCode.ValidationFailed, "You cannot send a friend request to yourself.");
 
+        var sender = await db.Users.FindAsync(senderId);
         var receiver = await db.Users.FindAsync(receiverId);
-        if (receiver == null)
+        if (receiver == null || sender == null)
             throw AppException.NotFound("User not found.");
 
         var (uid1, uid2) = NormalizeUserIds(senderId, receiverId);
@@ -86,6 +91,13 @@ public class FriendshipService(ApplicationDbContext db) : IFriendshipService
         db.Friendships.Add(friendship);
         await db.SaveChangesAsync();
 
+        // Bắn tin realtime chuẩn hoá cho thằng nhận qua SignalR kèm theo Avatar
+        var wsPayload = WsMessage<WsFriendRequestDto>.Create(
+            WsEventType.FriendRequestReceived, 
+            new WsFriendRequestDto(senderId, sender.Username, sender.AvatarUrl ?? "", $"User {sender.Username} sent you a friend request.")
+        );
+        await hubContext.Clients.User(receiverId.ToString()).SendAsync("ReceiveMessage", wsPayload);
+
         return UserProfileDto.FromEntity(receiver, RelationshipType.PendingSent);
     }
 
@@ -103,7 +115,8 @@ public class FriendshipService(ApplicationDbContext db) : IFriendshipService
             throw AppException.BadRequest(ErrorCode.ValidationFailed, "You cannot respond to your own friend request.");
 
         var requester = await db.Users.FindAsync(requesterId);
-        if (requester == null)
+        var currentUser = await db.Users.FindAsync(userId);
+        if (requester == null || currentUser == null)
             throw AppException.NotFound("User not found.");
 
         if (accept)
@@ -111,6 +124,14 @@ public class FriendshipService(ApplicationDbContext db) : IFriendshipService
             friendship.Status = FriendshipStatus.Accepted;
             friendship.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
+
+            // Bắn tin realtime chuẩn hoá cho thằng gửi ban đầu kèm Avatar của thằng vừa accept
+            var wsPayload = WsMessage<WsFriendRequestDto>.Create(
+                WsEventType.FriendRequestAccepted, 
+                new WsFriendRequestDto(userId, currentUser.Username, currentUser.AvatarUrl ?? "", $"{currentUser.Username} accepted your friend request.")
+            );
+            await hubContext.Clients.User(requesterId.ToString()).SendAsync("ReceiveMessage", wsPayload);
+
             return UserProfileDto.FromEntity(requester, RelationshipType.Accepted);
         }
         else
