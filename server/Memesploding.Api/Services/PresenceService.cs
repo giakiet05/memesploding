@@ -11,7 +11,7 @@ public class PresenceService : IPresenceService
 {
     private readonly ICacheStore _cache;
     private readonly ApplicationDbContext _db;
-    private readonly IHubContext<Hubs.PresenceHub> _hubContext;
+    private readonly IHubContext<Hubs.AppHub> _hubContext;
     private readonly ILogger<PresenceService> _logger;
     
     private const int PresenceTtlMinutes = 10;
@@ -19,7 +19,7 @@ public class PresenceService : IPresenceService
     public PresenceService(
         ICacheStore cache, 
         ApplicationDbContext db,
-        IHubContext<Hubs.PresenceHub> hubContext,
+        IHubContext<Hubs.AppHub> hubContext,
         ILogger<PresenceService> logger)
     {
         _cache = cache;

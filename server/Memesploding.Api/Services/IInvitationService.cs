@@ -1,28 +1,28 @@
+using Memesploding.Shared.Enums;
+using Memesploding.Api.DTOs;
+
 namespace Memesploding.Api.Services;
 
 public interface IInvitationService
 {
-
-    Task<(bool Success, string? ErrorCode, string? ErrorMessage)> InviteToRoomAsync(
+    Task<ServiceResult> InviteToRoomAsync(
         Guid inviterId, 
         string roomCode, 
         Guid friendUserId
     );
 
-
-    Task<(bool Success, string? ErrorCode, string? ErrorMessage)> RespondInvitationAsync(
+    Task<ServiceResult> RespondInvitationAsync(
         Guid userId,
         string invitationId,
         bool accepted
     );
 
-    Task<(bool Success, string? ErrorCode, string? ErrorMessage)> RequestJoinRoomAsync(
+    Task<ServiceResult> RequestJoinRoomAsync(
         Guid requesterId,
         string roomCode
     );
-
    
-    Task<(bool Success, string? ErrorCode, string? ErrorMessage)> RespondJoinRequestAsync(
+    Task<ServiceResult> RespondJoinRequestAsync(
         Guid userId,
         string requestId,
         bool accepted

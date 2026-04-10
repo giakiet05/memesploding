@@ -7,170 +7,75 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Memesploding.Api.Services;
 
-public class MatchmakingService : IMatchmakingService
+public class MatchmakingService(ICacheStore cache, ApplicationDbContext db, IRoomService roomService) : IMatchmakingService
 {
-    private readonly ICacheStore _cache;
-    private readonly ApplicationDbContext _db;
-    private readonly IRoomService _roomService;
-    private const string PublicRoomsSetKey = "public_rooms";
-    private const string RoomKeyPrefix = "room:";
-
-    public MatchmakingService(ICacheStore cache, ApplicationDbContext db, IRoomService roomService)
-    {
-        _cache = cache;
-        _db = db;
-        _roomService = roomService;
-    }
-
     public async Task<RoomDetailDto> QuickPlayAsync(Guid userId)
     {
         // 1. Check if user already in a room
-        var userRoomKey = $"user:{userId}:room";
-        var existingRoomCode = await _cache.StringGetAsync(userRoomKey);
+        var existingRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
         if (!string.IsNullOrEmpty(existingRoomCode))
         {
             throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in a room");
         }
 
-        // 2. Find any available public room (no filter - truly quick!)
+        // 2. Find available public rooms
         var availableRooms = await FindAvailableRoomsAsync();
 
-        // 3. Pick best room (closest to full for faster start)
-        var bestRoom = availableRooms
-            .OrderByDescending(r => r.CurrentPlayers)
-            .FirstOrDefault();
+        // 3. Pick best room (most full)
+        var bestRoom = availableRooms.OrderByDescending(r => r.CurrentPlayers).FirstOrDefault();
 
-        // 4. Join existing room or create new
         if (bestRoom != null)
         {
-            // Try to join - might fail if room just filled up (race condition)
             try
             {
-                return await JoinExistingRoomAsync(userId, bestRoom.Code);
+                return await roomService.JoinRoomAsync(userId, bestRoom.Code);
             }
-            catch (AppException ex) when (ex.Message.Contains("full"))
+            catch (AppException ex) when (ex.ErrorCode == ErrorCode.ValidationFailed)
             {
-                // Room filled up, try next best or create new
-                var nextBest = availableRooms
-                    .Where(r => r.Code != bestRoom.Code)
-                    .OrderByDescending(r => r.CurrentPlayers)
-                    .FirstOrDefault();
-
-                if (nextBest != null)
-                {
-                    return await JoinExistingRoomAsync(userId, nextBest.Code);
-                }
-                
-                // No other rooms, create new with default settings
+                // Room might be full now, try next or create
                 return await CreateNewRoomAsync(userId);
             }
         }
-        else
-        {
-            // No available rooms, create new
-            return await CreateNewRoomAsync(userId);
-        }
+
+        return await CreateNewRoomAsync(userId);
     }
 
     private async Task<List<AvailableRoomInfo>> FindAvailableRoomsAsync()
     {
-        var publicRoomCodes = await _cache.SetMembersAsync(PublicRoomsSetKey);
+        var publicRoomCodes = await cache.SetMembersAsync(CacheKeys.PublicRooms());
         var availableRooms = new List<AvailableRoomInfo>();
 
         foreach (var code in publicRoomCodes)
         {
-            var roomCode = code.ToString();
-            var roomKey = $"{RoomKeyPrefix}{roomCode}";
+            var roomInfo = await cache.HashGetAllAsync(CacheKeys.RoomInfo(code));
+            if (roomInfo.Length == 0) continue;
 
-            // Get room metadata
-            var roomData = await _cache.HashGetAllAsync(roomKey);
-            if (roomData.Length == 0) continue;
-
-            var roomDict = roomData.ToDictionary(
-                x => x.Name.ToString(),
-                x => x.Value.ToString()
-            );
-
-            // Only include waiting rooms
+            var roomDict = roomInfo.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
             if (roomDict.GetValueOrDefault("status") != "waiting") continue;
 
-            // Check if room is full
+            var currentPlayers = await cache.HashLengthAsync(CacheKeys.RoomParticipants(code));
             var maxPlayers = int.Parse(roomDict.GetValueOrDefault("max_players", "6"));
-            var participantsKey = $"{roomKey}:participants";
-            var currentPlayers = await _cache.HashLengthAsync(participantsKey);
 
-            if (currentPlayers >= maxPlayers) continue;
-
-            availableRooms.Add(new AvailableRoomInfo
+            if (currentPlayers < maxPlayers)
             {
-                Code = roomCode,
-                CurrentPlayers = (int)currentPlayers,
-                MaxPlayers = maxPlayers
-            });
+                availableRooms.Add(new AvailableRoomInfo { Code = code, CurrentPlayers = (int)currentPlayers, MaxPlayers = maxPlayers });
+            }
         }
 
         return availableRooms;
     }
 
-    private async Task<RoomDetailDto> JoinExistingRoomAsync(Guid userId, string roomCode)
-    {
-        var room = await _roomService.GetRoomByCodeAsync(roomCode);
-        
-        // Check room not full
-        if (room.CurrentParticipants.Count >= room.Settings.MaxPlayers)
-        {
-            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Room is full");
-        }
-
-        // Get user info
-        var user = await _db.Users
-            .Where(u => u.Id == userId)
-            .Select(u => new { u.Id, u.Username, u.AvatarUrl })
-            .FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw AppException.NotFound("User not found");
-        }
-
-        // Add participant to Redis
-        var roomKey = $"{RoomKeyPrefix}{roomCode}";
-        var participantsKey = $"{roomKey}:participants";
-        
-        var participantData = new
-        {
-            user_id = userId.ToString(),
-            nickname = user.Username,
-            avatar_url = user.AvatarUrl ?? "",
-            role = "player",
-            is_ready = true // Auto-ready for matchmaking
-        };
-
-        await _cache.HashSetAsync(participantsKey, userId.ToString(), System.Text.Json.JsonSerializer.Serialize(participantData));
-        await _cache.StringSetAsync($"user:{userId}:room", roomCode);
-
-        // Return updated room details
-        return await _roomService.GetRoomByCodeAsync(roomCode);
-    }
-
     private async Task<RoomDetailDto> CreateNewRoomAsync(Guid userId)
     {
-        // Create with default settings - Original card set only
-        var originalCardSet = await _db.CardSets
+        var originalCardSet = await db.CardSets
             .Where(cs => cs.Name == "Original" && cs.IsActive)
             .Select(cs => cs.Id)
             .FirstOrDefaultAsync();
 
         if (originalCardSet == Guid.Empty)
-        {
             throw AppException.BadRequest(ErrorCode.InternalError, "Default card set not found");
-        }
 
-        return await _roomService.CreateRoomAsync(userId, new CreateRoomDto(
-            MaxPlayers: 6,
-            IsPublic: true,
-            CardSetIds: [originalCardSet]
-        ));
+        return await roomService.CreateRoomAsync(userId, new CreateRoomDto(6, true, [originalCardSet]));
     }
 
     private class AvailableRoomInfo

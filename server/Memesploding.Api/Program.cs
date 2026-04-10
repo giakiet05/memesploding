@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Memesploding.Api.Data;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
+using Memesploding.Shared.Infrastructure.EventBus;
 using Memesploding.Api.Services;
 using Memesploding.Api.Workers;
 using Memesploding.Api.Middlewares;
@@ -33,6 +34,9 @@ public class Program
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
             ConnectionMultiplexer.Connect(redisConnectionString));
         builder.Services.AddSingleton<ICacheStore, RedisStore>();
+        
+        // Đăng ký Event Bus
+        builder.Services.AddSingleton<IEventBus, RedisEventBus>();
 
         // Thêm DI cho Service rẽ nhánh
         builder.Services.AddScoped<ITokenService, TokenService>();
@@ -54,7 +58,9 @@ public class Program
             });
 
         // Background services
-        builder.Services.AddHostedService<RoomUpdateListenerService>();
+        builder.Services.AddHostedService<FriendshipEventWorker>();
+        builder.Services.AddHostedService<RoomEventWorker>();
+        builder.Services.AddHostedService<PresenceEventWorker>();
 
         // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()
@@ -147,7 +153,7 @@ public class Program
         app.MapControllers();
 
         // SignalR WebSocket endpoint
-        app.MapHub<Memesploding.Api.Hubs.PresenceHub>("/ws")
+        app.MapHub<Memesploding.Api.Hubs.AppHub>("/ws")
             .RequireAuthorization();
 
         app.Run();

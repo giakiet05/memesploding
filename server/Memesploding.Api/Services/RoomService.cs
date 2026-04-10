@@ -39,19 +39,17 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         var participantsKey = CacheKeys.RoomParticipants(roomCode);
         var cardSetsKey = CacheKeys.RoomCardSets(roomCode);
 
-        // Chuẩn hoá camelCase cho JSON lưu trong Redis để đồng bộ với API
         var participantData = new
         {
             userId = hostId,
             nickname = host.Username,
             avatarUrl = host.AvatarUrl ?? "",
-            role = "player",
+            role = "host", // Host role
             isReady = true
         };
 
         var transaction = cache.CreateTransaction();
         
-        // Lưu metadata vào Hash bằng snake_case (Chuẩn Redis)
         _ = transaction.HashSetAsync(roomInfoKey, new HashEntry[]
         {
             new("host_id", hostId.ToString()),
@@ -74,22 +72,54 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
 
         await transaction.ExecuteAsync();
 
-        return new RoomDetailDto(
-            Code: roomCode,
-            HostId: hostId,
-            Status: "waiting",
-            IsPublic: dto.IsPublic,
-            Settings: new RoomSettingsDto(dto.MaxPlayers, 15),
-            CardSets: cardSets.Select(cs => new CardSetInfoDto(cs.Id, cs.Name)).ToList(),
-            CurrentParticipants: new List<RoomParticipantDto>
-            {
-                new(hostId, host.Username, host.AvatarUrl ?? "", "player", true)
-            },
-            Connection: new RoomConnectionDto(
-                WsUrl: "ws://localhost:5217/ws", // TODO: Get from config
-                WsAccessToken: "placeholder"
-            )
-        );
+        return await GetRoomByCodeAsync(roomCode);
+    }
+
+    public async Task<RoomDetailDto> JoinRoomAsync(Guid userId, string roomCode)
+    {
+        roomCode = roomCode.ToUpper();
+        
+        // 1. Check if user already in a room
+        var existingRoom = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
+        if (!string.IsNullOrEmpty(existingRoom))
+        {
+            if (existingRoom == roomCode) return await GetRoomByCodeAsync(roomCode);
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in another room");
+        }
+
+        // 2. Check room existence and capacity
+        var roomInfoKey = CacheKeys.RoomInfo(roomCode);
+        var roomData = await cache.HashGetAllAsync(roomInfoKey);
+        if (roomData.Length == 0) throw AppException.NotFound("Room not found");
+
+        var roomDict = roomData.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+        var participantsKey = CacheKeys.RoomParticipants(roomCode);
+        var currentCount = await cache.HashLengthAsync(participantsKey);
+        var maxPlayers = int.Parse(roomDict["max_players"]);
+
+        if (currentCount >= maxPlayers) throw AppException.BadRequest(ErrorCode.ValidationFailed, "Room is full");
+
+        // 3. Get user info
+        var user = await db.Users.FindAsync(userId);
+        if (user == null) throw AppException.NotFound("User not found");
+
+        // 4. Add to participants
+        var participantData = new
+        {
+            userId = userId,
+            nickname = user.Username,
+            avatarUrl = user.AvatarUrl ?? "",
+            role = "player",
+            isReady = false
+        };
+
+        var transaction = cache.CreateTransaction();
+        _ = transaction.HashSetAsync(participantsKey, userId.ToString(), JsonSerializer.Serialize(participantData));
+        _ = transaction.StringSetAsync(CacheKeys.UserInRoom(userId), roomCode);
+        
+        await transaction.ExecuteAsync();
+
+        return await GetRoomByCodeAsync(roomCode);
     }
 
     public async Task<ListResponseData<RoomSummaryDto>> GetPublicRoomsAsync(RoomQueryDto query)
@@ -120,16 +150,7 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
             var hostId = Guid.Parse(roomDict["host_id"]);
             var hostNickname = await db.Users.Where(u => u.Id == hostId).Select(u => u.Username).FirstOrDefaultAsync() ?? "Unknown";
 
-            rooms.Add(new RoomSummaryDto(
-                code, 
-                hostId, 
-                hostNickname, 
-                maxPlayers, 
-                (int)participantCount, 
-                roomDict["status"], 
-                cardSets, 
-                bool.Parse(roomDict.GetValueOrDefault("is_public", "false")), 
-                DateTime.Parse(roomDict.GetValueOrDefault("created_at", DateTime.UtcNow.ToString("O")))));
+            rooms.Add(new RoomSummaryDto(code, hostId, hostNickname, maxPlayers, (int)participantCount, roomDict["status"], cardSets, bool.Parse(roomDict.GetValueOrDefault("is_public", "false")), DateTime.Parse(roomDict.GetValueOrDefault("created_at", DateTime.UtcNow.ToString("O")))));
         }
 
         var totalCount = rooms.Count;
@@ -147,7 +168,6 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         var participantsData = await cache.HashGetAllAsync(CacheKeys.RoomParticipants(code));
         
         var participants = participantsData.Select(entry => {
-            // Dùng Dictionary để linh hoạt parse cả camelCase và PascalCase (phòng hờ data cũ)
             var p = JsonSerializer.Deserialize<JsonElement>(entry.Value.ToString());
             return new RoomParticipantDto(
                 UserId: Guid.Parse(GetJsonProp(p, "userId", "user_id")),
@@ -162,16 +182,7 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         var cardSetGuids = cardSetIds.Select(x => Guid.Parse(x)).ToList();
         var cardSets = await db.CardSets.Where(cs => cardSetGuids.Contains(cs.Id)).Select(cs => new CardSetInfoDto(cs.Id, cs.Name)).ToListAsync();
 
-        return new RoomDetailDto(
-            code, 
-            Guid.Parse(roomDict["host_id"]), 
-            roomDict["status"], 
-            bool.Parse(roomDict["is_public"]), 
-            new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict["turn_timer"])), 
-            cardSets, 
-            participants, 
-            new RoomConnectionDto("ws://localhost:5217/ws", "placeholder")
-        );
+        return new RoomDetailDto(code, Guid.Parse(roomDict["host_id"]), roomDict["status"], bool.Parse(roomDict["is_public"]), new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict["turn_timer"])), cardSets, participants, new RoomConnectionDto("ws://localhost:5217/ws", "placeholder"));
     }
 
     private string GetJsonProp(JsonElement el, string camel, string? snake = null)

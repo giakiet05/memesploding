@@ -16,7 +16,6 @@ public static class CacheKeys
 
     // 3. Invitations (Mời vào phòng)
     public static string Invitation(string invitationId) => $"invitation:{invitationId}";
-    public static string UserInvitationIndex(Guid userId) => $"invitation_index:{userId}";
     public static string InviteRateLimit(Guid inviterId, Guid friendId) => $"invite_ratelimit:{inviterId}:{friendId}";
 
     // 4. Join Requests (Xin vào phòng riêng)

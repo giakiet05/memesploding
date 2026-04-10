@@ -1,17 +1,17 @@
 using Memesploding.Api.Data;
 using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
-using Memesploding.Api.Hubs;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
-using Microsoft.AspNetCore.SignalR;
+using Memesploding.Shared.Events;
+using Memesploding.Shared.Infrastructure.EventBus;
 using Microsoft.EntityFrameworkCore;
 
 namespace Memesploding.Api.Services;
 
 public class FriendshipService(
     ApplicationDbContext db, 
-    IHubContext<PresenceHub> hubContext) : IFriendshipService
+    IEventBus eventBus) : IFriendshipService
 {
     public async Task<ListResponseData<UserProfileDto>> GetFriendsAsync(Guid userId, FriendshipQueryDto query)
     {
@@ -91,12 +91,9 @@ public class FriendshipService(
         db.Friendships.Add(friendship);
         await db.SaveChangesAsync();
 
-        // Bắn tin realtime chuẩn hoá cho thằng nhận qua SignalR kèm theo Avatar
-        var wsPayload = WsMessage<WsFriendRequestDto>.Create(
-            WsEventType.FriendRequestReceived, 
-            new WsFriendRequestDto(senderId, sender.Username, sender.AvatarUrl ?? "", $"User {sender.Username} sent you a friend request.")
-        );
-        await hubContext.Clients.User(receiverId.ToString()).SendAsync("ReceiveMessage", wsPayload);
+        // Bắn event ra Redis thay vì gọi trực tiếp SignalR
+        var @event = new FriendRequestSentEvent(senderId, sender.Username, sender.AvatarUrl ?? "", receiverId);
+        await eventBus.PublishAsync(EventChannels.FriendRequestSent, @event);
 
         return UserProfileDto.FromEntity(receiver, RelationshipType.PendingSent);
     }
@@ -125,12 +122,9 @@ public class FriendshipService(
             friendship.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            // Bắn tin realtime chuẩn hoá cho thằng gửi ban đầu kèm Avatar của thằng vừa accept
-            var wsPayload = WsMessage<WsFriendRequestDto>.Create(
-                WsEventType.FriendRequestAccepted, 
-                new WsFriendRequestDto(userId, currentUser.Username, currentUser.AvatarUrl ?? "", $"{currentUser.Username} accepted your friend request.")
-            );
-            await hubContext.Clients.User(requesterId.ToString()).SendAsync("ReceiveMessage", wsPayload);
+            // Bắn event ra Redis
+            var @event = new FriendRequestRespondedEvent(requesterId, userId, currentUser.Username, true);
+            await eventBus.PublishAsync(EventChannels.FriendRequestResponded, @event);
 
             return UserProfileDto.FromEntity(requester, RelationshipType.Accepted);
         }

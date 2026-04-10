@@ -54,4 +54,22 @@ public enum ErrorCode
 
     [JsonStringEnumMemberName("ALREADY_FRIENDS")]
     AlreadyFriends,
+
+    [JsonStringEnumMemberName("NOT_IN_ROOM")]
+    NotInRoom,
+
+    [JsonStringEnumMemberName("NOT_FRIENDS")]
+    NotFriends,
+
+    [JsonStringEnumMemberName("RATE_LIMITED")]
+    RateLimited,
+
+    [JsonStringEnumMemberName("INVITATION_NOT_FOUND")]
+    InvitationNotFound,
+
+    [JsonStringEnumMemberName("ROOM_PUBLIC")]
+    RoomPublic,
+
+    [JsonStringEnumMemberName("REQUEST_NOT_FOUND")]
+    RequestNotFound,
 }
