@@ -1,1025 +1,747 @@
-# Base URL
+# REST API - Shared Contract (Server <-> Client)
+
+## Base URL
+
 - Local: `http://localhost:8080/api/v1`
 - Remote: `https://api.memesploding.com/api/v1`
 
-# Success response format
+---
 
-```json
-{
-	"message": "Successfully!", // for debugging
-	"data": {} // data field can be any types, even null
-}
-```
+## Auth
 
-### *List response format*
-```json
-{
-	"message": "Successfully",
-	"data": {
-		"items": [],
-		"pagination": {
-			"page": 1,
-			"page_size": 20,
-			"total_count": 200,
-			"has_more": true
-		}
-	}
-}
+Trừ nhóm `/auth/*`, tất cả endpoint cần header:
 
-```
-# Error response format
-
-```json
-{
-	"message": "Internal error happened!", // for debugging
-	"error_code": "INTERNAL_ERROR"
-}
-```
-
-# Authentication
-
-Tất cả endpoints (trừ `/auth/*` endpoints) đều cần gửi access token qua header:
-
-**Header:**
-```
+```http
 Authorization: Bearer <access_token>
 ```
 
-Nếu access token hết hạn, gọi `POST /auth/refresh` để lấy token mới.
+---
+
+## Response format
+
+### Success (single)
+
+```json
+{
+  "message": "string",
+  "data": {}
+}
+```
+
+### Success (list)
+
+```json
+{
+  "message": "string",
+  "data": {
+    "items": [],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 0,
+      "hasMore": false
+    }
+  }
+}
+```
+
+### Error
+
+```json
+{
+  "message": "string",
+  "errorCode": "INTERNAL_ERROR"
+}
+```
 
 ---
 
-# 1. Authentication
+## 1) Authentication
 
-### POST /auth/google 
-Đăng nhập bằng Google
+### POST `/auth/guest`
 
-**Request:**
+**Request**
+
 ```json
 {
-	"code": "string" // OAuth2 authorization code
+  "deviceId": "device-unique-id"
 }
 ```
 
-**Response (200 OK):**
+**Response 200**
+
 ```json
 {
-	"message": "Login successful",
-	"data": {
-		"access_token": "string",
-		"refresh_token": "string",
-		"user": {
-			"id": "uuid",
-			"provider": "google",
-			"provider_id": "string",
-			"username": "string",
-			"created_at": "timestamp",
-			"updated_at": "timestamp"
-		}
-	}
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "guid",
+      "username": "string",
+      "email": "string",
+      "provider": "Guest",
+      "avatarUrl": "string",
+      "bio": "string",
+      "level": 1,
+      "score": 0,
+      "createdAt": "2026-04-11T00:00:00Z",
+      "updatedAt": "2026-04-11T00:00:00Z"
+    },
+    "accessToken": "jwt",
+    "refreshToken": "jwt",
+    "isNewUser": true
+  }
 }
 ```
 
-### POST /auth/facebook
-Đăng nhập Facebook
+### POST `/auth/google`
 
-**Request:**
+**Request**
+
 ```json
 {
-	"access_token": "string"
+  "idToken": "google-id-token"
 }
 ```
 
-**Response (200 OK):**
+**Response 200:** cùng format với `/auth/guest`.
+
+### POST `/auth/refresh`
+
+**Request**
+
 ```json
 {
-	"message": "Login successful",
-	"data": {
-		"access_token": "string",
-		"refresh_token": "string",
-		"user": {
-			"id": "uuid",
-			"provider": "facebook",
-			"provider_id": "string",
-			"username": "string",
-			"created_at": "timestamp",
-			"updated_at": "timestamp"
-		}
-	}
+  "refreshToken": "refresh-token"
 }
 ```
 
-### POST /auth/guest
-Đăng nhập tài khoản Khách
+**Response 200:** cùng format với `/auth/guest`.
 
-**Request:**
+### POST `/auth/logout`
+
+**Request**
+
 ```json
 {
-	"device_id": "string" 
+  "refreshToken": "refresh-token"
 }
 ```
 
-**Response (200 OK):**
+**Response 200**
+
 ```json
 {
-	"message": "Login successful",
-	"data": {
-		"access_token": "string",
-		"refresh_token": "string",
-		"user": {
-			"id": "uuid",
-			"provider": "guest",
-			"provider_id": "string",
-			"username": null,
-			"created_at": "timestamp",
-			"updated_at": "timestamp"
-		}
-	}
+  "message": "Logged out successfully",
+  "data": null
 }
 ```
 
-### POST /auth/refresh
-Làm mới Access Token khi hết hạn
+---
 
-**Request:**
+## 2) Users
+
+### GET `/users/me/profile`
+
+**Query params:** none
+
+**Response 200**
+
 ```json
 {
-	"refresh_token": "string"
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": "guid",
+    "username": "string",
+    "email": "string",
+    "provider": "Google",
+    "avatarUrl": "string",
+    "bio": "string",
+    "level": 5,
+    "score": 420,
+    "createdAt": "2026-04-11T00:00:00Z",
+    "updatedAt": "2026-04-11T00:00:00Z"
+  }
 }
 ```
 
-**Response (200 OK):**
+### PATCH `/users/me/profile`
+
+**Request**
+
 ```json
 {
-	"message": "Token refreshed",
-	"data": {
-		"access_token": "string",
-		"refresh_token": "string"
-	}
+  "username": "optional",
+  "bio": "optional",
+  "avatarUrl": "optional"
 }
 ```
 
-### POST /auth/logout
-Logout user và hủy token
+**Response 200:** cùng format data như `GET /users/me/profile`.
 
-**Response (200 OK):**
+### GET `/users/me/stats`
+
+**Query params:** none
+
+**Response 200**
+
 ```json
 {
-	"message": "Logged out successfully",
-	"data": null
+  "message": "User stats retrieved successfully",
+  "data": {
+    "xp": 1200,
+    "nextLevelXp": 2000,
+    "score": 450,
+    "level": 5,
+    "highestScore": 700,
+    "totalMatches": 42,
+    "totalWins": 20,
+    "winRate": 47.62,
+    "globalRank": 12
+  }
 }
 ```
 
+### GET `/users/{userId}`
 
-# 2. User Profile
+**Path params**
 
-### GET /users/me/profile
-Lấy thông tin hồ sơ cơ bản của chính người chơi
+- `userId` (guid)
 
-**Response (200 OK):**
+**Response 200**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"user_id": "uuid",
-		"nickname": "string",
-		"avatar_url": "string",
-		"bio": "string",
-		"level": 1,
-		"created_at": "timestamp"
-	}
+  "message": "Information retrieved successfully",
+  "data": {
+    "id": "guid",
+    "username": "string",
+    "avatarUrl": "string",
+    "bio": "string",
+    "level": 3,
+    "score": 120,
+    "relationship": "Accepted"
+  }
 }
 ```
 
-### PATCH /users/me/profile
-Cập nhật thông tin hồ sơ cá nhân
+### GET `/users/{userId}/stats`
 
-**Request:**
+**Path params**
+
+- `userId` (guid)
+
+**Response 200:** cùng format `GET /users/me/stats`.
+
+### GET `/users`
+
+**Query params**
+
+- `searchQuery` (string, optional)
+- `pagination.page` (int, optional, default 1)
+- `pagination.pageSize` (int, optional, default 20)
+
+**Response 200**
+
 ```json
 {
-	"nickname": "string", // optional
-	"avatar_url": "string", // optional
-	"bio": "string" // optional
+  "message": "Users retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "guid",
+        "username": "string",
+        "avatarUrl": "string",
+        "bio": "string",
+        "level": 1,
+        "score": 0,
+        "relationship": "None"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 100,
+      "hasMore": true
+    }
+  }
 }
 ```
 
-**Response (200 OK):**
+### GET `/users/leaderboard`
+
+**Query params**
+
+- `page` (int, optional, default 1)
+- `pageSize` (int, optional, default 20)
+
+**Response 200:** cùng format list user ở trên.
+
+---
+
+## 3) Friends
+
+### GET `/me/friends`
+
+**Query params**
+
+- `status` (optional)
+- `pagination.page` (int, optional)
+- `pagination.pageSize` (int, optional)
+
+**Response 200:** format list user profile.
+
+### POST `/me/friends/invitations`
+
+**Request**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"user_id": "uuid",
-		"nickname": "string",
-		"avatar_url": "string",
-		"bio": "string",
-		"level": 1,
-		"created_at": "timestamp"
-	}
+  "userId": "guid"
 }
 ```
 
-### GET /users/me/stats
-Lấy các thông số thống kê chi tiết của người chơi
+**Response 200**
 
-**Response (200 OK):**
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"xp": 540,
-		"next_level_xp": 1000,
-		"score": 1250,
-		"highest_score": 1500,
-		"total_matches": 50,
-		"total_wins": 25,
-		"win_rate": 50.0,
-		"global_rank": 42,
-		"friend_rank": 5
-	}
+  "message": "Invitation sent successfully",
+  "data": {
+    "id": "guid",
+    "username": "string",
+    "avatarUrl": "string",
+    "bio": "string",
+    "level": 1,
+    "score": 0,
+    "relationship": "PendingSent"
+  }
 }
 ```
 
-### GET /users/:id/profile
-Lấy thông tin hồ sơ cơ bản của người chơi khác
+### PATCH `/me/friends/invitations/{requesterId}`
 
-**Response (200 OK):**
+**Path params**
+
+- `requesterId` (guid)
+
+**Request**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"user_id": "uuid",
-		"nickname": "string",
-		"avatar_url": "string",
-		"bio": "string",
-		"level": 1,
-		"created_at": "timestamp"
-	}
+  "accept": true
 }
 ```
 
-### GET /users/:id/stats
-Lấy thông số thống kê chi tiết của người chơi khác
+**Response 200:** profile của user còn lại với relationship mới.
 
-**Response (200 OK):**
+### DELETE `/me/friends/{friendId}`
+
+**Path params**
+
+- `friendId` (guid)
+
+**Response 200**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"xp": 540,
-		"next_level_xp": 1000,
-		"score": 1250,
-		"highest_score": 1500,
-		"total_matches": 50,
-		"total_wins": 25,
-		"win_rate": 50.0,
-		"global_rank": 42,
-		"friend_rank": 5
-	}
+  "message": "Friend removed successfully",
+  "data": null
 }
 ```
 
+---
 
-# 3. Friends
+## 4) Rooms
 
-### GET /users/me/friends 
-Lấy danh sách bạn bè (bao gồm cả các yêu cầu đang chờ - status='pending')
+### POST `/rooms`
 
-**Note:** `is_online` field là snapshot tại thời điểm request (từ Redis). Để có real-time updates, client cần subscribe WebSocket channel `friend_status`. Xem ADR-0004 cho chi tiết.
+**Request**
 
-**Query Params:** `?page=1&page_size=50&status=accepted|pending`
-
-**Response (200 OK):**
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"user_id": "uuid",
-				"nickname": "string",
-				"avatar_url": "string",
-				"level": 1,
-				"status": "accepted",
-				"is_online": true
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 45,
-			"has_more": false
-		}
-	}
+  "maxPlayers": 6,
+  "isPublic": true,
+  "cardSetIds": ["guid"]
 }
 ```
 
-### GET /users/search
-Tìm kiếm người chơi theo nickname hoặc ID
+**Response 201**
 
-**Query Params:** `?q=keyword&page=1&page_size=50`
-
-**Response (200 OK):**
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"user_id": "uuid",
-				"nickname": "string",
-				"avatar_url": "string",
-				"level": 1
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 200,
-			"has_more": true
-		}
-	}
+  "message": "Room created successfully",
+  "data": {
+    "code": "ABC123",
+    "hostId": "guid",
+    "status": "waiting",
+    "isPublic": true,
+    "settings": {
+      "maxPlayers": 6,
+      "turnTimer": 15
+    },
+    "cardSets": [
+      {
+        "id": "guid",
+        "name": "Base Set"
+      }
+    ],
+    "currentParticipants": [
+      {
+        "userId": "guid",
+        "nickname": "string",
+        "avatarUrl": "string",
+        "role": "player",
+        "isReady": true
+      }
+    ],
+    "connection": {
+      "wsUrl": "wss://game.memesploding.com/ws",
+      "wsAccessToken": "jwt"
+    }
+  }
 }
 ```
 
-### POST /friends/invitation
-Gửi lời mời kết bạn
+### POST `/rooms/{code}/join`
 
-**Request:**
+**Path params**
+
+- `code` (string)
+
+**Request body:** none
+
+**Response 200:** cùng format room detail ở trên.
+
+### GET `/rooms`
+
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+- `cardSetIds` (list guid, optional)
+- `maxPlayers` (list int, optional)
+
+**Response 200**
+
 ```json
 {
-	"user_id": "uuid"
+  "message": "Successfully!",
+  "data": {
+    "items": [
+      {
+        "code": "ABC123",
+        "hostId": "guid",
+        "hostNickname": "string",
+        "maxPlayers": 6,
+        "currentPlayers": 3,
+        "status": "waiting",
+        "cardSets": [{ "id": "guid", "name": "Base Set" }],
+        "isPublic": true,
+        "createdAt": "2026-04-11T00:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 30,
+      "hasMore": true
+    }
+  }
 }
 ```
 
-**Response (200 OK):**
+### GET `/rooms/{code}`
+
+**Path params**
+
+- `code` (string)
+
+**Response 200:** room detail giống `POST /rooms`.
+
+---
+
+## 5) Matchmaking
+
+### POST `/matchmaking/quick-play`
+
+**Request body:** none
+
+**Response 200:** room detail (như `/rooms/{code}` hoặc `/rooms/{code}/join`).
+
+---
+
+## 6) Notifications
+
+### GET `/me/notifications`
+
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+
+**Response 200**
+
 ```json
 {
-	"message": "Friend request sent",
-	"data": null
+  "message": "Successfully!",
+  "data": {
+    "items": [
+      {
+        "id": "guid",
+        "type": "System",
+        "payload": "{\"k\":\"v\"}",
+        "isRead": false,
+        "createdAt": "2026-04-11T00:00:00Z",
+        "sender": {
+          "id": "guid",
+          "username": "string",
+          "avatarUrl": "string"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 10,
+      "hasMore": false
+    }
+  }
 }
 ```
 
-### PATCH /friends/:id
-Chấp nhận hoặc từ chối lời mời kết bạn
+### GET `/me/notifications/unread-count`
 
-**Request:**
+**Query params:** none
+
+**Response 200**
+
 ```json
 {
-	"action": "accept" // accept, reject
+  "message": "Successfully!",
+  "data": {
+    "count": 3
+  }
 }
 ```
 
-**Response (200 OK):**
+### PATCH `/notifications/{id}`
+
+**Path params**
+
+- `id` (guid)
+
+**Request body:** none
+
+**Response 200:** trả về object notification đã cập nhật `isRead`.
+
+### DELETE `/notifications/{id}`
+
+**Path params**
+
+- `id` (guid)
+
+**Response 200**
+
 ```json
 {
-	"message": "Friend request processed",
-	"data": null
+  "message": "Notification deleted successfully",
+  "data": {}
 }
 ```
 
-### DELETE /friends/:id
-Hủy kết bạn (chỉ dành cho status='accepted')
+### PATCH `/notifications/mark-all-read`
 
-**Response (200 OK):**
+**Request body:** none
+
+**Response 200**
+
 ```json
 {
-	"message": "Friendship removed successfully",
-	"data": null
+  "message": "All notifications marked as read",
+  "data": {}
 }
 ```
 
+### DELETE `/notifications/clear-all`
 
-# 4. Rooms
+**Response 200**
 
-### POST /rooms
-Tạo phòng chơi mới
-
-**Request:**
 ```json
 {
-	"max_players": 6,
-	"is_public": true,
-	"card_set_ids": ["uuid"]
+  "message": "All notifications cleared successfully",
+  "data": {}
 }
 ```
 
-**Response (201 Created):**
+---
+
+## 7) Match history
+
+### GET `/me/match-history`
+
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+
+**Response 200**
+
 ```json
 {
-	"message": "Room created successfully",
-	"data": {
-		"code": "ABC123",
-		"host_id": "uuid",
-		"status": "waiting",
-		"is_public": true,
-		"settings": {
-			"max_players": 6,
-			"turn_timer": 15
-		},
-		"card_sets": [
-			{ "id": "uuid", "name": "Base Set" }
-		],
-		"current_participants": [
-			{ 
-				"user_id": "uuid", 
-				"nickname": "string", 
-				"avatar_url": "string", 
-				"role": "player", 
-				"is_ready": true 
-			}
-		],
-		"connection": {
-			"ws_url": "wss://game.memesploding.com/ws",
-			"ws_access_token": "string"
-		}
-	}
+  "message": "Successfully!",
+  "data": {
+    "items": [
+      {
+        "matchId": "guid",
+        "roomCode": "ABC123",
+        "startedAt": "2026-04-11T00:00:00Z",
+        "endedAt": "2026-04-11T00:30:00Z",
+        "totalPlayers": 4,
+        "finalRank": 1,
+        "xpEarned": 100,
+        "scoreChange": 20,
+        "cardSets": [{ "id": "guid", "name": "Base Set" }],
+        "players": [
+          {
+            "userId": "guid",
+            "nickname": "string",
+            "avatarUrl": "string",
+            "finalRank": 1
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 50,
+      "hasMore": true
+    }
+  }
 }
 ```
 
+### GET `/users/{id}/match-history`
 
-### GET /rooms
-Lấy danh sách phòng chơi công khai (public)
+**Path params**
 
-**Query Params:** `?page=1&page_size=50&card_set_ids=uuid1,uuid2&max_players=4,6` (optional)
-- `card_set_ids`: Filter by card set (comma-separated)
-- `max_players`: Filter by player count (comma-separated)
+- `id` (guid)
 
-**Response (200 OK):**
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+
+**Response 200:** cùng format với `/me/match-history`.
+
+### GET `/matches/{matchId}`
+
+**Path params**
+
+- `matchId` (guid)
+
+**Response 200**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"code": "ABC123",
-				"host_id": "uuid",
-				"host_nickname": "string",
-				"max_players": 6,
-				"current_players": 3,
-				"status": "waiting",
-				"card_sets": [
-					{ "id": "uuid", "name": "Base Set" }
-				],
-				"is_public": true,
-				"created_at": "timestamp"
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 120,
-			"has_more": true
-		}
-	}
+  "message": "Successfully!",
+  "data": {
+    "matchId": "guid",
+    "roomCode": "ABC123",
+    "startedAt": "2026-04-11T00:00:00Z",
+    "endedAt": "2026-04-11T00:30:00Z",
+    "winnerId": "guid",
+    "cardSets": [{ "id": "guid", "name": "Base Set" }],
+    "participants": [
+      {
+        "userId": "guid",
+        "nickname": "string",
+        "avatarUrl": "string",
+        "finalRank": 1,
+        "xpEarned": 100,
+        "scoreChange": 20
+      }
+    ],
+    "stats": {
+      "totalTurns": 40,
+      "totalCards": 120,
+      "events": {}
+    }
+  }
 }
 ```
 
+---
 
-### GET /rooms/:code
-Xem thông tin phòng trước khi tham gia
+## 8) Card sets
 
-**Response (200 OK):**
+### GET `/card-sets`
+
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+
+**Response 200**
+
 ```json
 {
-	"message": "Successfully!",
-	"data": {
-		"code": "ABC123",
-		"host_id": "uuid",
-		"status": "waiting",
-		"is_public": true,
-		"settings": {
-			"max_players": 6,
-			"turn_timer": 15
-		},
-		"card_sets": [
-			{ "id": "uuid", "name": "Base Set" }
-		],
-		"current_participants": [
-			{ 
-				"user_id": "uuid", 
-				"nickname": "string", 
-				"avatar_url": "string", 
-				"role": "player", 
-				"is_ready": true 
-			}
-		]
-	}
+  "message": "Card sets retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "guid",
+        "name": "Base Set",
+        "description": "string",
+        "cardCount": 56,
+        "imageUrl": "https://...",
+        "isActive": true,
+        "createdAt": "2026-04-11T00:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 3,
+      "hasMore": false
+    }
+  }
 }
 ```
 
-### POST /rooms/:code/join
-Tham gia vào phòng chơi
+### GET `/card-sets/{id}/cards`
 
-**Response (200 OK):**
+**Path params**
+
+- `id` (guid)
+
+**Query params**
+
+- `page` (int, optional)
+- `pageSize` (int, optional)
+
+**Response 200**
+
 ```json
 {
-	"message": "Joined room successfully",
-	"data": {
-		"code": "ABC123",
-		"host_id": "uuid",
-		"status": "waiting",
-		"is_public": true,
-		"settings": {
-			"max_players": 6,
-			"turn_timer": 15
-		},
-		"card_sets": [
-			{ "id": "uuid", "name": "Base Set" }
-		],
-		"current_participants": [
-			{ 
-				"user_id": "uuid", 
-				"nickname": "string", 
-				"avatar_url": "string", 
-				"role": "player", 
-				"is_ready": true 
-			}
-		],
-		"connection": {
-			"ws_url": "wss://game.memesploding.com/ws",
-			"ws_access_token": "string"
-		}
-	}
-}
-```
-
-### POST /rooms/:code/leave
-Rời khỏi phòng (khi đang ở sảnh chờ)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Left room successfully",
-	"data": null
-}
-```
-
-### PATCH /rooms/:code
-Cập nhật cấu hình phòng (chỉ dành cho Chủ phòng)
-
-**Request:**
-```json
-{
-	"max_players": 5, // optional
-	"is_public": true, // optional
-	"card_set_ids": ["uuid"] // optional
-}
-```
-
-**Response (200 OK):**
-```json
-{
-	"message": "Room updated successfully",
-	"data": {
-		"code": "ABC123",
-		"host_id": "uuid",
-		"status": "waiting",
-		"is_public": true,
-		"settings": {
-			"max_players": 5,
-			"turn_timer": 15
-		},
-		"card_sets": [
-			{ "id": "uuid", "name": "Base Set" }
-		],
-		"current_participants": [
-			{ "user_id": "uuid", "nickname": "string", "avatar_url": "string", "role": "player", "is_ready": true }
-		]
-	}
-}
-```
-
-### DELETE /rooms/:code
-Giải tán phòng (chỉ dành cho Chủ phòng)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Room deleted successfully",
-	"data": null
-}
-```
-
-### PATCH /rooms/:code/participants/me
-Cập nhật trạng thái sẵn sàng của người chơi
-
-**Request:**
-```json
-{
-	"is_ready": true
-}
-```
-
-**Response (200 OK):**
-```json
-{
-	"message": "Ready status updated",
-	"data": {
-		"is_ready": true
-	}
-}
-```
-
-### DELETE /rooms/:code/participants/:user_id
-Chủ phòng đuổi người chơi khỏi phòng
-
-**Response (200 OK):**
-```json
-{
-	"message": "Player kicked successfully",
-	"data": null
-}
-```
-
-
-# 5. Matchmaking
-
-### POST /matchmaking/quick-play
-Xếp trận nhanh, ngẫu nhiên.
-
-**Request:**
-```json
-{
-	"card_set_ids": ["uuid"]
-}
-```
-
-**Response (200 OK):**
-```json
-{
-	"message": "Matched successfully",
-	"data": {
-		"room": {
-			"code": "ABC123",
-			"host_id": "uuid",
-			"status": "waiting",
-			"settings": {
-				"max_players": 6,
-				"turn_timer": 15
-			},
-			"card_sets": [
-				{ "id": "uuid", "name": "Base Set" }
-			],
-			"current_participants": [
-				{ "user_id": "uuid", "nickname": "string", "avatar_url": "string", "role": "player", "is_ready": true }
-			]
-		},
-		"connection": {
-			"ws_url": "wss://game.memesploding.com/ws",
-			"ws_access_token": "string"
-		}
-	}
-}
-```
-
-
-# 6. Notification 
-
-### GET /users/me/notifications
-Lấy danh sách thông báo tin tức (lên cấp, kết thúc trận...)
-
-**Query Params:** `?page=1&page_size=50` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"id": "uuid",
-				"type": "level_up",
-				"payload": { "old_level": 5, "new_level": 6 },
-				"status": "unread",
-				"created_at": "timestamp",
-				"sender": { // if sent by another player
-					"id": "uuid",
-					"nickname": "string",
-					"avatar_url": "string"
-				}
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 120,
-			"has_more": true
-		}
-	}
-}
-```
-
-### GET /users/me/notifications/unread-count
-Lấy số lượng thông báo chưa đọc
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"unread_count": 5
-	}
-}
-```
-
-### DELETE /notifications/:id
-Xóa một thông báo
-
-**Response (200 OK):**
-```json
-{
-	"message": "Notification deleted successfully",
-	"data": null
-}
-```
-
-### PATCH /notifications/:id
-Đánh dấu thông báo là đã đọc
-
-**Request:**
-```json
-{
-	"status": "read"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-	"message": "Notification marked as read",
-	"data": {
-		"id": "uuid",
-		"status": "read"
-	}
-}
-```
-
-### PATCH /notifications/mark-all-read
-Đánh dấu tất cả thông báo là đã đọc
-
-**Request:**
-```json
-{}
-```
-
-**Response (200 OK):**
-```json
-{
-	"message": "All notifications marked as read",
-	"data": null
-}
-```
-
-### DELETE /notifications/clear-all
-Xóa tất cả thông báo
-
-**Response (200 OK):**
-```json
-{
-	"message": "All notifications cleared",
-	"data": null
-}
-```
-
-
-# 7. Match History
-
-### GET /users/me/match-history
-Lấy lịch sử trận đấu của bản thân
-
-**Query Params:** `?page=1&page_size=20` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": [
-		{
-			"match_id": "uuid",
-			"room_code": "ABC123",
-			"started_at": "timestamp",
-			"ended_at": "timestamp",
-			"total_players": 4,
-			"final_rank": 1,
-			"xp_earned": 150,
-			"score_change": 25,
-			"card_sets": [
-				{ "id": "uuid", "name": "Base Set" }
-			],
-			"players": [
-				{ "user_id": "uuid", "nickname": "string", "avatar_url": "string", "final_rank": 1 }
-			]
-		}
-	]
-}
-```
-
-### GET /users/:id/match-history
-Lấy lịch sử trận đấu của người chơi khác
-
-**Query Params:** `?page=1&page_size=20` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"match_id": "uuid",
-				"room_code": "ABC123",
-				"started_at": "timestamp",
-				"ended_at": "timestamp",
-				"total_players": 4,
-				"final_rank": 1,
-				"xp_earned": 150,
-				"score_change": 25,
-				"card_sets": [
-					{ "id": "uuid", "name": "Base Set" }
-				],
-				"players": [
-					{ "user_id": "uuid", "nickname": "string", "avatar_url": "string", "final_rank": 1 }
-				]
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 20,
-			"total_count": 85,
-			"has_more": true
-		}
-	}
-}
-```
-
-### GET /matches/:match_id
-Lấy chi tiết một trận đấu cụ thể (bao gồm sự kiện và replay)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"match_id": "uuid",
-		"room_code": "ABC123",
-		"started_at": "timestamp",
-		"ended_at": "timestamp",
-		"total_players": 4,
-		"card_sets": [
-			{ "id": "uuid", "name": "Base Set" }
-		],
-		"participants": [
-			{
-				"user_id": "uuid",
-				"nickname": "string",
-				"avatar_url": "string",
-				"final_rank": 1,
-				"xp_earned": 150,
-				"score_change": 25
-			}
-		],
-		"events": [
-			{
-				"sequence": 1,
-				"event_type": "PLAY_CARD",
-				"player_id": "uuid",
-				"data": { "card_id": "uuid", "target_id": "uuid" },
-				"created_at": "timestamp"
-			}
-		],
-		"spectators": [
-			{ "user_id": "uuid", "nickname": "string", "joined_at": "timestamp" }
-		]
-	}
-}
-```
-
-
-# 8. Leaderboard
-
-### GET /leaderboard/global
-Bảng xếp hạng toàn cầu
-
-**Query Params:** `?page=1&page_size=100` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"rank": 1,
-				"user_id": "uuid",
-				"nickname": "string",
-				"avatar_url": "string",
-				"level": 10,
-				"score": 5000,
-				"total_wins": 100
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 100,
-			"total_count": 50000,
-			"has_more": true
-		}
-	}
-}
-```
-
-### GET /leaderboard/friends
-Bảng xếp hạng trong danh sách bạn bè
-
-**Query Params:** `?page=1&page_size=50` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"rank": 1,
-				"user_id": "uuid",
-				"nickname": "string",
-				"avatar_url": "string",
-				"level": 10,
-				"score": 5000,
-				"total_wins": 100
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 45,
-			"has_more": false
-		}
-	}
-}
-```
-
-
-# 9. Static Data
-
-### GET /card-sets
-Lấy danh sách các bộ bài
-
-**Query Params:** `?page=1&page_size=50` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"id": "uuid",
-				"name": "Base Set",
-				"description": "string",
-				"card_count": 56,
-				"image_url": "string",
-				"is_active": true,
-				"created_at": "timestamp"
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 50,
-			"total_count": 12,
-			"has_more": false
-		}
-	}
-}
-```
-
-### GET /card-sets/:id/cards
-Lấy danh sách các lá bài trong một bộ cụ thể
-
-**Query Params:** `?page=1&page_size=100` (optional)
-
-**Response (200 OK):**
-```json
-{
-	"message": "Successfully!",
-	"data": {
-		"items": [
-			{
-				"id": "uuid",
-				"code": "EXPLODING_KITTEN",
-				"name": "Exploding Kitten",
-				"description": "string",
-				"type": "bomb",
-				"image_url": "string",
-				"icon_url": "string"
-			}
-		],
-		"pagination": {
-			"page": 1,
-			"page_size": 100,
-			"total_count": 56,
-			"has_more": false
-		}
-	}
+  "message": "Cards retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "id": "guid",
+        "code": "SeeTheFuture",
+        "name": "See The Future",
+        "description": "string",
+        "type": "Action",
+        "imageUrl": "https://...",
+        "iconUrl": "https://..."
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalCount": 56,
+      "hasMore": true
+    }
+  }
 }
 ```
