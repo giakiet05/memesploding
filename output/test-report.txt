@@ -1,0 +1,5 @@
+[INFO] Server: http://localhost:5217/api/v1
+[INFO] Output: ./output
+[INFO] PHASE 1: Registration & Authentication
+[INFO] [1] Testing: Alice Guest Register
+[FAIL] Alice Guest Register - Invalid JSON response

@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Memesploding.Api.Data;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
+using Memesploding.Shared.Infrastructure.EventBus;
 using Memesploding.Api.Services;
+using Memesploding.Api.Workers;
 using Memesploding.Api.Middlewares;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
@@ -15,7 +17,7 @@ namespace Memesploding.Api;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -32,15 +34,39 @@ public class Program
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
             ConnectionMultiplexer.Connect(redisConnectionString));
         builder.Services.AddSingleton<ICacheStore, RedisStore>();
+        
+        // Đăng ký Event Bus
+        builder.Services.AddSingleton<IEventBus, RedisEventBus>();
 
         // Thêm DI cho Service rẽ nhánh
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IFriendshipService, FriendshipService>();
+        builder.Services.AddScoped<ICardSetService, CardSetService>();
+        builder.Services.AddScoped<IRoomService, RoomService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
+        builder.Services.AddScoped<IMatchService, MatchService>();
+        builder.Services.AddScoped<IMatchmakingService, MatchmakingService>();
+        builder.Services.AddScoped<IPresenceService, PresenceService>();
+        builder.Services.AddScoped<IInvitationService, InvitationService>();
+
+        // SignalR for WebSocket
+        builder.Services.AddSignalR()
+            .AddJsonProtocol(options => {
+                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
+        // Background services
+        builder.Services.AddHostedService<FriendshipEventWorker>();
+        builder.Services.AddHostedService<RoomEventWorker>();
+        builder.Services.AddHostedService<PresenceEventWorker>();
 
         // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
@@ -64,6 +90,23 @@ public class Program
                     ValidateLifetime = true,         // Hết hạn Token thì đá đít văng ra
                     ClockSkew = TimeSpan.Zero        // Không cho dây dưa quá hạn 5 phút ảo (đá sấp mặt liền)
                 };
+
+                // SignalR: JWT từ query string (WebSocket không support Authorization header)
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/ws"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         builder.Services.AddAuthorization();
@@ -78,6 +121,19 @@ public class Program
         {
             app.MapOpenApi();
             app.MapScalarApiReference(); // Bật giao diện Web xịn xò của Scalar lên!
+        }
+
+        // === Migration & Database Seeding ===
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            // Apply pending migrations
+            dbContext.Database.Migrate();
+            
+            // Seed card sets from YAML
+            var yamlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Seeds", "cards.yaml");
+            await CardSetSeeder.SeedAsync(dbContext, yamlPath);
         }
 
         app.UseHttpsRedirection();
@@ -95,6 +151,10 @@ public class Program
         
         // Mapping đường dẫn của tất cả các Class nhãn [ApiController]
         app.MapControllers();
+
+        // SignalR WebSocket endpoint
+        app.MapHub<Memesploding.Api.Hubs.AppHub>("/ws")
+            .RequireAuthorization();
 
         app.Run();
     }

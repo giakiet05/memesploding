@@ -5,7 +5,7 @@ public record RegisterGuestRequestDto(
 );
 
 public record AuthResponseDto(
-    UserDto User,
+    MeDto User,
     string AccessToken,
     string RefreshToken,
     bool IsNewUser  // True nếu lần đầu đăng nhập → Client hiện màn hình chọn Username

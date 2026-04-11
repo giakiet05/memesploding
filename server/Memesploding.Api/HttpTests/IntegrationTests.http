@@ -1,0 +1,294 @@
+###
+### Memesploding API - Comprehensive Integration Test Suite
+###
+
+### ============================================
+### PHASE 1: REGISTRATION & AUTHENTICATION
+### ============================================
+
+### 1.1 Alice registers (Guest)
+# @name aliceRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "alice_device_001"
+}
+
+> {%
+    client.test("Alice guest registration successful", function() {
+        client.assert(response.status === 200, "Registration failed");
+        client.assert(response.body.data.accessToken !== undefined, "No access token");
+    });
+    
+    client.global.set("aliceToken", response.body.data.accessToken);
+    client.global.set("aliceUserId", response.body.data.user.id);
+%}
+
+
+### 1.2 Alice updates profile
+# @name aliceUpdateProfile
+PATCH {{baseUrl}}/users/me/profile
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "username": "alice_test",
+  "bio": "I am Alice",
+  "avatarUrl": "http://avatar.com/alice"
+}
+
+
+### 1.2.1 Alice connects to WebSocket
+# @name aliceWS
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### 1.3 Bob registers (Guest)
+# @name bobRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "bob_device_002"
+}
+
+> {%
+    client.global.set("bobToken", response.body.data.accessToken);
+    client.global.set("bobUserId", response.body.data.user.id);
+%}
+
+
+### 1.4 Bob updates profile
+# @name bobUpdateProfile
+PATCH {{baseUrl}}/users/me/profile
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{
+  "username": "bob_test"
+}
+
+
+### 1.4.1 Bob connects to WebSocket
+# @name bobWS
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### 1.5 Charlie registers (Guest)
+# @name charlieRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "charlie_device_003"
+}
+
+> {%
+    client.global.set("charlieToken", response.body.data.accessToken);
+    client.global.set("charlieUserId", response.body.data.user.id);
+%}
+
+
+### ============================================
+### PHASE 2: SOCIAL DISCOVERY & PROFILES
+### ============================================
+
+### 2.1 Alice view own profile
+GET {{baseUrl}}/users/me/profile
+Authorization: Bearer {{aliceToken}}
+
+
+### 2.2 Alice view own stats
+GET {{baseUrl}}/users/me/stats
+Authorization: Bearer {{aliceToken}}
+
+
+### 2.3 Bob search for Alice
+# @name searchAlice
+GET {{baseUrl}}/users?SearchQuery=alice_test
+Authorization: Bearer {{bobToken}}
+
+
+### 2.4 Bob view Alice's public profile
+GET {{baseUrl}}/users/{{aliceUserId}}
+Authorization: Bearer {{bobToken}}
+
+
+### ============================================
+### PHASE 3: FRIENDSHIP MANAGEMENT
+### ============================================
+
+### 3.1 Alice send friend request to Bob
+# @name sendFriendRequest
+POST {{baseUrl}}/me/friends/invitations
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{bobUserId}}"
+}
+
+
+### 3.2 Bob view pending friend invitations
+# @name bobPendingFriends
+GET {{baseUrl}}/me/friends?Status=Pending
+Authorization: Bearer {{bobToken}}
+
+
+### 3.3 Bob accept Alice's friend request
+# @name acceptFriend
+PATCH {{baseUrl}}/me/friends/invitations/{{aliceUserId}}
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{
+  "accept": true
+}
+
+
+### 3.4 Alice check friends list
+GET {{baseUrl}}/me/friends?Status=Accepted
+Authorization: Bearer {{aliceToken}}
+
+### 3.5 Bob check friends list
+GET {{baseUrl}}/me/friends?Status=Accepted
+Authorization: Bearer {{bobToken}}
+
+### ============================================
+### PHASE 4: CONTENT EXPLORATION
+### ============================================
+
+### 4.1 Alice browse all card sets
+# @name browseCardSets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceToken}}
+
+> {%
+    if (response.body.data.items && response.body.data.items.length > 0) {
+        client.global.set("cardSetId", response.body.data.items[0].id);
+    }
+%}
+
+
+### 4.2 Alice view cards in specific set
+GET {{baseUrl}}/card-sets/{{cardSetId}}/cards
+Authorization: Bearer {{aliceToken}}
+
+
+### ============================================
+### PHASE 5: ROOM CREATION & MANAGEMENT
+### ============================================
+
+### 5.1 Alice create public room
+# @name createRoom
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "name": "Integration Test Room",
+  "isPublic": true,
+  "maxPlayers": 4,
+  "turnTimerSeconds": 30,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+> {%
+    client.global.set("roomCode", response.body.data.code);
+%}
+
+
+### 5.2 Bob browse public rooms
+GET {{baseUrl}}/rooms
+Authorization: Bearer {{bobToken}}
+
+
+### 5.3 Bob peeks room details
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{bobToken}}
+
+
+### ============================================
+### PHASE 6: SYSTEM NOTIFICATIONS & MATCHMAKING
+### ============================================
+
+### 6.1 Bob view system notifications
+GET {{baseUrl}}/me/notifications
+Authorization: Bearer {{bobToken}}
+
+
+### 6.2 Charlie quick-play matchmaking
+# @name charlieQuickPlay
+POST {{baseUrl}}/matchmaking/quick-play
+Authorization: Bearer {{charlieToken}}
+
+
+### 6.3 Alice view match history
+GET {{baseUrl}}/me/match-history
+Authorization: Bearer {{aliceToken}}
+
+
+### 6.4 Check leaderboard
+GET {{baseUrl}}/users/leaderboard?PageSize=10
+Authorization: Bearer {{aliceToken}}
+
+
+### ============================================
+### PHASE 7: REALTIME ROOM INTERACTION (WEBSOCKET)
+### ============================================
+
+### 7.1 Alice invites Bob to her room
+# @name inviteBob
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "InviteToRoom",
+  "arguments": [
+    "{{roomCode}}",
+    "{{bobUserId}}"
+  ]
+}
+
+
+### 7.2 Bob accepts Alice's room invitation
+# @name bobAcceptsInvitation
+# COPY THE INVITATION ID FROM BOB'S CONSOLE (Phase 7.1) AND PASTE IT HERE:
+@invitationId = "aef8edac-b876-4a98-921d-36b9dbf77fd1"
+
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "RespondInvitation",
+  "arguments": [
+    {{invitationId}},
+    true
+  ]
+}
+

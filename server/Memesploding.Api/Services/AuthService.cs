@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Memesploding.Api.Services;
 
 using System;
@@ -13,32 +15,20 @@ using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 
-public class AuthService : IAuthService
+public class AuthService(ApplicationDbContext db, ITokenService tokenService, ICacheStore cache, IConfiguration config)
+    : IAuthService
 {
-    private readonly ApplicationDbContext _dbContext;
-    private readonly ITokenService _tokenService;
-    private readonly ICacheStore _cache;
-    private readonly IConfiguration _config;
-
-    public AuthService(ApplicationDbContext dbContext, ITokenService tokenService, ICacheStore cache, IConfiguration config)
-    {
-        _dbContext = dbContext;
-        _tokenService = tokenService;
-        _cache = cache;
-        _config = config;
-    }
-
     public async Task<AuthResponseDto> RegisterGuestAsync(RegisterGuestRequestDto request)
     {
-        var existingUser = _dbContext.Users
-            .FirstOrDefault(u => u.ProviderId == request.DeviceId && u.Provider == AuthProvider.Guest);
+        var existingUser = await db.Users
+            .FirstOrDefaultAsync(u => u.ProviderId == request.DeviceId && u.Provider == AuthProvider.Guest);
 
         if (existingUser != null)
         {
-            var accessToken = _tokenService.GenerateAccessToken(existingUser, existingUser.Username);
-            var refreshToken = _tokenService.GenerateRefreshToken();
-            await _cache.SetAsync($"rt:{refreshToken}", existingUser.Id.ToString(), TimeSpan.FromDays(30));
-            return new AuthResponseDto(UserDto.FromEntity(existingUser), accessToken, refreshToken, IsNewUser: false);
+            var accessToken = tokenService.GenerateAccessToken(existingUser, existingUser.Username);
+            var refreshToken = tokenService.GenerateRefreshToken();
+            await cache.SetAsync($"rt:{refreshToken}", existingUser.Id.ToString(), TimeSpan.FromDays(30));
+            return new AuthResponseDto(MeDto.FromEntity(existingUser), accessToken, refreshToken, IsNewUser: false);
         }
 
         var user = new User
@@ -50,14 +40,14 @@ public class AuthService : IAuthService
             CreatedAt = DateTime.UtcNow
         };
 
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
 
-        var newAccessToken = _tokenService.GenerateAccessToken(user, user.Username);
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
-        await _cache.SetAsync($"rt:{newRefreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
+        var newAccessToken = tokenService.GenerateAccessToken(user, user.Username);
+        var newRefreshToken = tokenService.GenerateRefreshToken();
+        await cache.SetAsync($"rt:{newRefreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
 
-        return new AuthResponseDto(UserDto.FromEntity(user), newAccessToken, newRefreshToken, IsNewUser: true);
+        return new AuthResponseDto(MeDto.FromEntity(user), newAccessToken, newRefreshToken, IsNewUser: true);
     }
 
     public async Task<AuthResponseDto> LoginGoogleAsync(LoginGoogleRequestDto request)
@@ -67,7 +57,7 @@ public class AuthService : IAuthService
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                Audience = new[] { _config["Google:ClientId"] }
+                Audience = new[] { config["Google:ClientId"] }
             };
             payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
         }
@@ -80,8 +70,8 @@ public class AuthService : IAuthService
         var googleEmail = payload.Email;
         var googleAvatar = payload.Picture;
 
-        var user = _dbContext.Users
-            .FirstOrDefault(u => u.ProviderId == googleId && u.Provider == AuthProvider.Google);
+        var user = await db.Users
+            .FirstOrDefaultAsync(u => u.ProviderId == googleId && u.Provider == AuthProvider.Google);
 
         bool isNewUser = false;
         if (user == null)
@@ -95,35 +85,35 @@ public class AuthService : IAuthService
                 Username = $"User_{googleId[..8]}",
                 AvatarUrl = googleAvatar
             };
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(user, user.Username);
-        var refreshToken = _tokenService.GenerateRefreshToken();
-        await _cache.SetAsync($"rt:{refreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
+        var accessToken = tokenService.GenerateAccessToken(user, user.Username);
+        var refreshToken = tokenService.GenerateRefreshToken();
+        await cache.SetAsync($"rt:{refreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
 
-        return new AuthResponseDto(UserDto.FromEntity(user), accessToken, refreshToken, IsNewUser: isNewUser);
+        return new AuthResponseDto(MeDto.FromEntity(user), accessToken, refreshToken, IsNewUser: isNewUser);
     }
 
     public async Task<AuthResponseDto> RefreshAsync(RefreshTokenRequestDto request)
     {
-        var userIdStr = await _cache.GetAsync<string>($"rt:{request.RefreshToken}");
+        var userIdStr = await cache.GetAsync<string>($"rt:{request.RefreshToken}");
         if (string.IsNullOrEmpty(userIdStr))
             throw AppException.Unauthorized("Invalid or expired refresh token");
 
         var userId = Guid.Parse(userIdStr);
-        var user = await _dbContext.Users.FindAsync(userId);
-        if (user == null) throw AppException.NotFound(ErrorCode.UserNotFound, "User not found");
+        var user = await db.Users.FindAsync(userId);
+        if (user == null) throw AppException.NotFound("User not found");
 
         // Rotation: Xóa token cũ ngay khi sử dụng
-        await _cache.RemoveAsync($"rt:{request.RefreshToken}");
+        await cache.RemoveAsync($"rt:{request.RefreshToken}");
 
-        var newAccessToken = _tokenService.GenerateAccessToken(user, user.Username);
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
-        await _cache.SetAsync($"rt:{newRefreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
+        var newAccessToken = tokenService.GenerateAccessToken(user, user.Username);
+        var newRefreshToken = tokenService.GenerateRefreshToken();
+        await cache.SetAsync($"rt:{newRefreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
 
-        return new AuthResponseDto(UserDto.FromEntity(user), newAccessToken, newRefreshToken, IsNewUser: false);
+        return new AuthResponseDto(MeDto.FromEntity(user), newAccessToken, newRefreshToken, IsNewUser: false);
     }
 
     public async Task LogoutAsync(string accessToken, string refreshToken)
@@ -131,14 +121,14 @@ public class AuthService : IAuthService
         // 1. Chỉ xóa Refresh Token mà client gửi lên (Chỉ logout máy hiện tại)
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            await _cache.RemoveAsync($"rt:{refreshToken}");
+            await cache.RemoveAsync($"rt:{refreshToken}");
         }
 
         // 2. Blacklist Access Token hiện tại
-        var remainingTtl = _tokenService.GetRemainingTime(accessToken);
+        var remainingTtl = tokenService.GetRemainingTime(accessToken);
         if (remainingTtl.HasValue)
         {
-            await _cache.SetAsync($"bl:{accessToken[^20..]}", "revoked", remainingTtl.Value);
+            await cache.SetAsync($"bl:{accessToken[^20..]}", "revoked", remainingTtl.Value);
         }
     }
 }
