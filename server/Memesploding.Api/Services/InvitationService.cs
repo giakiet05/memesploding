@@ -18,6 +18,9 @@ public class InvitationService(
     ILogger<InvitationService> logger) : IInvitationService
 {
     private const int InvitationTtlMinutes = 5;
+    
+    // Ép case-insensitive để đọc được mọi loại JSON từ Redis
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public async Task<ServiceResult> InviteToRoomAsync(
         Guid inviterId,
@@ -92,7 +95,6 @@ public class InvitationService(
             TimeSpan.FromMinutes(InvitationTtlMinutes)
         );
 
-        // Bắn event ra Redis thay vì gọi SignalR trực tiếp
         var @event = new RoomInvitationSentEvent(
             invitationId,
             roomCode,
@@ -124,7 +126,8 @@ public class InvitationService(
             return ServiceResult.Fail(ErrorCode.InvitationNotFound, "Invitation not found or expired");
         }
 
-        var invitation = JsonSerializer.Deserialize<InternalInvitationData>(json);
+        // Dùng _jsonOptions để parse InviteeId chuẩn xác
+        var invitation = JsonSerializer.Deserialize<InternalInvitationData>(json, _jsonOptions);
         
         if (invitation == null || invitation.InviteeId != userId)
         {
@@ -158,7 +161,6 @@ public class InvitationService(
         }
 
         await cache.KeyDeleteAsync(CacheKeys.Invitation(invitationId));
-
 
         return ServiceResult.Ok();
     }
@@ -205,7 +207,7 @@ public class InvitationService(
         var requestId = Guid.NewGuid().ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(InvitationTtlMinutes);
 
-        var requestData = new { request_id = requestId, room_code = roomCode, requester_id = requesterId, expires_at = expiresAt };
+        var requestData = new { requestId = requestId, roomCode = roomCode, requesterId = requesterId, expiresAt = expiresAt };
 
         await cache.StringSetAsync(CacheKeys.JoinRequest(requestId), JsonSerializer.Serialize(requestData), TimeSpan.FromMinutes(InvitationTtlMinutes));
 
@@ -237,7 +239,7 @@ public class InvitationService(
         var requestJson = await cache.StringGetAsync(CacheKeys.JoinRequest(requestId));
         if (string.IsNullOrEmpty(requestJson)) return ServiceResult.Fail(ErrorCode.RequestNotFound, "Expired");
 
-        var joinRequest = JsonSerializer.Deserialize<JoinRequestData>(requestJson);
+        var joinRequest = JsonSerializer.Deserialize<JoinRequestData>(requestJson, _jsonOptions);
         if (joinRequest == null) return ServiceResult.Fail(ErrorCode.RequestNotFound, "Invalid");
 
         var actualRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
@@ -279,13 +281,9 @@ public class InvitationService(
 
     private class JoinRequestData
     {
-        [System.Text.Json.Serialization.JsonPropertyName("request_id")]
         public string RequestId { get; set; } = "";
-        [System.Text.Json.Serialization.JsonPropertyName("room_code")]
         public string RoomCode { get; set; } = "";
-        [System.Text.Json.Serialization.JsonPropertyName("requester_id")]
         public Guid RequesterId { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public DateTime ExpiresAt { get; set; }
     }
 }

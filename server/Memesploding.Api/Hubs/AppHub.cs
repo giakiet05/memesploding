@@ -44,12 +44,12 @@ public partial class AppHub : Hub
 
         try
         {
+            // Log & Publish - KHÔNG throw để tránh làm sập kết nối của user
             await _eventBus.PublishAsync(EventChannels.UserConnected, new UserConnectedEvent(userId.Value, connectionId));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error publishing user connection event for {UserId}", userId);
-            throw;
         }
 
         await base.OnConnectedAsync();

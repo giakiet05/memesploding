@@ -14,6 +14,9 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
     private static readonly Random _random = new();
     private const int RoomCodeLength = 6;
     private const string RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    
+    // Ép JsonSerializer luôn dùng camelCase khi lưu vào Redis để đồng bộ với API
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public async Task<RoomDetailDto> CreateRoomAsync(Guid hostId, CreateRoomDto dto)
     {
@@ -44,7 +47,7 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
             userId = hostId,
             nickname = host.Username,
             avatarUrl = host.AvatarUrl ?? "",
-            role = "host", // Host role
+            role = "host",
             isReady = true
         };
 
@@ -60,7 +63,7 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
             new("created_at", DateTime.UtcNow.ToString("O"))
         });
 
-        _ = transaction.HashSetAsync(participantsKey, hostId.ToString(), JsonSerializer.Serialize(participantData));
+        _ = transaction.HashSetAsync(participantsKey, hostId.ToString(), JsonSerializer.Serialize(participantData, _jsonOptions));
 
         foreach (var csId in cardSetIds)
             _ = transaction.SetAddAsync(cardSetsKey, csId.ToString());
@@ -79,7 +82,6 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
     {
         roomCode = roomCode.ToUpper();
         
-        // 1. Check if user already in a room
         var existingRoom = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
         if (!string.IsNullOrEmpty(existingRoom))
         {
@@ -87,7 +89,6 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
             throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in another room");
         }
 
-        // 2. Check room existence and capacity
         var roomInfoKey = CacheKeys.RoomInfo(roomCode);
         var roomData = await cache.HashGetAllAsync(roomInfoKey);
         if (roomData.Length == 0) throw AppException.NotFound("Room not found");
@@ -99,11 +100,9 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
 
         if (currentCount >= maxPlayers) throw AppException.BadRequest(ErrorCode.ValidationFailed, "Room is full");
 
-        // 3. Get user info
         var user = await db.Users.FindAsync(userId);
         if (user == null) throw AppException.NotFound("User not found");
 
-        // 4. Add to participants
         var participantData = new
         {
             userId = userId,
@@ -114,7 +113,7 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         };
 
         var transaction = cache.CreateTransaction();
-        _ = transaction.HashSetAsync(participantsKey, userId.ToString(), JsonSerializer.Serialize(participantData));
+        _ = transaction.HashSetAsync(participantsKey, userId.ToString(), JsonSerializer.Serialize(participantData, _jsonOptions));
         _ = transaction.StringSetAsync(CacheKeys.UserInRoom(userId), roomCode);
         
         await transaction.ExecuteAsync();
@@ -170,11 +169,11 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         var participants = participantsData.Select(entry => {
             var p = JsonSerializer.Deserialize<JsonElement>(entry.Value.ToString());
             return new RoomParticipantDto(
-                UserId: Guid.Parse(GetJsonProp(p, "userId", "user_id")),
-                Nickname: GetJsonProp(p, "nickname"),
-                AvatarUrl: GetJsonProp(p, "avatarUrl", "avatar_url"),
-                Role: GetJsonProp(p, "role"),
-                IsReady: bool.Parse(GetJsonProp(p, "isReady", "is_ready"))
+                UserId: Guid.Parse(GetJsonProp(p, "userId", "user_id", "UserId")), // Thêm UserId (Pascal) cho chắc
+                Nickname: GetJsonProp(p, "nickname", null, "Nickname"),
+                AvatarUrl: GetJsonProp(p, "avatarUrl", "avatar_url", "AvatarUrl"),
+                Role: GetJsonProp(p, "role", null, "Role"),
+                IsReady: bool.Parse(GetJsonProp(p, "isReady", "is_ready", "IsReady"))
             );
         }).ToList();
 
@@ -185,9 +184,10 @@ public class RoomService(ICacheStore cache, ApplicationDbContext db) : IRoomServ
         return new RoomDetailDto(code, Guid.Parse(roomDict["host_id"]), roomDict["status"], bool.Parse(roomDict["is_public"]), new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict["turn_timer"])), cardSets, participants, new RoomConnectionDto("ws://localhost:5217/ws", "placeholder"));
     }
 
-    private string GetJsonProp(JsonElement el, string camel, string? snake = null)
+    private string GetJsonProp(JsonElement el, string camel, string? snake = null, string? pascal = null)
     {
         if (el.TryGetProperty(camel, out var val)) return val.ToString();
+        if (pascal != null && el.TryGetProperty(pascal, out var val3)) return val3.ToString();
         if (snake != null && el.TryGetProperty(snake, out var val2)) return val2.ToString();
         return "";
     }

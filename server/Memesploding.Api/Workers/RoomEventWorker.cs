@@ -2,10 +2,10 @@ using Memesploding.Api.DTOs;
 using Memesploding.Api.Hubs;
 using Memesploding.Api.Services;
 using Memesploding.Shared.Events;
+using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.EventBus;
 using Microsoft.AspNetCore.SignalR;
 using StackExchange.Redis;
-using System.Text.Json;
 
 namespace Memesploding.Api.Workers;
 
@@ -13,18 +13,18 @@ public class RoomEventWorker : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus _eventBus;
-    private readonly IConnectionMultiplexer _redis;
+    private readonly ICacheStore _cache;
     private readonly ILogger<RoomEventWorker> _logger;
 
     public RoomEventWorker(
         IServiceProvider serviceProvider, 
         IEventBus eventBus,
-        IConnectionMultiplexer redis,
+        ICacheStore cache,
         ILogger<RoomEventWorker> logger)
     {
         _serviceProvider = serviceProvider;
         _eventBus = eventBus;
-        _redis = redis;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -44,24 +44,18 @@ public class RoomEventWorker : BackgroundService
 
     private async Task HandleRoomUpdateAsync(RoomUpdatedEvent update)
     {
-        var db = _redis.GetDatabase();
-
-        // 1. Update room:{code}:info cache
+        // 1. Update room info cache
         if (!string.IsNullOrEmpty(update.RoomCode))
         {
-            var roomInfoKey = $"room:{update.RoomCode}:info";
-            var roomInfo = new
+            var roomInfoKey = CacheKeys.RoomInfo(update.RoomCode);
+            await _cache.HashSetAsync(roomInfoKey, new[]
             {
-                is_public = update.IsPublic,
-                current_players = update.CurrentPlayers,
-                max_players = update.MaxPlayers
-            };
-
-            await db.StringSetAsync(
-                roomInfoKey,
-                JsonSerializer.Serialize(roomInfo),
-                TimeSpan.FromHours(1) // Cache for 1 hour
-            );
+                new HashEntry("status", update.Status),
+                new HashEntry("is_public", update.IsPublic ? "true" : "false"),
+                new HashEntry("current_players", update.CurrentPlayers.ToString()),
+                new HashEntry("max_players", update.MaxPlayers.ToString())
+            });
+            await _cache.KeyExpireAsync(roomInfoKey, TimeSpan.FromHours(1));
 
             _logger.LogDebug("Updated room info cache: {RoomCode}", update.RoomCode);
         }

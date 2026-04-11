@@ -273,7 +273,7 @@ Content-Type: application/json
 ### 7.2 Bob accepts Alice's room invitation
 # @name bobAcceptsInvitation
 # COPY THE INVITATION ID FROM BOB'S CONSOLE (Phase 7.1) AND PASTE IT HERE:
-@invitationId = "5adaba1c-c5c5-48f8-a39d-33890a60fcc7"
+@invitationId = "aef8edac-b876-4a98-921d-36b9dbf77fd1"
 
 WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
 Content-Type: application/json

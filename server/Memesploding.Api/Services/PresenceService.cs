@@ -1,8 +1,8 @@
 using Memesploding.Api.Data;
-using Memesploding.Api.DTOs;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
+using Memesploding.Shared.Events;
+using Memesploding.Shared.Infrastructure.EventBus;
 using Memesploding.Shared.Infrastructure.Cache;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace Memesploding.Api.Services;
@@ -11,7 +11,7 @@ public class PresenceService : IPresenceService
 {
     private readonly ICacheStore _cache;
     private readonly ApplicationDbContext _db;
-    private readonly IHubContext<Hubs.AppHub> _hubContext;
+    private readonly IEventBus _eventBus;
     private readonly ILogger<PresenceService> _logger;
     
     private const int PresenceTtlMinutes = 10;
@@ -19,18 +19,17 @@ public class PresenceService : IPresenceService
     public PresenceService(
         ICacheStore cache, 
         ApplicationDbContext db,
-        IHubContext<Hubs.AppHub> hubContext,
+        IEventBus eventBus,
         ILogger<PresenceService> logger)
     {
         _cache = cache;
         _db = db;
-        _hubContext = hubContext;
+        _eventBus = eventBus;
         _logger = logger;
     }
 
     public async Task UserConnectedAsync(Guid userId, string connectionId)
     {
-        // Dùng CacheKeys cho đồng bộ
         var connectionsKey = CacheKeys.UserConnections(userId);
         await _cache.SetAddAsync(connectionsKey, connectionId);
         await _cache.KeyExpireAsync(connectionsKey, TimeSpan.FromMinutes(PresenceTtlMinutes));
@@ -39,7 +38,6 @@ public class PresenceService : IPresenceService
         var existingPresence = await _cache.StringGetAsync(presenceKey);
         bool wasOffline = string.IsNullOrEmpty(existingPresence);
 
-        // Build rich activity
         var activity = await BuildActivityAsync(userId);
 
         var presenceData = new InternalPresenceData
@@ -75,7 +73,7 @@ public class PresenceService : IPresenceService
             {
                 Online = false,
                 LastSeen = DateTime.UtcNow,
-                Activity = new WsUserActivityDto("idle"),
+                Activity = new PresenceUserActivity("idle"),
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -122,25 +120,20 @@ public class PresenceService : IPresenceService
             .Select(f => f.UserId1 == userId ? f.UserId2 : f.UserId1)
             .ToListAsync();
 
-        var statusDto = new WsFriendStatusDto(
+        if (!friendIds.Any()) return;
+
+        // Bắn event ra Redis thay vì gọi SignalR trực tiếp
+        var @event = new FriendStatusChangedEvent(
             userId,
             user.Username,
             user.AvatarUrl ?? "",
             presence.Online,
             presence.LastSeen,
-            presence.Activity
+            presence.Activity,
+            friendIds
         );
 
-        var wsMessage = WsMessage<WsFriendStatusDto>.Create(WsEventType.FriendStatusChanged, statusDto);
-
-        foreach (var friendId in friendIds)
-        {
-            var friendConnections = await GetUserConnectionsAsync(friendId);
-            if (friendConnections.Any())
-            {
-                await _hubContext.Clients.Clients(friendConnections).SendAsync("ReceiveMessage", wsMessage);
-            }
-        }
+        await _eventBus.PublishAsync(EventChannels.FriendStatusChanged, @event);
     }
 
     public async Task UpdateUserActivityAsync(Guid userId)
@@ -167,21 +160,21 @@ public class PresenceService : IPresenceService
         await BroadcastFriendStatusAsync(userId);
     }
 
-    private async Task<WsUserActivityDto> BuildActivityAsync(Guid userId)
+    private async Task<PresenceUserActivity> BuildActivityAsync(Guid userId)
     {
         var roomCode = await _cache.StringGetAsync(CacheKeys.UserInRoom(userId));
-        if (string.IsNullOrEmpty(roomCode)) return new WsUserActivityDto("idle");
+        if (string.IsNullOrEmpty(roomCode)) return new PresenceUserActivity("idle");
 
         var roomKey = CacheKeys.RoomInfo(roomCode);
         var roomData = await _cache.HashGetAllAsync(roomKey);
-        if (roomData.Length == 0) return new WsUserActivityDto("idle");
+        if (roomData.Length == 0) return new PresenceUserActivity("idle");
 
         var roomDict = roomData.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
         var status = roomDict.GetValueOrDefault("status", "waiting");
 
-        return new WsUserActivityDto(
+        return new PresenceUserActivity(
             Type: status == "playing" ? "in_match" : "in_room",
-            Room: new WsRoomBriefDto(
+            Room: new PresenceRoomBrief(
                 Code: roomCode,
                 Status: status,
                 IsPublic: bool.Parse(roomDict.GetValueOrDefault("is_public", "true")),
@@ -195,7 +188,7 @@ public class PresenceService : IPresenceService
     {
         public bool Online { get; set; }
         public DateTime? LastSeen { get; set; }
-        public WsUserActivityDto Activity { get; set; } = new("idle");
+        public PresenceUserActivity Activity { get; set; } = new("idle");
         public DateTime UpdatedAt { get; set; }
     }
 }

@@ -14,4 +14,5 @@ public static class EventChannels
     
     public const string UserConnected = "events:presence:connected";
     public const string UserDisconnected = "events:presence:disconnected";
+    public const string FriendStatusChanged = "events:presence:friend_status_changed"; // Thêm mới
 }
