@@ -189,106 +189,29 @@ Authorization: Bearer {{aliceToken}}
 
 
 ### ============================================
-### PHASE 5: ROOM CREATION & MANAGEMENT
+### PHASE 5: SYSTEM NOTIFICATIONS
 ### ============================================
 
-### 5.1 Alice create public room
-# @name createRoom
-POST {{baseUrl}}/rooms
-Authorization: Bearer {{aliceToken}}
-Content-Type: application/json
-
-{
-  "name": "Integration Test Room",
-  "isPublic": true,
-  "maxPlayers": 4,
-  "turnTimerSeconds": 30,
-  "cardSetIds": ["{{cardSetId}}"]
-}
-
-> {%
-    client.global.set("roomCode", response.body.data.code);
-%}
-
-
-### 5.2 Bob browse public rooms
-GET {{baseUrl}}/rooms
-Authorization: Bearer {{bobToken}}
-
-
-### 5.3 Bob peeks room details
-GET {{baseUrl}}/rooms/{{roomCode}}
-Authorization: Bearer {{bobToken}}
-
-
-### ============================================
-### PHASE 6: SYSTEM NOTIFICATIONS & MATCHMAKING
-### ============================================
-
-### 6.1 Bob view system notifications
+### 5.1 Bob view system notifications
 GET {{baseUrl}}/me/notifications
 Authorization: Bearer {{bobToken}}
 
 
-### 6.2 Charlie quick-play matchmaking
-# @name charlieQuickPlay
-POST {{baseUrl}}/matchmaking/quick-play
-Authorization: Bearer {{charlieToken}}
-
-
-### 6.3 Alice view match history
+### 5.2 Alice view match history
 GET {{baseUrl}}/me/match-history
 Authorization: Bearer {{aliceToken}}
 
 
-### 6.4 Check leaderboard
+### 5.3 Check leaderboard
 GET {{baseUrl}}/users/leaderboard?PageSize=10
 Authorization: Bearer {{aliceToken}}
 
-
 ### ============================================
-### PHASE 7: REALTIME ROOM INTERACTION (WEBSOCKET)
+### ROOM SCENARIOS MOVED OUT
 ### ============================================
 
-### 7.1 Alice invites Bob to her room
-# @name inviteBob
-WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
-Content-Type: application/json
+### Room happy-path scenarios:
+### - Run: HttpTests/Room.HappyPath.http
 
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "InviteToRoom",
-  "arguments": [
-    "{{roomCode}}",
-    "{{bobUserId}}"
-  ]
-}
-
-
-### 7.2 Bob accepts Alice's room invitation
-# @name bobAcceptsInvitation
-# COPY THE INVITATION ID FROM BOB'S CONSOLE (Phase 7.1) AND PASTE IT HERE:
-@invitationId = "aef8edac-b876-4a98-921d-36b9dbf77fd1"
-
-WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
-Content-Type: application/json
-
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "RespondInvitation",
-  "arguments": [
-    {{invitationId}},
-    true
-  ]
-}
-
+### Room edge-cases scenarios:
+### - Run: HttpTests/Room.EdgeCases.http

@@ -14,17 +14,20 @@ public partial class AppHub : Hub
 {
     private readonly IPresenceService _presenceService;
     private readonly IInvitationService _invitationService;
+    private readonly IRoomService _roomService;
     private readonly IEventBus _eventBus;
     private readonly ILogger<AppHub> _logger;
 
     public AppHub(
         IPresenceService presenceService, 
         IInvitationService invitationService,
+        IRoomService roomService,
         IEventBus eventBus,
         ILogger<AppHub> logger)
     {
         _presenceService = presenceService;
         _invitationService = invitationService;
+        _roomService = roomService;
         _eventBus = eventBus;
         _logger = logger;
     }

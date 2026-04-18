@@ -4,6 +4,7 @@ using Memesploding.Shared.Infrastructure.EventBus;
 using Memesploding.Shared.Infrastructure.Cache;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace Memesploding.Api.Services;
 
@@ -13,6 +14,8 @@ public class PresenceService : IPresenceService
     private readonly ApplicationDbContext _db;
     private readonly IEventBus _eventBus;
     private readonly ILogger<PresenceService> _logger;
+    private readonly int _reconnectGraceSeconds;
+    private readonly int _reconnectGraceKeyTtlSeconds;
     
     private const int PresenceTtlMinutes = 10;
 
@@ -20,12 +23,15 @@ public class PresenceService : IPresenceService
         ICacheStore cache, 
         ApplicationDbContext db,
         IEventBus eventBus,
+        IConfiguration config,
         ILogger<PresenceService> logger)
     {
         _cache = cache;
         _db = db;
         _eventBus = eventBus;
         _logger = logger;
+        _reconnectGraceSeconds = Math.Max(10, config.GetValue<int?>("Realtime:ReconnectGraceSeconds") ?? 120);
+        _reconnectGraceKeyTtlSeconds = _reconnectGraceSeconds + 300;
     }
 
     public async Task UserConnectedAsync(Guid userId, string connectionId)
@@ -52,6 +58,8 @@ public class PresenceService : IPresenceService
             JsonSerializer.Serialize(presenceData),
             TimeSpan.FromMinutes(PresenceTtlMinutes)
         );
+
+        await ClearRoomReconnectGraceAsync(userId);
 
         if (wasOffline)
         {
@@ -82,6 +90,8 @@ public class PresenceService : IPresenceService
                 JsonSerializer.Serialize(presenceData),
                 TimeSpan.FromMinutes(PresenceTtlMinutes)
             );
+
+            await MarkRoomReconnectGraceAsync(userId);
 
             await BroadcastFriendStatusAsync(userId);
             await _cache.KeyDeleteAsync(connectionsKey);
@@ -190,5 +200,36 @@ public class PresenceService : IPresenceService
         public DateTime? LastSeen { get; set; }
         public PresenceUserActivity Activity { get; set; } = new("idle");
         public DateTime UpdatedAt { get; set; }
+    }
+
+    private async Task MarkRoomReconnectGraceAsync(Guid userId)
+    {
+        var roomCode = await _cache.StringGetAsync(CacheKeys.UserInRoom(userId));
+        if (string.IsNullOrEmpty(roomCode))
+        {
+            await ClearRoomReconnectGraceAsync(userId);
+            return;
+        }
+
+        var data = new RoomReconnectGraceData
+        {
+            RoomCode = roomCode.ToUpper(),
+            DisconnectedAt = DateTime.UtcNow
+        };
+
+        await _cache.SetAsync(CacheKeys.RoomReconnectGrace(userId), data, TimeSpan.FromSeconds(_reconnectGraceKeyTtlSeconds));
+        await _cache.SetAddAsync(CacheKeys.RoomReconnectGraceUsers(), userId.ToString());
+    }
+
+    private async Task ClearRoomReconnectGraceAsync(Guid userId)
+    {
+        await _cache.KeyDeleteAsync(CacheKeys.RoomReconnectGrace(userId));
+        await _cache.SetRemoveAsync(CacheKeys.RoomReconnectGraceUsers(), userId.ToString());
+    }
+
+    private class RoomReconnectGraceData
+    {
+        public string RoomCode { get; set; } = "";
+        public DateTime DisconnectedAt { get; set; }
     }
 }

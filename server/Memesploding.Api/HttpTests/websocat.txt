@@ -1,0 +1,17 @@
+# 1) Handshake only (SignalR)
+printf $'{"protocol":"json","version":1}\x1e' \
+| websocat -t "ws://localhost:5217/ws?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYjY4NWI2ZC00NjIzLTRmYzEtYWQzMS1kMDBlYmVlM2MwMDgiLCJ1bmlxdWVfbmFtZSI6Ikd1ZXN0X3Jvb21yZWNvXzM4ZjAwYiIsInByb3ZpZGVyIjoiR3Vlc3QiLCJuYmYiOjE3NzY0OTg5NzAsImV4cCI6MTc3NjU1ODk3MCwiaWF0IjoxNzc2NDk4OTcwLCJpc3MiOiJNZW1lc3Bsb2RpbmdBcGkiLCJhdWQiOiJNZW1lc3Bsb2RpbmdDbGllbnQifQ.PRqTd4ixwYG96T2rUHOhgnnbKXZpo1wkaRCjarRdJPA"
+
+# 2) Handshake + invoke SetReadyStatus
+printf $'{"protocol":"json","version":1}\x1e{"type":1,"target":"SetReadyStatus","arguments":["MNGYUK",true]}\x1e' \
+| websocat -t "ws://localhost:5217/ws?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYjY4NWI2ZC00NjIzLTRmYzEtYWQzMS1kMDBlYmVlM2MwMDgiLCJ1bmlxdWVfbmFtZSI6Ikd1ZXN0X3Jvb21yZWNvXzM4ZjAwYiIsInByb3ZpZGVyIjoiR3Vlc3QiLCJuYmYiOjE3NzY0OTg5NzAsImV4cCI6MTc3NjU1ODk3MCwiaWF0IjoxNzc2NDk4OTcwLCJpc3MiOiJNZW1lc3Bsb2RpbmdBcGkiLCJhdWQiOiJNZW1lc3Bsb2RpbmdDbGllbnQifQ.PRqTd4ixwYG96T2rUHOhgnnbKXZpo1wkaRCjarRdJPA"
+
+# 3) Handshake + invoke LeaveRoom
+printf $'{"protocol":"json","version":1}\x1e{"type":1,"target":"LeaveRoom","arguments":["MNGYUK"]}\x1e' \
+| websocat -t "ws://localhost:5217/ws?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYjY4NWI2ZC00NjIzLTRmYzEtYWQzMS1kMDBlYmVlM2MwMDgiLCJ1bmlxdWVfbmFtZSI6Ikd1ZXN0X3Jvb21yZWNvXzM4ZjAwYiIsInByb3ZpZGVyIjoiR3Vlc3QiLCJuYmYiOjE3NzY0OTg5NzAsImV4cCI6MTc3NjU1ODk3MCwiaWF0IjoxNzc2NDk4OTcwLCJpc3MiOiJNZW1lc3Bsb2RpbmdBcGkiLCJhdWQiOiJNZW1lc3Bsb2RpbmdDbGllbnQifQ.PRqTd4ixwYG96T2rUHOhgnnbKXZpo1wkaRCjarRdJPA"
+
+# 4) Full example cho room action khác (đổi target/arguments)
+# target: KickRoomMember
+# arguments: ["MNGYUK", "<TARGET_USER_GUID>"]
+printf $'{"protocol":"json","version":1}\x1e{"type":1,"target":"KickRoomMember","arguments":["MNGYUK","<TARGET_USER_GUID>"]}\x1e' \
+| websocat -t "ws://localhost:5217/ws?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYjY4NWI2ZC00NjIzLTRmYzEtYWQzMS1kMDBlYmVlM2MwMDgiLCJ1bmlxdWVfbmFtZSI6Ikd1ZXN0X3Jvb21yZWNvXzM4ZjAwYiIsInByb3ZpZGVyIjoiR3Vlc3QiLCJuYmYiOjE3NzY0OTg5NzAsImV4cCI6MTc3NjU1ODk3MCwiaWF0IjoxNzc2NDk4OTcwLCJpc3MiOiJNZW1lc3Bsb2RpbmdBcGkiLCJhdWQiOiJNZW1lc3Bsb2RpbmdDbGllbnQifQ.PRqTd4ixwYG96T2rUHOhgnnbKXZpo1wkaRCjarRdJPA"

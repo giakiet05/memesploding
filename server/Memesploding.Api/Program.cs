@@ -61,6 +61,7 @@ public class Program
         builder.Services.AddHostedService<FriendshipEventWorker>();
         builder.Services.AddHostedService<RoomEventWorker>();
         builder.Services.AddHostedService<PresenceEventWorker>();
+        builder.Services.AddHostedService<RoomReconnectWorker>();
 
         // Thêm mảng Controller - camelCase mặc định + Enum ra chữ thay vì số
         builder.Services.AddControllers()

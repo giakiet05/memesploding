@@ -14,7 +14,7 @@ public class UserService(ApplicationDbContext db) : IUserService
     {
         var user = await db.Users.FindAsync(userId);
         if (user == null)
-            throw new KeyNotFoundException("User not found.");
+            throw AppException.NotFound("User not found.");
 
         return MeDto.FromEntity(user);
     }
@@ -23,7 +23,7 @@ public class UserService(ApplicationDbContext db) : IUserService
     {
         var user = await db.Users.FindAsync(userId);
         if (user == null)
-            throw new KeyNotFoundException("User not found.");
+            throw AppException.NotFound("User not found.");
 
         if (!string.IsNullOrWhiteSpace(request.Username))
             user.Username = request.Username;
@@ -94,7 +94,7 @@ public class UserService(ApplicationDbContext db) : IUserService
     {
         var user = await db.Users.FindAsync(userId);
         if (user == null)
-            throw new KeyNotFoundException("User not found.");
+            throw AppException.NotFound("User not found.");
 
         var globalRank = await db.Users.CountAsync(u => u.Score > user.Score) + 1;
         

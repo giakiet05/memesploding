@@ -46,6 +46,33 @@ public class TokenService : ITokenService
         return tokenHandler.WriteToken(token);
     }
 
+    public string GenerateGameTicket(Guid userId, string roomCode)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim("room_code", roomCode.ToUpperInvariant()),
+            new Claim("scope", "game_ws")
+        };
+
+        var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature);
+        var expirationSeconds = int.Parse(_config["GameTicket:ExpirationSeconds"] ?? "120");
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddSeconds(expirationSeconds),
+            Issuer = _config["GameTicket:Issuer"] ?? _config["Jwt:Issuer"],
+            Audience = _config["GameTicket:Audience"] ?? _config["Jwt:Audience"],
+            SigningCredentials = creds
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return tokenHandler.WriteToken(token);
+    }
+
     public string GenerateRefreshToken()
     {
         var randomNumber = new byte[64];

@@ -4,6 +4,8 @@ using Memesploding.Api.Services;
 using Memesploding.Shared.Events;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.EventBus;
+using Memesploding.Shared.Infrastructure.Security;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR;
 using StackExchange.Redis;
 
@@ -14,17 +16,20 @@ public class RoomEventWorker : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus _eventBus;
     private readonly ICacheStore _cache;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<RoomEventWorker> _logger;
 
     public RoomEventWorker(
         IServiceProvider serviceProvider, 
         IEventBus eventBus,
         ICacheStore cache,
+        IConfiguration configuration,
         ILogger<RoomEventWorker> logger)
     {
         _serviceProvider = serviceProvider;
         _eventBus = eventBus;
         _cache = cache;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -37,6 +42,13 @@ public class RoomEventWorker : BackgroundService
         await _eventBus.SubscribeAsync<RoomInvitationRespondedEvent>(EventChannels.RoomInvitationResponded, HandleRoomInvitationRespondedAsync);
         await _eventBus.SubscribeAsync<RoomJoinRequestSentEvent>(EventChannels.RoomJoinRequestSent, HandleRoomJoinRequestSentAsync);
         await _eventBus.SubscribeAsync<RoomJoinRequestRespondedEvent>(EventChannels.RoomJoinRequestResponded, HandleRoomJoinRequestRespondedAsync);
+        await _eventBus.SubscribeAsync<RoomMemberJoinedEvent>(EventChannels.RoomMemberJoined, HandleRoomMemberJoinedAsync);
+        await _eventBus.SubscribeAsync<RoomMemberLeftEvent>(EventChannels.RoomMemberLeft, HandleRoomMemberLeftAsync);
+        await _eventBus.SubscribeAsync<RoomMemberKickedEvent>(EventChannels.RoomMemberKicked, HandleRoomMemberKickedAsync);
+        await _eventBus.SubscribeAsync<RoomReadyStatusChangedEvent>(EventChannels.RoomReadyStatusChanged, HandleRoomReadyStatusChangedAsync);
+        await _eventBus.SubscribeAsync<RoomMatchStartingEvent>(EventChannels.RoomMatchStarting, HandleRoomMatchStartingAsync);
+        await _eventBus.SubscribeAsync<RoomHostChangedEvent>(EventChannels.RoomHostChanged, HandleRoomHostChangedAsync);
+        await _eventBus.SubscribeAsync<RoomDissolvedEvent>(EventChannels.RoomDissolved, HandleRoomDissolvedAsync);
         
         // Subscribe to Room updates from Game Server
         await _eventBus.SubscribeAsync<RoomUpdatedEvent>(EventChannels.RoomUpdates, HandleRoomUpdateAsync);
@@ -179,6 +191,143 @@ public class RoomEventWorker : BackgroundService
 
             await hubContext.Clients.Clients(requesterConnections).SendAsync("ReceiveMessage", wsMessage);
             _logger.LogInformation("Handled RoomJoinRequestRespondedEvent for {RequesterId}", @event.RequesterId);
+        }
+    }
+
+    private async Task HandleRoomMemberJoinedAsync(RoomMemberJoinedEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomMemberJoinedDto>.Create(
+            WsEventType.RoomMemberJoined,
+            new WsRoomMemberJoinedDto(
+                @event.RoomCode,
+                @event.UserId,
+                @event.Nickname,
+                @event.AvatarUrl,
+                @event.Role,
+                @event.IsReady
+            )
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private async Task HandleRoomMemberLeftAsync(RoomMemberLeftEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomMemberLeftDto>.Create(
+            WsEventType.RoomMemberLeft,
+            new WsRoomMemberLeftDto(@event.RoomCode, @event.UserId)
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private async Task HandleRoomMemberKickedAsync(RoomMemberKickedEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomMemberKickedDto>.Create(
+            WsEventType.RoomMemberKicked,
+            new WsRoomMemberKickedDto(@event.RoomCode, @event.TargetUserId, @event.KickedByUserId)
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private async Task HandleRoomReadyStatusChangedAsync(RoomReadyStatusChangedEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomReadyStatusChangedDto>.Create(
+            WsEventType.RoomReadyStatusChanged,
+            new WsRoomReadyStatusChangedDto(@event.RoomCode, @event.UserId, @event.IsReady)
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private async Task HandleRoomMatchStartingAsync(RoomMatchStartingEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        var wsUrl = _configuration["Realtime:GameWsUrl"] ?? "ws://localhost:5217/ws";
+
+        foreach (var userId in @event.RecipientIds.Distinct())
+        {
+            var connections = await presenceService.GetUserConnectionsAsync(userId);
+            if (connections.Count == 0)
+            {
+                continue;
+            }
+
+            var gameTicket = tokenService.GenerateGameTicket(userId, @event.RoomCode);
+            var payload = WsMessage<WsRoomMatchStartingDto>.Create(
+                WsEventType.RoomMatchStarting,
+                new WsRoomMatchStartingDto(
+                    @event.RoomCode,
+                    @event.StartedByUserId,
+                    new WsRoomConnectionDto(wsUrl, gameTicket)
+                )
+            );
+
+            await hubContext.Clients.Clients(connections.Distinct().ToList()).SendAsync("ReceiveMessage", payload);
+        }
+    }
+
+    private async Task HandleRoomDissolvedAsync(RoomDissolvedEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomDissolvedDto>.Create(
+            WsEventType.RoomDissolved,
+            new WsRoomDissolvedDto(@event.RoomCode, @event.DissolvedByUserId)
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private async Task HandleRoomHostChangedAsync(RoomHostChangedEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+        var payload = WsMessage<WsRoomHostChangedDto>.Create(
+            WsEventType.RoomHostChanged,
+            new WsRoomHostChangedDto(@event.RoomCode, @event.PreviousHostUserId, @event.NewHostUserId)
+        );
+
+        await BroadcastToUsersAsync(hubContext, presenceService, @event.RecipientIds, payload);
+    }
+
+    private static async Task BroadcastToUsersAsync<T>(
+        IHubContext<AppHub> hubContext,
+        IPresenceService presenceService,
+        List<Guid> userIds,
+        WsMessage<T> payload
+    )
+    {
+        if (userIds.Count == 0) return;
+
+        var allConnections = new List<string>();
+        foreach (var userId in userIds.Distinct())
+        {
+            var connections = await presenceService.GetUserConnectionsAsync(userId);
+            allConnections.AddRange(connections);
+        }
+
+        if (allConnections.Count > 0)
+        {
+            await hubContext.Clients.Clients(allConnections.Distinct().ToList()).SendAsync("ReceiveMessage", payload);
         }
     }
 }

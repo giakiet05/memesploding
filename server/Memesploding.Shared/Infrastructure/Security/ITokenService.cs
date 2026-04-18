@@ -5,6 +5,7 @@ using Memesploding.Shared.Entities;
 public interface ITokenService
 {
     string GenerateAccessToken(User user, string username);
+    string GenerateGameTicket(Guid userId, string roomCode);
     string GenerateRefreshToken();
     TimeSpan? GetRemainingTime(string accessToken); // Calculate remaining TTL of the token
 }

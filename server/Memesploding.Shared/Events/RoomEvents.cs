@@ -49,3 +49,52 @@ public record RoomUpdatedEvent(
     int MaxPlayers,
     List<Guid> PlayerIds
 );
+
+public record RoomMemberLeftEvent(
+    string RoomCode,
+    Guid UserId,
+    List<Guid> RecipientIds
+);
+
+public record RoomMemberJoinedEvent(
+    string RoomCode,
+    Guid UserId,
+    string Nickname,
+    string AvatarUrl,
+    string Role,
+    bool IsReady,
+    List<Guid> RecipientIds
+);
+
+public record RoomMemberKickedEvent(
+    string RoomCode,
+    Guid TargetUserId,
+    Guid KickedByUserId,
+    List<Guid> RecipientIds
+);
+
+public record RoomReadyStatusChangedEvent(
+    string RoomCode,
+    Guid UserId,
+    bool IsReady,
+    List<Guid> RecipientIds
+);
+
+public record RoomMatchStartingEvent(
+    string RoomCode,
+    Guid StartedByUserId,
+    List<Guid> RecipientIds
+);
+
+public record RoomHostChangedEvent(
+    string RoomCode,
+    Guid PreviousHostUserId,
+    Guid NewHostUserId,
+    List<Guid> RecipientIds
+);
+
+public record RoomDissolvedEvent(
+    string RoomCode,
+    Guid DissolvedByUserId,
+    List<Guid> RecipientIds
+);

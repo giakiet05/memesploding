@@ -13,6 +13,8 @@ public static class CacheKeys
     public static string RoomCardSets(string roomCode) => $"set:room:{roomCode.ToUpper()}:card_sets";
     public static string PublicRooms() => "set:public_rooms";
     public static string UserInRoom(Guid userId) => $"str:user:{userId}:room";
+    public static string RoomReconnectGrace(Guid userId) => $"str:room_reconnect_grace:{userId}";
+    public static string RoomReconnectGraceUsers() => "set:room_reconnect_grace:users";
 
     // 3. Invitations (Mời vào phòng)
     public static string Invitation(string invitationId) => $"str:invitation:{invitationId}";
