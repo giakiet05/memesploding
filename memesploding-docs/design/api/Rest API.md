@@ -269,6 +269,8 @@ Authorization: Bearer <access_token>
 
 ### GET `/users/leaderboard`
 
+**Auth:** Bearer token required.
+
 **Query params**
 
 - `page` (int, optional, default 1)
@@ -401,6 +403,14 @@ Authorization: Bearer <access_token>
 }
 ```
 
+`connection.wsAccessToken` là game ticket ngắn hạn do API ký.  
+API chỉ cấp ticket khi:
+- requester đang là member của room đó, và
+- room đã vào trạng thái `playing`.
+
+Ngoài các trường hợp trên, `wsAccessToken` sẽ rỗng.
+Flow chính cho client là nhận ticket ngay trong WS event `RoomMatchStarting`; trường REST này dùng làm fallback/resync.
+
 ### POST `/rooms/{code}/join`
 
 **Path params**
@@ -410,6 +420,10 @@ Authorization: Bearer <access_token>
 **Request body:** none
 
 **Response 200:** cùng format room detail ở trên.
+
+**Idempotent behavior:**
+- Nếu user đã ở đúng room `{code}`, API vẫn trả `200` với room detail hiện tại (không tạo participant trùng).
+- Nếu user đang ở room khác, API trả lỗi validation.
 
 ### GET `/rooms`
 
@@ -456,6 +470,12 @@ Authorization: Bearer <access_token>
 - `code` (string)
 
 **Response 200:** room detail giống `POST /rooms`.
+
+**Reconnect note (room/lobby):**
+
+- Sau khi WS reconnect, client nên gọi lại `GET /rooms/{code}` để resync full snapshot.
+- `currentParticipants` là nguồn truth để quyết định user còn trong room hay đã bị remove/kick.
+- Không có REST/WS action dissolve thủ công; room tự kill khi member cuối cùng rời.
 
 ---
 

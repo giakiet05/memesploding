@@ -42,7 +42,8 @@ public class RoomsController(IRoomService roomService) : ControllerBase
     [HttpGet("{code}")]
     public async Task<IActionResult> GetRoomByCode(string code)
     {
-        var room = await roomService.GetRoomByCodeAsync(code.ToUpper());
+        var userId = User.GetUserId();
+        var room = await roomService.GetRoomByCodeAsync(code.ToUpper(), userId);
         return Ok(new ApiResponse<RoomDetailDto>("Successfully!", room));
     }
 }

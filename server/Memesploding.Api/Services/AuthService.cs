@@ -14,6 +14,7 @@ using Memesploding.Shared.Enums;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 public class AuthService(ApplicationDbContext db, ITokenService tokenService, ICacheStore cache, IConfiguration config)
     : IAuthService
@@ -31,17 +32,35 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
             return new AuthResponseDto(MeDto.FromEntity(existingUser), accessToken, refreshToken, IsNewUser: false);
         }
 
-        var user = new User
+        User? user = null;
+        for (var attempt = 0; attempt < 5; attempt++)
         {
-            Provider = AuthProvider.Guest,
-            ProviderId = request.DeviceId,
-            Username = $"Guest_{request.DeviceId[..8]}",
-            AvatarUrl = "default-avatar.png",
-            CreatedAt = DateTime.UtcNow
-        };
+            user = new User
+            {
+                Provider = AuthProvider.Guest,
+                ProviderId = request.DeviceId,
+                Username = await GenerateUniqueUsernameAsync("Guest", request.DeviceId),
+                AvatarUrl = "default-avatar.png",
+                CreatedAt = DateTime.UtcNow
+            };
 
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
+            db.Users.Add(user);
+            try
+            {
+                await db.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException ex) when (IsUsernameUniqueViolation(ex))
+            {
+                db.Entry(user).State = EntityState.Detached;
+                user = null;
+            }
+        }
+
+        if (user == null)
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Unable to create guest account. Please retry.");
+        }
 
         var newAccessToken = tokenService.GenerateAccessToken(user, user.Username);
         var newRefreshToken = tokenService.GenerateRefreshToken();
@@ -82,7 +101,7 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
                 Provider = AuthProvider.Google,
                 ProviderId = googleId,
                 Email = googleEmail,
-                Username = $"User_{googleId[..8]}",
+                Username = await GenerateUniqueUsernameAsync("User", googleId),
                 AvatarUrl = googleAvatar
             };
             db.Users.Add(user);
@@ -130,5 +149,45 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
         {
             await cache.SetAsync($"bl:{accessToken[^20..]}", "revoked", remainingTtl.Value);
         }
+    }
+
+    private async Task<string> GenerateUniqueUsernameAsync(string prefix, string seed)
+    {
+        var normalizedSeed = NormalizeSeed(seed);
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var suffix = Guid.NewGuid().ToString("N")[..6];
+            var candidate = $"{prefix}_{normalizedSeed}_{suffix}";
+            if (candidate.Length > 50)
+            {
+                candidate = candidate[..50];
+            }
+
+            var exists = await db.Users.AnyAsync(u => u.Username == candidate);
+            if (!exists)
+            {
+                return candidate;
+            }
+        }
+
+        throw AppException.BadRequest(ErrorCode.ValidationFailed, "Unable to generate unique username");
+    }
+
+    private static string NormalizeSeed(string seed)
+    {
+        var alnum = new string(seed.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(alnum))
+        {
+            return "user";
+        }
+
+        return alnum.Length <= 8 ? alnum : alnum[..8];
+    }
+
+    private static bool IsUsernameUniqueViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException pg
+               && pg.SqlState == PostgresErrorCodes.UniqueViolation
+               && pg.ConstraintName == "IX_users_Username";
     }
 }

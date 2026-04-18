@@ -29,13 +29,14 @@ public class InvitationService(
     {
         var actualRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(inviterId));
 
-        if (string.IsNullOrEmpty(actualRoomCode) || actualRoomCode != roomCode)
+        if (string.IsNullOrEmpty(actualRoomCode) || !string.Equals(actualRoomCode, roomCode, StringComparison.OrdinalIgnoreCase))
         {
             return ServiceResult.Fail(ErrorCode.NotInRoom, "You are not in this room");
         }
 
+        var normalizedRoomCode = actualRoomCode.ToUpperInvariant();
         var friendRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(friendUserId));
-        if (!string.IsNullOrEmpty(friendRoomCode) && friendRoomCode == roomCode)
+        if (!string.IsNullOrEmpty(friendRoomCode) && string.Equals(friendRoomCode, normalizedRoomCode, StringComparison.OrdinalIgnoreCase))
         {
             return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "Friend is already in this room");
         }
@@ -52,9 +53,9 @@ public class InvitationService(
             return ServiceResult.Fail(ErrorCode.NotFriends, "Target user is not your friend");
         }
 
-        var roomInfoKey = CacheKeys.RoomInfo(roomCode);
+        var roomInfoKey = CacheKeys.RoomInfo(normalizedRoomCode);
         var maxPlayersVal = await cache.HashGetAsync(roomInfoKey, "max_players");
-        var currentPlayersCount = await cache.HashLengthAsync(CacheKeys.RoomParticipants(roomCode));
+        var currentPlayersCount = await cache.HashLengthAsync(CacheKeys.RoomParticipants(normalizedRoomCode));
 
         if (!maxPlayersVal.IsNull)
         {
@@ -87,7 +88,7 @@ public class InvitationService(
         var invitationId = Guid.NewGuid().ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(InvitationTtlMinutes);
 
-        var invitation = new InternalInvitationData(invitationId, roomCode, inviterId, friendUserId, DateTime.UtcNow, expiresAt);
+        var invitation = new InternalInvitationData(invitationId, normalizedRoomCode, inviterId, friendUserId, DateTime.UtcNow, expiresAt);
 
         await cache.StringSetAsync(
             CacheKeys.Invitation(invitationId),
@@ -97,7 +98,7 @@ public class InvitationService(
 
         var @event = new RoomInvitationSentEvent(
             invitationId,
-            roomCode,
+            normalizedRoomCode,
             inviterId,
             friendUserId,
             inviter.Username,
@@ -169,13 +170,14 @@ public class InvitationService(
         Guid requesterId,
         string roomCode)
     {
+        var normalizedRoomCode = roomCode.ToUpperInvariant();
         var actualRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(requesterId));
-        if (!string.IsNullOrEmpty(actualRoomCode) && actualRoomCode == roomCode)
+        if (!string.IsNullOrEmpty(actualRoomCode) && string.Equals(actualRoomCode, normalizedRoomCode, StringComparison.OrdinalIgnoreCase))
         {
             return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "You are already in this room");
         }
 
-        var roomKey = CacheKeys.RoomInfo(roomCode);
+        var roomKey = CacheKeys.RoomInfo(normalizedRoomCode);
         var hostIdVal = await cache.HashGetAsync(roomKey, "host_id");
 
         if (hostIdVal.IsNull) return ServiceResult.Fail(ErrorCode.NotFound, "Room not found");
@@ -185,7 +187,7 @@ public class InvitationService(
 
         if (isPublic) return ServiceResult.Fail(ErrorCode.RoomPublic, "Room is public, join via REST");
 
-        var currentPlayersCount = await cache.HashLengthAsync(CacheKeys.RoomParticipants(roomCode));
+        var currentPlayersCount = await cache.HashLengthAsync(CacheKeys.RoomParticipants(normalizedRoomCode));
         var maxPlayersVal = await cache.HashGetAsync(roomKey, "max_players");
 
         if (!maxPlayersVal.IsNull && currentPlayersCount >= int.Parse(maxPlayersVal.ToString()))
@@ -193,7 +195,7 @@ public class InvitationService(
             return ServiceResult.Fail(ErrorCode.RoomIsFull, "Room is full");
         }
 
-        var rateLimitKey = CacheKeys.JoinRequestRateLimit(requesterId, roomCode);
+        var rateLimitKey = CacheKeys.JoinRequestRateLimit(requesterId, normalizedRoomCode);
         if (!string.IsNullOrEmpty(await cache.StringGetAsync(rateLimitKey)))
         {
             return ServiceResult.Fail(ErrorCode.RateLimited, "Please wait");
@@ -203,11 +205,11 @@ public class InvitationService(
         var requester = await db.Users.FindAsync(requesterId);
         if (requester == null) return ServiceResult.Fail(ErrorCode.NotFound, "User not found");
 
-        var participantKeys = await cache.HashKeysAsync(CacheKeys.RoomParticipants(roomCode));
+        var participantKeys = await cache.HashKeysAsync(CacheKeys.RoomParticipants(normalizedRoomCode));
         var requestId = Guid.NewGuid().ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(InvitationTtlMinutes);
 
-        var requestData = new { requestId = requestId, roomCode = roomCode, requesterId = requesterId, expiresAt = expiresAt };
+        var requestData = new { requestId = requestId, roomCode = normalizedRoomCode, requesterId = requesterId, expiresAt = expiresAt };
 
         await cache.StringSetAsync(CacheKeys.JoinRequest(requestId), JsonSerializer.Serialize(requestData), TimeSpan.FromMinutes(InvitationTtlMinutes));
 
@@ -217,7 +219,7 @@ public class InvitationService(
         {
             var @event = new RoomJoinRequestSentEvent(
                 requestId,
-                roomCode,
+                normalizedRoomCode,
                 requesterId,
                 requester.Username,
                 requester.AvatarUrl ?? "",
@@ -243,7 +245,7 @@ public class InvitationService(
         if (joinRequest == null) return ServiceResult.Fail(ErrorCode.RequestNotFound, "Invalid");
 
         var actualRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
-        if (string.IsNullOrEmpty(actualRoomCode) || actualRoomCode != joinRequest.RoomCode)
+        if (string.IsNullOrEmpty(actualRoomCode) || !string.Equals(actualRoomCode, joinRequest.RoomCode, StringComparison.OrdinalIgnoreCase))
         {
             return ServiceResult.Fail(ErrorCode.Forbidden, "Not in room");
         }

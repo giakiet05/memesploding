@@ -1,0 +1,393 @@
+###
+### Memesploding Room - Happy Path (REST + WebSocket)
+###
+
+### ============================================
+### PHASE 1: USERS + TOKENS + WS CONNECTIONS
+### ============================================
+
+### 1.1 Alice registers (Guest)
+# @name aliceRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_happy_alice_001"
+}
+
+> {%
+    client.global.set("aliceToken", response.body.data.accessToken);
+    client.global.set("aliceUserId", response.body.data.user.id);
+%}
+
+### 1.2 Bob registers (Guest)
+# @name bobRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_happy_bob_002"
+}
+
+> {%
+    client.global.set("bobToken", response.body.data.accessToken);
+    client.global.set("bobUserId", response.body.data.user.id);
+%}
+
+### 1.3 Charlie registers (Guest)
+# @name charlieRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_happy_charlie_003"
+}
+
+> {%
+    client.global.set("charlieToken", response.body.data.accessToken);
+    client.global.set("charlieUserId", response.body.data.user.id);
+%}
+
+### 1.4 Alice WS connect
+# @name aliceWS
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 1.5 Bob WS connect
+# @name bobWS
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 1.6 Charlie WS connect
+# @name charlieWS
+WEBSOCKET {{wsUrl}}?access_token={{charlieToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### ============================================
+### PHASE 2: FRIENDSHIP (ALICE <-> BOB)
+### ============================================
+
+### 2.1 Alice sends friend request to Bob
+POST {{baseUrl}}/me/friends/invitations
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{bobUserId}}"
+}
+
+### 2.2 Bob accepts friend request
+PATCH {{baseUrl}}/me/friends/invitations/{{aliceUserId}}
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{
+  "accept": true
+}
+
+
+### ============================================
+### PHASE 3: CREATE ROOM + PUBLIC LIST JOIN
+### ============================================
+
+### 3.1 Alice loads card sets
+# @name loadCardSets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceToken}}
+
+> {%
+    const items = response.body.data?.items ?? [];
+    if (items.length > 0) {
+      client.global.set("roomHappyCardSetId", items[0].id);
+    }
+%}
+
+### 3.2 Alice creates public room A
+# @name createRoomA
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomHappyCardSetId}}"]
+}
+
+> {%
+    client.global.set("roomCodeA", response.body.data.code);
+%}
+
+### 3.3 Charlie browses public rooms and picks Alice room
+# @name charliePublicRoomsA
+GET {{baseUrl}}/rooms
+Authorization: Bearer {{charlieToken}}
+
+> {%
+    const items = response.body.data?.items ?? [];
+    const targetCode = client.global.get("roomCodeA");
+    const target = items.find(r => r.code === targetCode) || items[0];
+    if (target) {
+      client.global.set("roomCodeAFromList", target.code);
+    }
+%}
+
+### 3.4 Charlie joins room A via public list code
+POST {{baseUrl}}/rooms/{{roomCodeAFromList}}/join
+Authorization: Bearer {{charlieToken}}
+
+
+### ============================================
+### PHASE 4: INVITE + JOIN REQUEST FLOW
+### ============================================
+
+### 4.1 Alice invites Bob to room A (WS)
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "InviteToRoom",
+  "arguments": [
+    "{{roomCodeA}}",
+    "{{bobUserId}}"
+  ]
+}
+
+### 4.2 Bob accepts invitation (WS)
+### COPY invitationId từ console của Bob khi nhận RoomInvitationReceived
+@invitationId = "40a0511e-66d0-49f6-9f1f-3df864adcef4"
+
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "RespondInvitation",
+  "arguments": [
+    {{invitationId}},
+    true
+  ]
+}
+
+
+### ============================================
+### PHASE 5: ROOM LIFECYCLE ACTIONS (ROOM A)
+### ============================================
+
+### 5.1 Bob ready true (WS)
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomCodeA}}",
+    true
+  ]
+}
+
+### 5.2 Charlie ready true (WS)
+WEBSOCKET {{wsUrl}}?access_token={{charlieToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomCodeA}}",
+    true
+  ]
+}
+
+### 5.3 Alice kicks Charlie (WS)
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "KickRoomMember",
+  "arguments": [
+    "{{roomCodeA}}",
+    "{{charlieUserId}}"
+  ]
+}
+
+### 5.4 Charlie rejoins room A by list code
+POST {{baseUrl}}/rooms/{{roomCodeA}}/join
+Authorization: Bearer {{charlieToken}}
+
+### 5.5 Charlie leaves room A (WS)
+WEBSOCKET {{wsUrl}}?access_token={{charlieToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "LeaveRoom",
+  "arguments": [
+    "{{roomCodeA}}"
+  ]
+}
+
+### 5.6 Alice leaves room A (WS, host handover expected)
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "LeaveRoom",
+  "arguments": [
+    "{{roomCodeA}}"
+  ]
+}
+
+### 5.7 Bob leaves room A (WS, last member -> room auto-killed)
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "LeaveRoom",
+  "arguments": [
+    "{{roomCodeA}}"
+  ]
+}
+
+
+### ============================================
+### PHASE 6: START MATCH FLOW (ROOM B)
+### ============================================
+
+### 6.1 Charlie creates public room B (Charlie is host)
+# @name createRoomB
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{charlieToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomHappyCardSetId}}"]
+}
+
+> {%
+    client.global.set("roomCodeB", response.body.data.code);
+%}
+
+### 6.2 Alice joins room B
+POST {{baseUrl}}/rooms/{{roomCodeB}}/join
+Authorization: Bearer {{aliceToken}}
+
+### 6.3 Bob joins room B
+POST {{baseUrl}}/rooms/{{roomCodeB}}/join
+Authorization: Bearer {{bobToken}}
+
+### 6.4 Alice ready true
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomCodeB}}",
+    true
+  ]
+}
+
+### 6.5 Bob ready true
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomCodeB}}",
+    true
+  ]
+}
+
+### 6.6 Charlie starts match
+WEBSOCKET {{wsUrl}}?access_token={{charlieToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "StartRoomMatch",
+  "arguments": [
+    "{{roomCodeB}}"
+  ]
+}

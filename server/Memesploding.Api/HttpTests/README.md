@@ -6,7 +6,10 @@ Complete integration test suite covering **all 30 REST endpoints + WebSocket int
 
 | File | Description | Tool |
 |------|-------------|------|
-| **IntegrationTests.http** | Main test file with all 26 REST endpoints | Rider/IntelliJ HTTP Client |
+| **IntegrationTests.http** | Main cross-domain smoke tests (non-room heavy) | Rider/IntelliJ HTTP Client |
+| **Room.HappyPath.http** | Room happy-path flows (REST + WebSocket) | Rider/IntelliJ HTTP Client |
+| **Room.EdgeCases.http** | Room negative/edge-case flows (REST + WebSocket) | Rider/IntelliJ HTTP Client |
+| **Room.Reconnect.http** | Room reconnect/grace-timeout scenarios (manual + REST resync) | Rider/IntelliJ HTTP Client |
 | **run-integration-tests.sh** | Automated bash runner (curl-based) | Bash + curl + jq |
 | **ws-test.sh** | WebSocket automated tests | Bash + websocat |
 | **ws-test-manual.md** | WebSocket manual testing guide | wscat or websocat |

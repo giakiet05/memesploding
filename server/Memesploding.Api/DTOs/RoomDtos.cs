@@ -8,6 +8,10 @@ public record CreateRoomDto(
     List<Guid> CardSetIds
 );
 
+public record UpdateReadyStatusDto(
+    bool IsReady
+);
+
 // Quick Play không cần input - random vào phòng public bất kỳ
 public record QuickPlayDto;
 

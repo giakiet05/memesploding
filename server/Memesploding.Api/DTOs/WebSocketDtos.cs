@@ -17,6 +17,15 @@ public enum WsEventType
     RoomInvitationResponse,
     JoinRoomRequested,
     JoinRoomResponse,
+    RoomMemberJoined,
+    RoomMemberLeft,
+    RoomMemberKicked,
+    RoomReadyStatusChanged,
+    RoomMatchStarting,
+    RoomHostChanged,
+    RoomDissolved,
+    MatchEnded,
+    ReturnedToRoom,
     
     // System
     Error,
@@ -101,6 +110,54 @@ public record WsJoinRoomResponseDto(
     bool Accepted,
     Guid? ResponderId,
     string? ResponderUsername
+);
+
+public record WsRoomMemberJoinedDto(
+    string RoomCode,
+    Guid UserId,
+    string Nickname,
+    string AvatarUrl,
+    string Role,
+    bool IsReady
+);
+
+public record WsRoomMemberLeftDto(
+    string RoomCode,
+    Guid UserId
+);
+
+public record WsRoomMemberKickedDto(
+    string RoomCode,
+    Guid TargetUserId,
+    Guid KickedByUserId
+);
+
+public record WsRoomReadyStatusChangedDto(
+    string RoomCode,
+    Guid UserId,
+    bool IsReady
+);
+
+public record WsRoomConnectionDto(
+    string WsUrl,
+    string WsAccessToken
+);
+
+public record WsRoomMatchStartingDto(
+    string RoomCode,
+    Guid StartedByUserId,
+    WsRoomConnectionDto Connection
+);
+
+public record WsRoomHostChangedDto(
+    string RoomCode,
+    Guid PreviousHostUserId,
+    Guid NewHostUserId
+);
+
+public record WsRoomDissolvedDto(
+    string RoomCode,
+    Guid DissolvedByUserId
 );
 
 public record WsErrorDto(
