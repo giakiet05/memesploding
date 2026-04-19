@@ -1,5 +1,42 @@
 # Game Server Design (Phase 1)
 
+## 0) Flow hoạt động tổng quan (đọc nhanh)
+
+1. **API Server phát lệnh bắt đầu trận**
+   - Host bấm start match ở room.
+   - API validate điều kiện room, tạo `matchId`, chuyển room sang `starting/playing`.
+   - API push `RoomMatchStarting` qua WS room, kèm `connection.wsUrl` + `connection.wsAccessToken` cho từng player.
+
+2. **Client kết nối Game WS bằng game ticket**
+   - Client dùng `wsUrl` + `wsAccessToken` để vào game server.
+   - Game server verify ticket (`scope = game_ws`, `userId`, `roomCode/matchId`, hạn ngắn).
+
+3. **Game server khởi tạo runtime authoritative**
+   - Tạo runtime theo `matchId` (in-memory).
+   - Nạp danh sách player, setup deck, chia bài, random người đi đầu.
+   - Persist snapshot ban đầu để phục vụ reconnect.
+
+4. **Vòng lặp gameplay realtime**
+   - Client chỉ gửi command/intent (`PlayCard`, `DrawCard`, ...).
+   - Game server validate theo phase/turn/rule rồi mới apply.
+   - State chạy theo tick/queue tuần tự để tránh race.
+
+5. **Broadcast state cho client**
+   - Game server gửi event gameplay + state patch/snapshot theo phiên bản (`stateVersion`).
+   - Client render theo dữ liệu server, không tự quyết định kết quả.
+
+6. **Disconnect/reconnect trong trận**
+   - Khi rớt mạng, player được giữ slot trong grace window (phase 1: 60s).
+   - Reconnect hợp lệ thì nhận snapshot mới nhất để tiếp tục.
+   - Quá hạn grace thì xử lý theo rule AFK/eliminated của trận.
+
+7. **Kết thúc trận và lưu kết quả**
+   - Khi đủ điều kiện kết thúc, game server chốt winner + stats.
+   - Publish kết quả về API server để persist DB (`matches`, `match_participants`, leaderboard nếu có).
+   - Room được trả về pre-game state để người chơi quay lại lobby.
+
+---
+
 ## 1) Mục tiêu và phạm vi
 
 ### Mục tiêu phase 1
