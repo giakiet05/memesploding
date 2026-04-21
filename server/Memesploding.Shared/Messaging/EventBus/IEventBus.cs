@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Infrastructure.EventBus;
+namespace Memesploding.Shared.Messaging.EventBus;
 
 public interface IEventBus
 {

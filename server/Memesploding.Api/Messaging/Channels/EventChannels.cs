@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Infrastructure.EventBus;
+namespace Memesploding.Api.Messaging.Channels;
 
 public static class EventChannels
 {

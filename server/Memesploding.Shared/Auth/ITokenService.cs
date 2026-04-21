@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Infrastructure.Security;
+namespace Memesploding.Shared.Auth;
 
 using Memesploding.Shared.Entities;
 

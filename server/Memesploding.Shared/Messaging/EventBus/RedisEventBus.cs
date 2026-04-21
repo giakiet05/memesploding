@@ -2,7 +2,7 @@ using StackExchange.Redis;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Memesploding.Shared.Infrastructure.EventBus;
+namespace Memesploding.Shared.Messaging.EventBus;
 
 public class RedisEventBus : IEventBus
 {

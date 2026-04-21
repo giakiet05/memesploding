@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Auth;
 
 namespace Memesploding.Api.Services;
 
@@ -11,8 +13,6 @@ using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Infrastructure.Cache;
-using Memesploding.Shared.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 

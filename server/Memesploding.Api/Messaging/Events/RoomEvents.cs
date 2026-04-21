@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Events;
+namespace Memesploding.Api.Messaging.Events;
 
 public record RoomInvitationSentEvent(
     string InvitationId,

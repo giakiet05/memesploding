@@ -1,4 +1,4 @@
-namespace Memesploding.Shared.Infrastructure.Cache;
+namespace Memesploding.Api.Infrastructure.Cache;
 
 public static class CacheKeys
 {

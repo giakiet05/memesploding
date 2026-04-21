@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Memesploding.Api.Data;
-using Memesploding.Shared.Infrastructure.Cache;
-using Memesploding.Shared.Infrastructure.Security;
-using Memesploding.Shared.Infrastructure.EventBus;
+using Memesploding.Api.Infrastructure.Cache;
+using Memesploding.Shared.Auth;
+using Memesploding.Api.Messaging.Channels;
 using Memesploding.Api.Services;
 using Memesploding.Api.Workers;
 using Memesploding.Api.Middlewares;
@@ -10,6 +10,8 @@ using Scalar.AspNetCore;
 using StackExchange.Redis;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Messaging.EventBus;
 using System.Text;
 using System.Text.Json.Serialization;
 

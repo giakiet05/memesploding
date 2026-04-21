@@ -1,15 +1,17 @@
 using Memesploding.Api.Data;
 using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
-using Memesploding.Shared.Events;
+using Memesploding.Api.Messaging.Events;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Infrastructure.Cache;
-using Memesploding.Shared.Infrastructure.EventBus;
-using Memesploding.Shared.Infrastructure.Security;
+using Memesploding.Api.Infrastructure.Cache;
+using Memesploding.Api.Messaging.Channels;
+using Memesploding.Shared.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using System.Text.Json;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Messaging.EventBus;
 
 namespace Memesploding.Api.Services;
 

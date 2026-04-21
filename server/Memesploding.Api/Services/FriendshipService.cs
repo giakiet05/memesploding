@@ -3,9 +3,10 @@ using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Events;
-using Memesploding.Shared.Infrastructure.EventBus;
+using Memesploding.Api.Messaging.Events;
+using Memesploding.Api.Messaging.Channels;
 using Microsoft.EntityFrameworkCore;
+using Memesploding.Shared.Messaging.EventBus;
 
 namespace Memesploding.Api.Services;
 

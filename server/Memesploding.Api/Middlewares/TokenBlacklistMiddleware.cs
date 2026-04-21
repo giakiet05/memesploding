@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
 using Memesploding.Api.Exceptions;
-using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Api.Infrastructure.Cache;
 using Microsoft.AspNetCore.Http;
+using Memesploding.Shared.Infrastructure.Cache;
 
 namespace Memesploding.Api.Middlewares;
 

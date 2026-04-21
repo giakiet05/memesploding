@@ -4,12 +4,14 @@
 
 1. **API Server phát lệnh bắt đầu trận**
    - Host bấm start match ở room.
-   - API validate điều kiện room, tạo `matchId`, chuyển room sang `starting/playing`.
+   - API validate điều kiện room, tạo `matchId`, chuyển room sang `starting`.
+   - API publish **integration event** (qua contract/channels trong Shared) để yêu cầu game server start runtime.
    - API push `RoomMatchStarting` qua WS room, kèm `connection.wsUrl` + `connection.wsAccessToken` cho từng player.
 
 2. **Client kết nối Game WS bằng game ticket**
    - Client dùng `wsUrl` + `wsAccessToken` để vào game server.
    - Game server verify ticket (`scope = game_ws`, `userId`, `roomCode/matchId`, hạn ngắn).
+   - Client **không** gửi request để chuyển phase room (`waiting -> playing`).
 
 3. **Game server khởi tạo runtime authoritative**
    - Tạo runtime theo `matchId` (in-memory).
@@ -82,6 +84,11 @@
 - **Domain/Game Engine Layer**: state machine, rules, effect resolver.
 - **Infra Layer**: Redis snapshot, pub/sub, persistence bridge sang API/DB.
 
+### 2.4 Event/Channel boundary
+- **Internal events/channels**: đặt trong từng service (`Memesploding.Api`, `Memesploding.Game`) cho flow nội bộ service đó.
+- **Integration events/channels (API <-> Game)**: đặt trong Shared để hai server dùng cùng schema, tránh drift contract.
+- Game runtime chỉ được start bởi integration event từ API, không bởi command từ client.
+
 ---
 
 
@@ -120,7 +127,6 @@
 - Tách nhóm event gameplay rõ ràng để client render deterministic.
 
 ### 4.2 Nhóm client -> server (ý tưởng command)
-- `StartMatch`
 - `PlayCard`
 - `DrawCard`
 - `UseDefuse`
@@ -128,6 +134,8 @@
 - `Nope`
 - `ReconnectMatch`
 - `AckStateVersion` (optional nếu cần sync/catch-up)
+
+> `StartMatch` không thuộc nhóm client -> game. Đây là API room action và API sẽ phát integration event sang game server.
 
 ### 4.3 Nhóm server -> client (ý tưởng event)
 - `MatchStarted`
@@ -150,10 +158,10 @@
 ### 5.1 StartMatch
 1. Host gọi `StartMatch` vào API Server.
 2. API validate host + trạng thái ready + khóa room sang `starting`.
-3. API handoff command sang Game Server.
-4. Game load card sets (Original), build deck, chia bài, random người đi đầu.
-5. Game persist initial snapshot + broadcast `MatchStarted`.
-6. API/Presence nhận trạng thái `playing` để phản ánh ra social layer.
+3. API publish integration event `StartMatchRequested` sang game server (channel/contract trong Shared).
+4. Game server nhận event, tạo runtime, load card sets (Original), build deck, chia bài, random người đi đầu.
+5. Game persist initial snapshot + broadcast `MatchStarted` cho client đã kết nối game WS.
+6. Game publish integration event `MatchStarted`/`RoomUpdated` về API để API cập nhật presence + phản ánh trạng thái `playing`.
 
 ### 5.2 Turn loop
 1. Mở turn + countdown timer.
@@ -192,8 +200,8 @@
 - Reuse `room:*` hiện có cho bridge presence/status.
 
 ### 6.3 Bridge với API Server
-- API publish StartMatch command (kèm snapshot room pre-game tối thiểu) hoặc game server pull room data khi start.
-- Game server publish room/match updates qua Redis pub/sub channel hiện có (`room:updates`) + channel match ended callback.
+- API publish integration event StartMatch (kèm snapshot room pre-game tối thiểu) theo shared contract; game server consume event này để start runtime.
+- Game server publish integration events room/match updates theo shared contract (bao gồm match started/match ended callback).
 - API là nơi cuối cùng persist lịch sử trận và reset room state cho phiên tiếp theo.
 
 ---
