@@ -4,12 +4,18 @@ using Memesploding.Api.Services;
 using Memesploding.Api.Messaging.Events;
 using Memesploding.Api.Infrastructure.Cache;
 using Memesploding.Api.Messaging.Channels;
+using Memesploding.Api.Data;
+using Memesploding.Shared.Entities;
 using Memesploding.Shared.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using Memesploding.Shared.Infrastructure.Cache;
 using Memesploding.Shared.Messaging.EventBus;
+using Memesploding.Shared.Messaging.Integration.Channels;
+using Memesploding.Shared.Messaging.Integration.Events;
+using System.Text.Json;
 
 namespace Memesploding.Api.Workers;
 
@@ -18,8 +24,8 @@ public class RoomEventWorker : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus _eventBus;
     private readonly ICacheStore _cache;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<RoomEventWorker> _logger;
+    private readonly string _gameWsUrl;
 
     public RoomEventWorker(
         IServiceProvider serviceProvider, 
@@ -31,8 +37,9 @@ public class RoomEventWorker : BackgroundService
         _serviceProvider = serviceProvider;
         _eventBus = eventBus;
         _cache = cache;
-        _configuration = configuration;
         _logger = logger;
+        _gameWsUrl = configuration["Realtime:GameWsUrl"]
+                     ?? throw new InvalidOperationException("Missing Realtime:GameWsUrl in configuration");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -53,10 +60,11 @@ public class RoomEventWorker : BackgroundService
         await _eventBus.SubscribeAsync<RoomDissolvedEvent>(EventChannels.RoomDissolved, HandleRoomDissolvedAsync);
         
         // Subscribe to Room updates from Game Server
-        await _eventBus.SubscribeAsync<RoomUpdatedEvent>(EventChannels.RoomUpdates, HandleRoomUpdateAsync);
+        await _eventBus.SubscribeAsync<RoomUpdatedIntegrationEvent>(GameIntegrationChannels.RoomUpdated, HandleRoomUpdateAsync);
+        await _eventBus.SubscribeAsync<MatchEndedIntegrationEvent>(GameIntegrationChannels.MatchEnded, HandleMatchEndedAsync);
     }
 
-    private async Task HandleRoomUpdateAsync(RoomUpdatedEvent update)
+    private async Task HandleRoomUpdateAsync(RoomUpdatedIntegrationEvent update)
     {
         // 1. Update room info cache
         if (!string.IsNullOrEmpty(update.RoomCode))
@@ -80,11 +88,10 @@ public class RoomEventWorker : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
 
-            var updateTasks = update.PlayerIds.Select(playerId => 
-                presenceService.UpdateUserActivityAsync(playerId)
-            );
-
-            await Task.WhenAll(updateTasks);
+            foreach (var playerId in update.PlayerIds)
+            {
+                await presenceService.UpdateUserActivityAsync(playerId);
+            }
 
             _logger.LogInformation(
                 "Updated presence for {Count} players in room {RoomCode}",
@@ -92,6 +99,127 @@ public class RoomEventWorker : BackgroundService
                 update.RoomCode
             );
         }
+    }
+
+    private async Task HandleMatchEndedAsync(MatchEndedIntegrationEvent @event)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
+        var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+
+        var roomCode = @event.RoomCode.ToUpperInvariant();
+        var roomInfo = await _cache.HashGetAllAsync(CacheKeys.RoomInfo(roomCode));
+        var roomInfoDict = roomInfo.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+        var turnTimer = int.TryParse(roomInfoDict.GetValueOrDefault("turn_timer"), out var turnTimerParsed) ? turnTimerParsed : 15;
+        var maxPlayers = int.TryParse(roomInfoDict.GetValueOrDefault("max_players"), out var maxPlayersParsed) ? maxPlayersParsed : 0;
+        var cardSetIds = (await _cache.SetMembersAsync(CacheKeys.RoomCardSets(roomCode)))
+            .Select(raw => Guid.TryParse(raw, out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        var participantIds = await GetRoomParticipantIdsAsync(roomCode);
+        var participantResults = (@event.Participants ?? [])
+            .GroupBy(x => x.UserId)
+            .Select(g => g.First())
+            .ToDictionary(x => x.UserId, x => x.FinalRank);
+
+        foreach (var participantId in participantIds)
+        {
+            if (!participantResults.ContainsKey(participantId))
+            {
+                participantResults[participantId] = @event.WinnerId == participantId ? 1 : 2;
+            }
+        }
+
+        var match = await db.Matches
+            .Include(m => m.Participants)
+            .FirstOrDefaultAsync(m => m.Id == @event.MatchId);
+
+        var settingsJson = JsonSerializer.Serialize(new
+        {
+            roomCode,
+            cardSetIds,
+            maxPlayers,
+            turnTimer
+        });
+        var statsJson = JsonSerializer.Serialize(new
+        {
+            totalTurns = @event.TotalTurns,
+            totalCards = @event.TotalCardsPlayed
+        });
+
+        if (match == null)
+        {
+            match = new Match
+            {
+                Id = @event.MatchId,
+                WinnerId = @event.WinnerId,
+                StartedAt = @event.StartedAt ?? @event.EndedAt,
+                EndedAt = @event.EndedAt,
+                Settings = settingsJson,
+                Stats = statsJson
+            };
+
+            foreach (var (userId, finalRank) in participantResults.OrderBy(x => x.Value))
+            {
+                match.Participants.Add(new MatchParticipant
+                {
+                    MatchId = @event.MatchId,
+                    UserId = userId,
+                    FinalRank = finalRank,
+                    XpEarned = 0,
+                    ScoreChange = 0
+                });
+            }
+
+            await db.Matches.AddAsync(match);
+        }
+        else
+        {
+            match.WinnerId = @event.WinnerId;
+            match.EndedAt = @event.EndedAt;
+            match.StartedAt = @event.StartedAt ?? match.StartedAt;
+            match.Settings = settingsJson;
+            match.Stats = statsJson;
+
+            db.MatchParticipants.RemoveRange(match.Participants);
+            foreach (var (userId, finalRank) in participantResults.OrderBy(x => x.Value))
+            {
+                await db.MatchParticipants.AddAsync(new MatchParticipant
+                {
+                    MatchId = @event.MatchId,
+                    UserId = userId,
+                    FinalRank = finalRank,
+                    XpEarned = 0,
+                    ScoreChange = 0
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        await _cache.HashSetAsync(CacheKeys.RoomInfo(roomCode), "status", "waiting");
+
+        var payload = WsMessage<WsMatchEndedDto>.Create(
+            WsEventType.MatchEnded,
+            new WsMatchEndedDto(@event.MatchId, roomCode, @event.WinnerId, @event.EndedAt)
+        );
+
+        var connections = new List<string>();
+        foreach (var userId in participantIds.Distinct())
+        {
+            var userConnections = await presenceService.GetUserConnectionsAsync(userId);
+            connections.AddRange(userConnections);
+        }
+
+        if (connections.Count > 0)
+        {
+            await hubContext.Clients.Clients(connections.Distinct().ToList()).SendAsync("ReceiveMessage", payload);
+        }
+
+        _logger.LogInformation("Persisted match {MatchId} result for room {RoomCode}", @event.MatchId, roomCode);
     }
 
     private async Task HandleRoomInvitationSentAsync(RoomInvitationSentEvent @event)
@@ -261,8 +389,6 @@ public class RoomEventWorker : BackgroundService
         var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
         var presenceService = scope.ServiceProvider.GetRequiredService<IPresenceService>();
         var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
-        var wsUrl = _configuration["Realtime:GameWsUrl"] ?? "ws://localhost:5217/ws";
-
         foreach (var userId in @event.RecipientIds.Distinct())
         {
             var connections = await presenceService.GetUserConnectionsAsync(userId);
@@ -277,7 +403,7 @@ public class RoomEventWorker : BackgroundService
                 new WsRoomMatchStartingDto(
                     @event.RoomCode,
                     @event.StartedByUserId,
-                    new WsRoomConnectionDto(wsUrl, gameTicket)
+                    new WsRoomConnectionDto(_gameWsUrl, gameTicket)
                 )
             );
 
@@ -331,5 +457,14 @@ public class RoomEventWorker : BackgroundService
         {
             await hubContext.Clients.Clients(allConnections.Distinct().ToList()).SendAsync("ReceiveMessage", payload);
         }
+    }
+
+    private async Task<List<Guid>> GetRoomParticipantIdsAsync(string roomCode)
+    {
+        var participantsData = await _cache.HashGetAllAsync(CacheKeys.RoomParticipants(roomCode));
+        return participantsData
+            .Select(entry => Guid.TryParse(entry.Name.ToString(), out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .ToList();
     }
 }

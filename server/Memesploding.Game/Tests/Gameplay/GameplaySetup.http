@@ -1,0 +1,185 @@
+### 
+### Memesploding Gameplay Setup Flow
+### Uses environment variables from ../http-client.env.json
+### In Rider: Select "dev" environment from dropdown before running
+### 
+
+### 
+### 1. LOGIN & TOKENS
+### 
+
+# @name aliceLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdAlice}}" }
+
+> {% 
+    client.global.set("aliceToken", response.body.data.accessToken); 
+    client.global.set("aliceId", response.body.data.user.id);
+    client.global.set("aliceUsername", response.body.data.user.username);
+%}
+
+###
+
+# @name bobLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdBob}}" }
+
+> {% 
+    client.global.set("bobToken", response.body.data.accessToken); 
+    client.global.set("bobId", response.body.data.user.id);
+    client.global.set("bobUsername", response.body.data.user.username);
+%}
+
+###
+
+# @name charlieLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdCharlie}}" }
+
+> {% 
+    client.global.set("charlieToken", response.body.data.accessToken); 
+    client.global.set("charlieId", response.body.data.user.id);
+    client.global.set("charlieUsername", response.body.data.user.username);
+%}
+
+### 
+### 2. CREATE & JOIN ROOM
+### 
+
+# @name loadCardSets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("cardSetId", response.body.data.items[0].id); 
+    client.global.set("cardSetName", response.body.data.items[0].name);
+%}
+
+###
+
+# @name createRoom
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+> {% 
+    client.global.set("roomCode", response.body.data.code); 
+    client.global.set("roomId", response.body.data.id);
+%}
+
+###
+
+# @name bobJoin
+POST {{baseUrl}}/rooms/{{roomCode}}/join
+Authorization: Bearer {{bobToken}}
+
+> {% 
+    client.global.set("bobJoinStatus", response.status);
+%}
+
+###
+
+# @name charlieJoin
+POST {{baseUrl}}/rooms/{{roomCode}}/join
+Authorization: Bearer {{charlieToken}}
+
+> {% 
+    client.global.set("charlieJoinStatus", response.status);
+%}
+
+### 
+### 3. SET READY & START MATCH
+### 
+
+# Gửi sẵn sàng qua REST (hoặc mày có thể dùng WS nhưng đây cho nhanh)
+# Lưu ý: Client thực tế sẽ dùng WS target "SetReadyStatus"
+
+# @name aliceReady
+PATCH {{baseUrl}}/rooms/{{roomCode}}/ready?isReady=true
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("aliceReadyStatus", response.status);
+%}
+
+###
+
+# @name bobReady
+PATCH {{baseUrl}}/rooms/{{roomCode}}/ready?isReady=true
+Authorization: Bearer {{bobToken}}
+
+> {% 
+    client.global.set("bobReadyStatus", response.status);
+%}
+
+###
+
+# @name charlieReady
+PATCH {{baseUrl}}/rooms/{{roomCode}}/ready?isReady=true
+Authorization: Bearer {{charlieToken}}
+
+> {% 
+    client.global.set("charlieReadyStatus", response.status);
+%}
+
+###
+
+# @name startMatch
+# ALICE START MATCH (Gọi qua API để kích hoạt trạng thái "playing")
+# Thực tế host sẽ gửi WS target "StartRoomMatch"
+POST {{baseUrl}}/rooms/{{roomCode}}/start
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("matchStartStatus", response.status);
+%}
+
+### 
+### 4. GET GAME TICKETS (VÀO ĐÂY ĐỂ LẤY TOKEN CHO WS GAME)
+### 
+
+# Chạy 3 request này SAU KHI đã Start Match để lấy Game Ticket
+# Dùng ticket này kết hợp với gameWsUrl: {{gameWsUrl}}?access_token={ticket}
+
+# @name getAliceTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("aliceGameTicket", response.body.data.gameTicket);
+    client.global.set("aliceWsUrl", `${client.global.get("gameWsUrl")}?access_token=${response.body.data.gameTicket}`);
+%}
+
+###
+
+# @name getBobTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{bobToken}}
+
+> {% 
+    client.global.set("bobGameTicket", response.body.data.gameTicket);
+    client.global.set("bobWsUrl", `${client.global.get("gameWsUrl")}?access_token=${response.body.data.gameTicket}`);
+%}
+
+###
+
+# @name getCharlieTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{charlieToken}}
+
+> {% 
+    client.global.set("charlieGameTicket", response.body.data.gameTicket);
+    client.global.set("charlieWsUrl", `${client.global.get("gameWsUrl")}?access_token=${response.body.data.gameTicket}`);
+%}

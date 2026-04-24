@@ -160,6 +160,13 @@ public record WsRoomDissolvedDto(
     Guid DissolvedByUserId
 );
 
+public record WsMatchEndedDto(
+    Guid MatchId,
+    string RoomCode,
+    Guid? WinnerId,
+    DateTime EndedAt
+);
+
 public record WsErrorDto(
     ErrorCode Code,
     string Message

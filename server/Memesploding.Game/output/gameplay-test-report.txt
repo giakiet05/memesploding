@@ -1,0 +1,9 @@
+[INFO] Server: http://localhost:5217/api/v1
+[INFO] Output: ./output
+
+=========================================
+  Memesploding Gameplay Test Suite
+=========================================
+
+[INFO] PHASE 1: Authentication
+[TEST] Alice Login

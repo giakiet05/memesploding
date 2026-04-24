@@ -28,7 +28,7 @@
    - Client render theo dữ liệu server, không tự quyết định kết quả.
 
 6. **Disconnect/reconnect trong trận**
-   - Khi rớt mạng, player được giữ slot trong grace window (phase 1: 60s).
+   - Khi rớt mạng, player được giữ slot trong grace window (phase 1: 120s).
    - Reconnect hợp lệ thì nhận snapshot mới nhất để tiếp tục.
    - Quá hạn grace thì xử lý theo rule AFK/eliminated của trận.
 
@@ -44,7 +44,7 @@
 ### Mục tiêu phase 1
 - Xây dựng Game Server cho **core gameplay loop end-to-end** từ `StartMatch` đến `EndMatch`.
 - Kiến trúc vận hành ban đầu: **single instance** (dễ triển khai, ổn định trước, scale sau).
-- Hỗ trợ **reconnect cơ bản trong 60 giây** bằng snapshot state.
+- Hỗ trợ **reconnect cơ bản trong 120 giây** bằng snapshot state.
 - Scope luật chơi: **chỉ bộ Original**.
 - Target vận hành: **internal alpha ~50 phòng đồng thời**, ưu tiên ổn định.
 
@@ -105,11 +105,11 @@
 ### 3.2 Trạng thái người chơi
 - `Alive`, `Eliminated`, `Disconnected`
 - Cờ bổ sung:
-  - `PendingReconnectUntil` (UTC deadline 60s)
+  - `PendingReconnectUntil` (UTC deadline 120s)
   - `MustDrawCount` (tích lũy do Attack)
   - `HasDefuse` (phục vụ validate nhanh)
 
-### 3.3 Snapshot strategy (reconnect 60s)
+### 3.3 Snapshot strategy (reconnect 120s)
 - Snapshot tối thiểu gồm:
   - Match metadata (roomCode, phase, turn index, timer remaining)
   - Player public states + private hand per player
@@ -150,6 +150,14 @@
 ### 4.4 Versioning contract
 - Thêm `protocolVersion` ở handshake hoặc first server push.
 - Mỗi state update có `stateVersion` tăng dần để client detect missing event.
+
+### 4.5 Timing policy (đã chốt)
+- Turn timer: **15s**.
+- Nope reaction window: **3s**.
+- Defuse decision window: **5s**.
+- Bomb reinsert window sau Defuse: **10s**.
+- Effect resolution delay sau khi đóng cửa sổ phản ứng: **400ms**.
+- Reconnect grace window: **120s**.
 
 ---
 
@@ -223,7 +231,7 @@
 - Reaction window Nope.
 - Explosion + Defuse flow hoàn chỉnh.
 
-### Milestone 3 - Reconnect 60s + snapshot
+### Milestone 3 - Reconnect 120s + snapshot
 - Persist snapshot định kỳ + tại critical transitions.
 - Reconnect handshake và rehydrate state theo player.
 - Timeout reconnect xử lý AFK theo rule phase 1.
@@ -285,6 +293,6 @@
 
 - Có thể chạy full match Original từ start đến end qua SignalR realtime.
 - Server authoritative, validate đầy đủ action cơ bản.
-- Reconnect trong 60s hoạt động cho player hợp lệ.
+- Reconnect trong 120s hoạt động cho player hợp lệ.
 - Kết quả match được lưu và truy vấn qua API hiện có.
 - Vượt tiêu chí internal alpha (~50 phòng đồng thời) với độ ổn định chấp nhận được.
