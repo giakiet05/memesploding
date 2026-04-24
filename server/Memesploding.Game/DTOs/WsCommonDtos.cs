@@ -28,7 +28,21 @@ public record WsStateSnapshotDto(
     int TurnCounter,
     DateTime? TurnEndsAt,
     IReadOnlyList<WsPlayerPublicStateDto> Players,
-    IReadOnlyList<string> SelfHand
+    IReadOnlyList<string> SelfHand,
+    int DrawPileCount,
+    IReadOnlyList<string> DiscardPile,
+    Guid? PendingDefuseUserId,
+    Guid? PendingBombOwnerUserId,
+    string? PendingBombCardCode,
+    DateTime? DefuseWindowEndsAt,
+    DateTime? BombReinsertWindowEndsAt,
+    Guid? PendingReactionUserId,
+    string? PendingReactionAction,
+    DateTime? ReactionWindowEndsAt,
+    int PendingNopeCount,
+    Guid? PendingFavorRequesterId,
+    Guid? PendingFavorTargetId,
+    DateTime? FavorWindowEndsAt
 );
 
 public record WsPlayerPublicStateDto(

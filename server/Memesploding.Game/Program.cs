@@ -10,6 +10,17 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddGameFoundationServices(builder.Configuration);
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .SetIsOriginAllowed(_ => true) // Allow any origin
+                      .AllowCredentials(); // Required for SignalR
+            });
+        });
+
         builder.Services.AddAuthorization();
         builder.Services.AddOpenApi();
 
@@ -20,6 +31,7 @@ public class Program
             app.MapOpenApi();
         }
 
+        app.UseCors();
         app.UseAuthorization();
 
         app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Memesploding.Game" }));

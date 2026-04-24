@@ -101,30 +101,29 @@ curl -s -X POST "$HTTP_BASE_URL/rooms/$ROOM_CODE/join" \
   -d '{}' > /dev/null
 echo -e "${GREEN}✅ $CHARLIE_NAME joined${NC}"
 
-# Mark ready
-echo -e "\n${CYAN}→ Marking players ready...${NC}"
-curl -s -X POST "$HTTP_BASE_URL/rooms/$ROOM_CODE/player-ready" \
-  -H "Authorization: Bearer $ALICE_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{}' > /dev/null
+# Mark ready via AppHub (SignalR WebSocket)
+echo -e "\n${CYAN}→ Marking players ready via AppHub (WS)...${NC}"
+READY_MSG='{"type":1,"target":"SetReadyStatus","arguments":["'"$ROOM_CODE"'",true]}'
+# Gửi SetReadyStatus qua SignalR cho từng player
+for PLAYER_TOKEN in "$ALICE_TOKEN" "$BOB_TOKEN" "$CHARLIE_TOKEN"; do
+    printf '%s\x1e%s\x1e' '{"protocol":"json","version":1}' "$READY_MSG" | \
+        timeout 3 websocat -n "ws://localhost:5217/ws?access_token=$PLAYER_TOKEN" 2>/dev/null || true
+    sleep 0.3
+done
+echo -e "${GREEN}✅ Ready messages sent${NC}"
 
-curl -s -X POST "$HTTP_BASE_URL/rooms/$ROOM_CODE/player-ready" \
-  -H "Authorization: Bearer $BOB_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{}' > /dev/null
-
-curl -s -X POST "$HTTP_BASE_URL/rooms/$ROOM_CODE/player-ready" \
-  -H "Authorization: Bearer $CHARLIE_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{}' > /dev/null
-
-echo -e "${GREEN}✅ All players ready${NC}"
+# Start match auto via AppHub
+echo -e "\n${CYAN}→ Starting match via AppHub (WS) as Alice...${NC}"
+START_MSG='{"type":1,"target":"StartRoomMatch","arguments":["'"$ROOM_CODE"'"]}'
+printf '%s\x1e%s\x1e' '{"protocol":"json","version":1}' "$START_MSG" | \
+    timeout 5 websocat -n "ws://localhost:5217/ws?access_token=$ALICE_TOKEN" 2>/dev/null || true
+echo -e "${GREEN}✅ Match start requested${NC}"
 
 # Get connection info
-sleep 1
-echo -e "\n${CYAN}→ Fetching WebSocket tokens...${NC}"
+sleep 2
+echo -e "\n${CYAN}→ Fetching Game WebSocket tickets from API...${NC}"
 
-ALICE_ROOM=$(curl -s -X GET "$HTTP_BASE_URL/rooms/$ROOM_CODE" \
+ALICE_ROOM=$(curl -sf -X GET "$HTTP_BASE_URL/rooms/$ROOM_CODE" \
   -H "Authorization: Bearer $ALICE_TOKEN")
 
 BOB_ROOM=$(curl -s -X GET "$HTTP_BASE_URL/rooms/$ROOM_CODE" \
@@ -168,12 +167,14 @@ ${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━�
 Token: ${ALICE_WS_TOKEN}
 
 Run in terminal 1:
-${GREEN}websocat '${WS_URL}?token=${ALICE_WS_TOKEN}'${NC}
+${GREEN}websocat '${WS_URL}?access_token=${ALICE_WS_TOKEN}'${NC}
 
-Then send commands:
-${CYAN}{"type":"StartMatch"}${NC}
-${CYAN}{"type":"DrawCard"}${NC}
-${CYAN}{"type":"PlayCard","data":{"cardCode":"ATTACK"}}${NC}
+Handshake (gửi đầu tiên):
+${CYAN}{"protocol":"json","version":1}${NC}
+
+Game commands:
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"drawcard","Data":{}}]}${NC}
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"playcard","Data":{"cardCode":"Attack"}}]}${NC}
 
 ${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 ${YELLOW}🎮 PLAYER 2: Bob ($BOB_NAME)${NC}
@@ -182,12 +183,14 @@ ${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━�
 Token: ${BOB_WS_TOKEN}
 
 Run in terminal 2:
-${GREEN}websocat '${WS_URL}?token=${BOB_WS_TOKEN}'${NC}
+${GREEN}websocat '${WS_URL}?access_token=${BOB_WS_TOKEN}'${NC}
 
-Then send commands:
-${CYAN}{"type":"DrawCard"}${NC}
-${CYAN}{"type":"PlayCard","data":{"cardCode":"SKIP"}}${NC}
-${CYAN}{"type":"Nope"}${NC}
+Handshake (gửi đầu tiên):
+${CYAN}{"protocol":"json","version":1}${NC}
+
+Game commands:
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"drawcard","Data":{}}]}${NC}
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"nope","Data":{}}]}${NC}
 
 ${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 ${YELLOW}🎮 PLAYER 3: Charlie ($CHARLIE_NAME)${NC}
@@ -196,45 +199,53 @@ ${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━�
 Token: ${CHARLIE_WS_TOKEN}
 
 Run in terminal 3:
-${GREEN}websocat '${WS_URL}?token=${CHARLIE_WS_TOKEN}'${NC}
+${GREEN}websocat '${WS_URL}?access_token=${CHARLIE_WS_TOKEN}'${NC}
 
-Then send commands:
-${CYAN}{"type":"DrawCard"}${NC}
-${CYAN}{"type":"PlayCard","data":{"cardCode":"FAVOR"}}${NC}
-${CYAN}{"type":"Nope"}${NC}
+Handshake (gửi đầu tiên):
+${CYAN}{"protocol":"json","version":1}${NC}
 
-${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}
-${YELLOW}[QUICK START]${NC}
-
-${CYAN}# Terminal 1 - Alice${NC}
-websocat '${WS_URL}?token=${ALICE_WS_TOKEN}'
-
-${CYAN}# Terminal 2 - Bob${NC}
-websocat '${WS_URL}?token=${BOB_WS_TOKEN}'
-
-${CYAN}# Terminal 3 - Charlie${NC}
-websocat '${WS_URL}?token=${CHARLIE_WS_TOKEN}'
+Game commands:
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"drawcard","Data":{}}]}${NC}
+${CYAN}{"type":1,"target":"SendCommand","arguments":[{"Event":"nope","Data":{}}]}${NC}
 
 ${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}
-${YELLOW}[GAME COMMANDS]${NC}
+${YELLOW}[QUICK START - COPY VÀO POSTMAN / WS KING]${NC}
 
-${CYAN}Start match:${NC}
-  {"type":"StartMatch"}
+${CYAN}# Alice URL:${NC}
+${WS_URL}?access_token=${ALICE_WS_TOKEN}
+
+${CYAN}# Bob URL:${NC}
+${WS_URL}?access_token=${BOB_WS_TOKEN}
+
+${CYAN}# Charlie URL:${NC}
+${WS_URL}?access_token=${CHARLIE_WS_TOKEN}
+
+${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}
+${YELLOW}[HOẶC CHẠY TRÊN TERMINAL BẰNG WEBSOCAT]${NC}
+
+websocat '${WS_URL}?access_token=${ALICE_WS_TOKEN}'
+websocat '${WS_URL}?access_token=${BOB_WS_TOKEN}'
+websocat '${WS_URL}?access_token=${CHARLIE_WS_TOKEN}'
+
+${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}
+${YELLOW}[GAME COMMANDS - SignalR Format]${NC}
 
 ${CYAN}Draw card:${NC}
-  {"type":"DrawCard"}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"drawcard","Data":{}}]}
 
 ${CYAN}Play card:${NC}
-  {"type":"PlayCard","data":{"cardCode":"ATTACK"}}
-  {"type":"PlayCard","data":{"cardCode":"SKIP"}}
-  {"type":"PlayCard","data":{"cardCode":"FAVOR"}}
-  {"type":"PlayCard","data":{"cardCode":"SEE_THE_FUTURE"}}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"playcard","Data":{"cardCode":"Skip"}}]}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"playcard","Data":{"cardCode":"Attack"}}]}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"playcard","Data":{"cardCode":"Favor","targetUserId":"UUID"}}]}
 
 ${CYAN}React:${NC}
-  {"type":"Nope"}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"nope","Data":{}}]}
 
 ${CYAN}Use defuse:${NC}
-  {"type":"UseDefuse"}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"usedefuse","Data":{}}]}
+
+${CYAN}Bomb position:${NC}
+  {"type":1,"target":"SendCommand","arguments":[{"Event":"choosebombinsertposition","Data":{"position":0}}]}
 
 ${BLUE}═══════════════════════════════════════════════════════════════════════════${NC}
 

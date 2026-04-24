@@ -37,6 +37,10 @@ public class MatchRuntimeState
     public bool ImplodingKittenFaceUpInDeck { get; set; }
     public bool MatchEndedPublished { get; set; }
     public Guid? WinnerUserId { get; set; }
+    // Favorite Interaction
+    public Guid? PendingFavorRequesterId { get; set; }
+    public Guid? PendingFavorTargetId { get; set; }
+    public DateTime? FavorWindowEndsAt { get; set; }
     public List<Guid> EliminationOrder { get; set; } = [];
     public List<MatchRuntimePlayerState> Players { get; set; } = [];
 }

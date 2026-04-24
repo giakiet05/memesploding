@@ -112,7 +112,21 @@ public class RuntimeTickWorker(
                     runtime.State.TurnCounter,
                     runtime.State.TurnEndsAt,
                     BuildPublicPlayers(runtime.State),
-                    []
+                    [],
+                    runtime.State.DrawPile.Count,
+                    runtime.State.DiscardPile.ToList(),
+                    runtime.State.PendingDefuseUserId,
+                    runtime.State.PendingBombOwnerUserId,
+                    runtime.State.PendingBombCardCode,
+                    runtime.State.DefuseWindowEndsAt,
+                    runtime.State.BombReinsertWindowEndsAt,
+                    runtime.State.PendingReactionUserId,
+                    runtime.State.PendingReactionAction,
+                    runtime.State.ReactionWindowEndsAt,
+                    runtime.State.PendingNopeCount,
+                    runtime.State.PendingFavorRequesterId,
+                    runtime.State.PendingFavorTargetId,
+                    runtime.State.FavorWindowEndsAt
                 )
             );
 

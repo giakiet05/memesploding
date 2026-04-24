@@ -114,7 +114,21 @@ public class GameHub(
                         player.PendingReconnectUntil
                     ))
                     .ToList(),
-                self?.Hand?.ToList() ?? []
+                self?.Hand?.ToList() ?? [],
+                snapshot.DrawPile.Count,
+                snapshot.DiscardPile.ToList(),
+                snapshot.PendingDefuseUserId,
+                snapshot.PendingBombOwnerUserId,
+                snapshot.PendingBombCardCode,
+                snapshot.DefuseWindowEndsAt,
+                snapshot.BombReinsertWindowEndsAt,
+                snapshot.PendingReactionUserId,
+                snapshot.PendingReactionAction,
+                snapshot.ReactionWindowEndsAt,
+                snapshot.PendingNopeCount,
+                snapshot.PendingFavorRequesterId,
+                snapshot.PendingFavorTargetId,
+                snapshot.FavorWindowEndsAt
             )
         );
 

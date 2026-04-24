@@ -105,6 +105,13 @@ public class MatchRuntime
             }
         }
 
+        if (State.FavorWindowEndsAt.HasValue && State.FavorWindowEndsAt.Value <= DateTime.UtcNow &&
+            State.PendingFavorRequesterId.HasValue && State.PendingFavorTargetId.HasValue)
+        {
+            // Timeout: auto-pick random card from Bob
+            ExecuteFavorTransfer(State.PendingFavorRequesterId.Value, State.PendingFavorTargetId.Value, null);
+        }
+
         ProcessReconnectTimeouts();
         CheckMatchFinished();
     }
@@ -172,6 +179,9 @@ public class MatchRuntime
             case "choosebombinsertposition":
                 HandleChooseBombInsertPosition(command.UserId, command.Payload);
                 break;
+            case "choosefavorcard":
+                HandleChooseFavorCard(command.UserId, command.Payload);
+                break;
             default:
                 IncrementVersion("unknown_command", $"{{\"name\":\"{command.Name}\"}}");
                 break;
@@ -218,7 +228,7 @@ public class MatchRuntime
         }
     }
 
-    private void HandlePlayCardCommand(Guid userId, string payload)
+    public void HandlePlayCardCommand(Guid userId, string payload)
     {
         if (State.Phase != MatchPhase.Playing)
         {
@@ -232,7 +242,20 @@ public class MatchRuntime
             return;
         }
 
-        if (State.PendingReactionAction != null || State.ReactionResolveAt.HasValue)
+        if (!TryGetCardCode(payload, out var cardCode))
+        {
+            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_payload\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
+        // Nope can be played regardless of turn if window is open
+        if (cardCode == "Nope")
+        {
+            HandleNopeCommand(userId);
+            return;
+        }
+
+        if (State.PendingReactionAction != null || State.ReactionWindowEndsAt.HasValue)
         {
             IncrementVersion("action_rejected", $"{{\"reason\":\"reaction_in_progress\",\"userId\":\"{userId}\"}}");
             return;
@@ -250,33 +273,17 @@ public class MatchRuntime
             return;
         }
 
-        if (!TryGetCardCode(payload, out var cardCode))
-        {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_payload\",\"userId\":\"{userId}\"}}");
-            return;
-        }
-
         var playerIndex = State.Players.FindIndex(p => p.UserId == userId);
-        if (playerIndex < 0)
-        {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"player_not_found\",\"userId\":\"{userId}\"}}");
-            return;
-        }
-
+        if (playerIndex < 0) return;
         var hand = State.Players[playerIndex].Hand ?? [];
-        if (cardCode == "Nope")
-        {
-            HandleNopeCommand(userId);
-            return;
-        }
 
-        if (IsCatCard(cardCode) && TryGetComboSize(payload, out var comboSize))
+        // Universal Combo Support
+        if (TryGetComboSize(payload, out var comboSize) && comboSize >= 2)
         {
-            if (!TryApplyCatCombo(userId, playerIndex, hand, cardCode, comboSize, payload))
+            if (TryApplyUniversalCombo(userId, playerIndex, hand, cardCode, comboSize, payload))
             {
                 return;
             }
-
             return;
         }
 
@@ -285,7 +292,6 @@ public class MatchRuntime
             IncrementVersion("action_rejected", $"{{\"reason\":\"card_not_owned\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
             return;
         }
-
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
         State.DiscardPile.Add(cardCode);
         IncrementVersion("card_played", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
@@ -359,6 +365,15 @@ public class MatchRuntime
                 break;
             case "Favor":
                 ApplyFavor(userId, payload);
+                break;
+            case "Combo2":
+                ResolveTwoOfKindCombo(userId, payload);
+                break;
+            case "Combo3":
+                ResolveThreeOfKindCombo(userId, payload);
+                break;
+            case "Combo5":
+                ResolveFiveOfKindCombo(userId, payload);
                 break;
             case "Bury":
                 ApplyBury(userId);
@@ -470,7 +485,10 @@ public class MatchRuntime
             "Reverse" or
             "Skip" or
             "SuperSkip" or
-            "DrawFromBottom";
+            "DrawFromBottom" or
+            "Combo2" or
+            "Combo3" or
+            "Combo5";
     }
 
     private void ApplyAttack(Guid userId, string cardCode, string payload)
@@ -518,6 +536,11 @@ public class MatchRuntime
 
     private void ConsumePendingDraw(Guid userId)
     {
+        if (!IsAlivePlayer(userId))
+        {
+            return;
+        }
+
         var playerIndex = State.Players.FindIndex(player => player.UserId == userId);
         if (playerIndex < 0)
         {
@@ -531,6 +554,11 @@ public class MatchRuntime
 
     private void CompleteCurrentTurnAfterDrawResolution(Guid userId)
     {
+        if (!IsAlivePlayer(userId))
+        {
+            return;
+        }
+
         var playerIndex = State.Players.FindIndex(player => player.UserId == userId);
         if (playerIndex < 0)
         {
@@ -588,6 +616,14 @@ public class MatchRuntime
             }
             else
             {
+                if (!HasCardInHand(userId, "Defuse"))
+                {
+                    hand.Add(card);
+                    State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
+                    EliminatePlayer(userId, "missing_defuse");
+                    return;
+                }
+
                 State.PendingDefuseUserId = userId;
                 State.DefuseWindowEndsAt = DateTime.UtcNow.AddSeconds(State.DefuseDecisionSeconds);
                 State.PendingBombOwnerUserId = userId;
@@ -993,56 +1029,76 @@ public class MatchRuntime
         IncrementVersion("future_peeked", payload);
     }
 
-    private bool TryApplyCatCombo(Guid userId, int playerIndex, List<string> hand, string cardCode, int comboSize, string payload)
+    private bool TryApplyUniversalCombo(Guid userId, int playerIndex, List<string> hand, string cardCode, int comboSize, string payload)
     {
-        if (comboSize is not (2 or 3 or 5))
-        {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_combo_size\",\"userId\":\"{userId}\",\"comboSize\":{comboSize}}}");
-            return false;
-        }
+        if (comboSize is not (2 or 3 or 5)) return false;
 
-        var sameCards = hand.Count(card => card == cardCode);
-        if (sameCards < comboSize)
+        if (comboSize == 5)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"insufficient_combo_cards\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"required\":{comboSize}}}");
-            return false;
-        }
-
-        var removed = 0;
-        for (var i = hand.Count - 1; i >= 0 && removed < comboSize; i--)
-        {
-            if (hand[i] != cardCode)
+            List<string> cardCodes;
+            try
             {
-                continue;
+                using var doc = JsonDocument.Parse(payload);
+                if (!doc.RootElement.TryGetProperty("cardCodes", out var codesElem) || codesElem.ValueKind != JsonValueKind.Array)
+                {
+                    IncrementVersion("action_rejected", $"{{\"reason\":\"combo5_requires_cardCodes_array\",\"userId\":\"{userId}\"}}");
+                    return false;
+                }
+                cardCodes = codesElem.EnumerateArray()
+                    .Select(x => x.GetString())
+                    .Where(x => x != null)
+                    .Cast<string>()
+                    .ToList();
+            }
+            catch
+            {
+                IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_json_payload\",\"userId\":\"{userId}\"}}");
+                return false;
             }
 
-            hand.RemoveAt(i);
-            State.DiscardPile.Add(cardCode);
-            removed++;
+            if (cardCodes.Count != 5 || cardCodes.Distinct().Count() != 5)
+            {
+                IncrementVersion("action_rejected", $"{{\"reason\":\"combo5_requires_5_distinct_cards\",\"userId\":\"{userId}\"}}");
+                return false;
+            }
+
+            foreach (var code in cardCodes)
+            {
+                if (!hand.Remove(code))
+                {
+                    IncrementVersion("action_rejected", $"{{\"reason\":\"card_not_owned\",\"userId\":\"{userId}\",\"cardCode\":\"{code}\"}}");
+                    return false;
+                }
+                State.DiscardPile.Add(code);
+            }
+        }
+        else // Combo 2 or 3
+        {
+            var count = hand.Count(c => c == cardCode);
+            if (count < comboSize)
+            {
+                IncrementVersion("action_rejected", $"{{\"reason\":\"insufficient_combo_cards\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"required\":{comboSize}}}");
+                return false;
+            }
+
+            for (var i = 0; i < comboSize; i++)
+            {
+                hand.Remove(cardCode);
+                State.DiscardPile.Add(cardCode);
+            }
         }
 
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
-        IncrementVersion("cat_combo_played", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"comboSize\":{comboSize}}}");
+        var comboCode = $"Combo{comboSize}";
+        IncrementVersion("combo_played", $"{{\"userId\":\"{userId}\",\"comboSize\":{comboSize},\"cardCode\":\"{cardCode}\",\"comboCode\":\"{comboCode}\"}}");
 
-        switch (comboSize)
-        {
-            case 2:
-                ResolveTwoOfKindCombo(userId, payload);
-                break;
-            case 3:
-                ResolveThreeOfKindCombo(userId, payload);
-                break;
-            case 5:
-                ResolveFiveOfKindCombo(userId, payload);
-                break;
-        }
-
+        ApplyCardEffect(userId, comboCode, payload);
         return true;
     }
 
     private static bool IsCatCard(string cardCode)
     {
-        return cardCode is "Cat1" or "Cat2" or "Cat3" or "Cat4" or "Cat5";
+        return cardCode is "Cat1" or "Cat2" or "Cat3" or "Cat4" or "Cat5" or "FeralCat";
     }
 
     private void ResolveTwoOfKindCombo(Guid userId, string payload)
@@ -1074,7 +1130,7 @@ public class MatchRuntime
         var sourceHand = State.Players[sourceIndex].Hand ?? [];
         sourceHand.Add(stolen);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
-        IncrementVersion("cat_combo_two_resolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\"}}");
+        IncrementVersion("cat_combo_two_resolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"cardCode\":\"{stolen}\"}}");
     }
 
     private void ResolveThreeOfKindCombo(Guid userId, string payload)
@@ -1144,33 +1200,67 @@ public class MatchRuntime
     private void ApplyFavor(Guid userId, string payload)
     {
         var target = ResolveTargetUser(userId, payload);
-        if (target == null)
-        {
-            return;
-        }
+        if (target == null) return;
 
         var targetIdx = State.Players.FindIndex(p => p.UserId == target.Value);
-        var sourceIdx = State.Players.FindIndex(p => p.UserId == userId);
-        if (targetIdx < 0 || sourceIdx < 0)
-        {
-            return;
-        }
+        if (targetIdx < 0) return;
 
         var targetHand = State.Players[targetIdx].Hand ?? [];
         if (targetHand.Count == 0)
         {
+            IncrementVersion("favor_target_empty", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
             return;
         }
 
-        var cardIdx = _random.Next(targetHand.Count);
-        var card = targetHand[cardIdx];
-        targetHand.RemoveAt(cardIdx);
-        State.Players[targetIdx] = State.Players[targetIdx] with { Hand = targetHand };
+        // Open favor window: Bob must pick a card to give
+        State.PendingFavorRequesterId = userId;
+        State.PendingFavorTargetId = target.Value;
+        State.FavorWindowEndsAt = DateTime.UtcNow.AddSeconds(15);
+        IncrementVersion("favor_window_opened", $"{{\"requesterId\":\"{userId}\",\"targetId\":\"{target.Value}\"}}");
+    }
 
-        var sourceHand = State.Players[sourceIdx].Hand ?? [];
+    private void HandleChooseFavorCard(Guid userId, string payload)
+    {
+        if (!State.PendingFavorTargetId.HasValue || State.PendingFavorTargetId.Value != userId)
+        {
+            IncrementVersion("action_rejected", $"{{\"reason\":\"no_pending_favor\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
+        TryGetStringProperty(payload, "cardCode", out var cardCode);
+        ExecuteFavorTransfer(State.PendingFavorRequesterId!.Value, userId, string.IsNullOrWhiteSpace(cardCode) ? null : cardCode);
+    }
+
+    private void ExecuteFavorTransfer(Guid requesterId, Guid targetId, string? requestedCardCode)
+    {
+        State.PendingFavorRequesterId = null;
+        State.PendingFavorTargetId = null;
+        State.FavorWindowEndsAt = null;
+
+        var targetIndex = State.Players.FindIndex(p => p.UserId == targetId);
+        var sourceIndex = State.Players.FindIndex(p => p.UserId == requesterId);
+        if (targetIndex < 0 || sourceIndex < 0) return;
+
+        var targetHand = State.Players[targetIndex].Hand ?? [];
+        if (targetHand.Count == 0) return;
+
+        string card;
+        if (requestedCardCode != null && targetHand.Contains(requestedCardCode))
+        {
+            card = requestedCardCode;
+        }
+        else
+        {
+            card = targetHand[_random.Next(targetHand.Count)];
+        }
+
+        targetHand.Remove(card);
+        State.Players[targetIndex] = State.Players[targetIndex] with { Hand = targetHand };
+
+        var sourceHand = State.Players[sourceIndex].Hand ?? [];
         sourceHand.Add(card);
-        State.Players[sourceIdx] = State.Players[sourceIdx] with { Hand = sourceHand };
-        IncrementVersion("favor_resolved", $"{{\"from\":\"{target.Value}\",\"to\":\"{userId}\"}}");
+        State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
+        IncrementVersion("favor_resolved", $"{{\"from\":\"{targetId}\",\"to\":\"{requesterId}\",\"cardCode\":\"{card}\"}}");
     }
 
     private void ApplyBury(Guid userId)
