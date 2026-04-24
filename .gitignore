@@ -46,3 +46,4 @@ Secret/
 .log
 .gitnexus
 output
+node_modules
