@@ -1,7 +1,7 @@
 using System;
-using Card;
 using Events;
 using Events.GameEvents;
+using Gameplay.Card;
 using Managers;
 using UnityEngine;
 using UnityEngine.EventSystems;

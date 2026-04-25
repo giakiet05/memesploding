@@ -1,11 +1,10 @@
 using System.Collections;
-using Gameplay;
 using Managers;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace Card
+namespace Gameplay.Card
 {
     public class PlayableCard : BaseCard, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
     {

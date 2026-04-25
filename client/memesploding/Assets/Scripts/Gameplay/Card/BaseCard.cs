@@ -3,7 +3,7 @@ using ScriptableObjects;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Card
+namespace Gameplay.Card
 {
     public class BaseCard : MonoBehaviour
     {

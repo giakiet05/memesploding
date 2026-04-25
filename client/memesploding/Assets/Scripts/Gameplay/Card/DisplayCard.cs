@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace Card
+﻿namespace Gameplay.Card
 {
     public class DisplayCard : BaseCard { }
 }

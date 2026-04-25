@@ -1,8 +1,8 @@
 using Events;
 using Managers;
 using System.Collections;
-using Card;
 using Events.GameEvents;
+using Gameplay.Card;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;

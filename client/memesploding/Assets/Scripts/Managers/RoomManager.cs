@@ -1,12 +1,10 @@
-﻿using Gameplay;
-using UnityEngine;
-using UnityEngine.Serialization;
+﻿using UnityEngine;
 
 namespace Managers
 {
-    public class TurnManager : MonoBehaviour
+    public class RoomManager : MonoBehaviour
     {
-        public static TurnManager Instance;
+        public static RoomManager Instance;
 
         private void Awake()
         {
@@ -15,7 +13,5 @@ namespace Managers
             else
                 Instance = this;
         }
-
-        [SerializeField] private Timer turnTimer;
     }
 }

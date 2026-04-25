@@ -1,8 +1,7 @@
-using Card;
 using Events;
 using Events.GameEvents;
-using System.Collections;
 using System.Collections.Generic;
+using Gameplay.Card;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;

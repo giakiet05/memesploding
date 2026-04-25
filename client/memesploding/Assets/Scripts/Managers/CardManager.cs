@@ -1,10 +1,9 @@
-﻿using Card;
-using Events;
+﻿using Events;
 using Events.GameEvents;
 using Gameplay;
+using Gameplay.Card;
 using ScriptableObjects;
 using UnityEngine;
-using UnityEngine.Serialization;
 using EventType = Events.EventType;
 
 namespace Managers

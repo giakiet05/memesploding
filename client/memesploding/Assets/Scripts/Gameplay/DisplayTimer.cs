@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace Gameplay
 {
-    public class Timer : MonoBehaviour
+    public class DisplayTimer : MonoBehaviour
     {
         [Header("Timer UI references :")]
         [SerializeField] private Image uiFillImage;
@@ -63,7 +63,7 @@ namespace Gameplay
                 onTimerPauseAction.Invoke(IsPaused);
         }
 
-        public Timer SetDuration(int seconds)
+        public DisplayTimer SetDuration(int seconds)
         {
             Duration = _remainingDuration = seconds;
             return this;
@@ -71,25 +71,25 @@ namespace Gameplay
 
         //-- Events ----------------------------------
 
-        public Timer OnBegin(UnityAction action)
+        public DisplayTimer OnBegin(UnityAction action)
         {
             onTimerBeginAction = action;
             return this;
         }
 
-        public Timer OnChange(UnityAction<int> action)
+        public DisplayTimer OnChange(UnityAction<int> action)
         {
             onTimerChangeAction = action;
             return this;
         }
 
-        public Timer OnEnd(UnityAction action)
+        public DisplayTimer OnEnd(UnityAction action)
         {
             onTimerEndAction = action;
             return this;
         }
 
-        public Timer OnPause(UnityAction<bool> action)
+        public DisplayTimer OnPause(UnityAction<bool> action)
         {
             onTimerPauseAction = action;
             return this;

@@ -1,5 +1,5 @@
-﻿using Card;
-using Gameplay;
+﻿using Gameplay;
+using Gameplay.Card;
 using UnityEngine;
 
 namespace Events

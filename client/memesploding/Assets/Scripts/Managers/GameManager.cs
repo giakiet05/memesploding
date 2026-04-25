@@ -1,3 +1,4 @@
+using Models;
 using UnityEngine;
 
 namespace Managers
@@ -15,6 +16,6 @@ namespace Managers
         }
 
 
-        public PlayerModel player = new PlayerModel("", "Vak0506");
+        public User Player { get; set; }
     }
 }
