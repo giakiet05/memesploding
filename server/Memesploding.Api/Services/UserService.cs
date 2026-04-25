@@ -3,7 +3,7 @@ using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Api.Infrastructure.Cache;
 using Microsoft.EntityFrameworkCore;
 
 namespace Memesploding.Api.Services;

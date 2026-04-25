@@ -1,9 +1,10 @@
 using Memesploding.Api.DTOs;
 using Memesploding.Api.Hubs;
 using Memesploding.Api.Services;
-using Memesploding.Shared.Events;
-using Memesploding.Shared.Infrastructure.EventBus;
+using Memesploding.Api.Messaging.Events;
+using Memesploding.Api.Messaging.Channels;
 using Microsoft.AspNetCore.SignalR;
+using Memesploding.Shared.Messaging.EventBus;
 
 namespace Memesploding.Api.Workers;
 

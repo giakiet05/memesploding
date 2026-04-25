@@ -1,10 +1,12 @@
 using Memesploding.Api.Data;
-using Memesploding.Shared.Events;
-using Memesploding.Shared.Infrastructure.EventBus;
-using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Api.Messaging.Events;
+using Memesploding.Api.Messaging.Channels;
+using Memesploding.Api.Infrastructure.Cache;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Messaging.EventBus;
 
 namespace Memesploding.Api.Services;
 

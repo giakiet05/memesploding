@@ -1,11 +1,50 @@
 # Game Server Design (Phase 1)
 
+## 0) Flow hoạt động tổng quan (đọc nhanh)
+
+1. **API Server phát lệnh bắt đầu trận**
+   - Host bấm start match ở room.
+   - API validate điều kiện room, tạo `matchId`, chuyển room sang `starting`.
+   - API publish **integration event** (qua contract/channels trong Shared) để yêu cầu game server start runtime.
+   - API push `RoomMatchStarting` qua WS room, kèm `connection.wsUrl` + `connection.wsAccessToken` cho từng player.
+
+2. **Client kết nối Game WS bằng game ticket**
+   - Client dùng `wsUrl` + `wsAccessToken` để vào game server.
+   - Game server verify ticket (`scope = game_ws`, `userId`, `roomCode/matchId`, hạn ngắn).
+   - Client **không** gửi request để chuyển phase room (`waiting -> playing`).
+
+3. **Game server khởi tạo runtime authoritative**
+   - Tạo runtime theo `matchId` (in-memory).
+   - Nạp danh sách player, setup deck, chia bài, random người đi đầu.
+   - Persist snapshot ban đầu để phục vụ reconnect.
+
+4. **Vòng lặp gameplay realtime**
+   - Client chỉ gửi command/intent (`PlayCard`, `DrawCard`, ...).
+   - Game server validate theo phase/turn/rule rồi mới apply.
+   - State chạy theo tick/queue tuần tự để tránh race.
+
+5. **Broadcast state cho client**
+   - Game server gửi event gameplay + state patch/snapshot theo phiên bản (`stateVersion`).
+   - Client render theo dữ liệu server, không tự quyết định kết quả.
+
+6. **Disconnect/reconnect trong trận**
+   - Khi rớt mạng, player được giữ slot trong grace window (phase 1: 120s).
+   - Reconnect hợp lệ thì nhận snapshot mới nhất để tiếp tục.
+   - Quá hạn grace thì xử lý theo rule AFK/eliminated của trận.
+
+7. **Kết thúc trận và lưu kết quả**
+   - Khi đủ điều kiện kết thúc, game server chốt winner + stats.
+   - Publish kết quả về API server để persist DB (`matches`, `match_participants`, leaderboard nếu có).
+   - Room được trả về pre-game state để người chơi quay lại lobby.
+
+---
+
 ## 1) Mục tiêu và phạm vi
 
 ### Mục tiêu phase 1
 - Xây dựng Game Server cho **core gameplay loop end-to-end** từ `StartMatch` đến `EndMatch`.
 - Kiến trúc vận hành ban đầu: **single instance** (dễ triển khai, ổn định trước, scale sau).
-- Hỗ trợ **reconnect cơ bản trong 60 giây** bằng snapshot state.
+- Hỗ trợ **reconnect cơ bản trong 120 giây** bằng snapshot state.
 - Scope luật chơi: **chỉ bộ Original**.
 - Target vận hành: **internal alpha ~50 phòng đồng thời**, ưu tiên ổn định.
 
@@ -45,6 +84,11 @@
 - **Domain/Game Engine Layer**: state machine, rules, effect resolver.
 - **Infra Layer**: Redis snapshot, pub/sub, persistence bridge sang API/DB.
 
+### 2.4 Event/Channel boundary
+- **Internal events/channels**: đặt trong từng service (`Memesploding.Api`, `Memesploding.Game`) cho flow nội bộ service đó.
+- **Integration events/channels (API <-> Game)**: đặt trong Shared để hai server dùng cùng schema, tránh drift contract.
+- Game runtime chỉ được start bởi integration event từ API, không bởi command từ client.
+
 ---
 
 
@@ -61,11 +105,11 @@
 ### 3.2 Trạng thái người chơi
 - `Alive`, `Eliminated`, `Disconnected`
 - Cờ bổ sung:
-  - `PendingReconnectUntil` (UTC deadline 60s)
+  - `PendingReconnectUntil` (UTC deadline 120s)
   - `MustDrawCount` (tích lũy do Attack)
   - `HasDefuse` (phục vụ validate nhanh)
 
-### 3.3 Snapshot strategy (reconnect 60s)
+### 3.3 Snapshot strategy (reconnect 120s)
 - Snapshot tối thiểu gồm:
   - Match metadata (roomCode, phase, turn index, timer remaining)
   - Player public states + private hand per player
@@ -83,7 +127,6 @@
 - Tách nhóm event gameplay rõ ràng để client render deterministic.
 
 ### 4.2 Nhóm client -> server (ý tưởng command)
-- `StartMatch`
 - `PlayCard`
 - `DrawCard`
 - `UseDefuse`
@@ -91,6 +134,8 @@
 - `Nope`
 - `ReconnectMatch`
 - `AckStateVersion` (optional nếu cần sync/catch-up)
+
+> `StartMatch` không thuộc nhóm client -> game. Đây là API room action và API sẽ phát integration event sang game server.
 
 ### 4.3 Nhóm server -> client (ý tưởng event)
 - `MatchStarted`
@@ -106,6 +151,14 @@
 - Thêm `protocolVersion` ở handshake hoặc first server push.
 - Mỗi state update có `stateVersion` tăng dần để client detect missing event.
 
+### 4.5 Timing policy (đã chốt)
+- Turn timer: **15s**.
+- Nope reaction window: **3s**.
+- Defuse decision window: **5s**.
+- Bomb reinsert window sau Defuse: **10s**.
+- Effect resolution delay sau khi đóng cửa sổ phản ứng: **400ms**.
+- Reconnect grace window: **120s**.
+
 ---
 
 ## 5) Luồng nghiệp vụ cốt lõi phase 1
@@ -113,10 +166,10 @@
 ### 5.1 StartMatch
 1. Host gọi `StartMatch` vào API Server.
 2. API validate host + trạng thái ready + khóa room sang `starting`.
-3. API handoff command sang Game Server.
-4. Game load card sets (Original), build deck, chia bài, random người đi đầu.
-5. Game persist initial snapshot + broadcast `MatchStarted`.
-6. API/Presence nhận trạng thái `playing` để phản ánh ra social layer.
+3. API publish integration event `StartMatchRequested` sang game server (channel/contract trong Shared).
+4. Game server nhận event, tạo runtime, load card sets (Original), build deck, chia bài, random người đi đầu.
+5. Game persist initial snapshot + broadcast `MatchStarted` cho client đã kết nối game WS.
+6. Game publish integration event `MatchStarted`/`RoomUpdated` về API để API cập nhật presence + phản ánh trạng thái `playing`.
 
 ### 5.2 Turn loop
 1. Mở turn + countdown timer.
@@ -155,8 +208,8 @@
 - Reuse `room:*` hiện có cho bridge presence/status.
 
 ### 6.3 Bridge với API Server
-- API publish StartMatch command (kèm snapshot room pre-game tối thiểu) hoặc game server pull room data khi start.
-- Game server publish room/match updates qua Redis pub/sub channel hiện có (`room:updates`) + channel match ended callback.
+- API publish integration event StartMatch (kèm snapshot room pre-game tối thiểu) theo shared contract; game server consume event này để start runtime.
+- Game server publish integration events room/match updates theo shared contract (bao gồm match started/match ended callback).
 - API là nơi cuối cùng persist lịch sử trận và reset room state cho phiên tiếp theo.
 
 ---
@@ -178,7 +231,7 @@
 - Reaction window Nope.
 - Explosion + Defuse flow hoàn chỉnh.
 
-### Milestone 3 - Reconnect 60s + snapshot
+### Milestone 3 - Reconnect 120s + snapshot
 - Persist snapshot định kỳ + tại critical transitions.
 - Reconnect handshake và rehydrate state theo player.
 - Timeout reconnect xử lý AFK theo rule phase 1.
@@ -240,6 +293,6 @@
 
 - Có thể chạy full match Original từ start đến end qua SignalR realtime.
 - Server authoritative, validate đầy đủ action cơ bản.
-- Reconnect trong 60s hoạt động cho player hợp lệ.
+- Reconnect trong 120s hoạt động cho player hợp lệ.
 - Kết quả match được lưu và truy vấn qua API hiện có.
 - Vượt tiêu chí internal alpha (~50 phòng đồng thời) với độ ổn định chấp nhận được.

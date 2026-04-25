@@ -1,8 +1,9 @@
 using Memesploding.Api.Exceptions;
 using Memesploding.Api.Services;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Api.Infrastructure.Cache;
 using Microsoft.Extensions.Configuration;
+using Memesploding.Shared.Infrastructure.Cache;
 
 namespace Memesploding.Api.Workers;
 

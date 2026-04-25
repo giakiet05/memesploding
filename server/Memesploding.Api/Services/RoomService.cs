@@ -1,15 +1,19 @@
 using Memesploding.Api.Data;
 using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
-using Memesploding.Shared.Events;
+using Memesploding.Api.Messaging.Events;
 using Memesploding.Shared.Enums;
-using Memesploding.Shared.Infrastructure.Cache;
-using Memesploding.Shared.Infrastructure.EventBus;
-using Memesploding.Shared.Infrastructure.Security;
+using Memesploding.Api.Infrastructure.Cache;
+using Memesploding.Api.Messaging.Channels;
+using Memesploding.Shared.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using System.Text.Json;
+using Memesploding.Shared.Infrastructure.Cache;
+using Memesploding.Shared.Messaging.EventBus;
+using Memesploding.Shared.Messaging.Integration.Channels;
+using Memesploding.Shared.Messaging.Integration.Events;
 
 namespace Memesploding.Api.Services;
 
@@ -68,7 +72,6 @@ public class RoomService(
             new("status", "waiting"),
             new("is_public", dto.IsPublic.ToString().ToLower()),
             new("max_players", dto.MaxPlayers.ToString()),
-            new("turn_timer", "15"),
             new("created_at", DateTime.UtcNow.ToString("O"))
         });
 
@@ -291,6 +294,42 @@ public class RoomService(
 
         await cache.HashSetAsync(CacheKeys.RoomInfo(roomCode), "status", "playing");
         var recipients = await GetParticipantIdsAsync(roomCode);
+
+        var matchId = Guid.NewGuid();
+        var turnTimer = 0; // Let Game Server handle the default turn timer
+        var cardSetIds = (await cache.SetMembersAsync(CacheKeys.RoomCardSets(roomCode)))
+            .Select(x => Guid.TryParse(x, out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .ToList();
+
+        var playerInfos = new List<IntegrationPlayerInfo>();
+        foreach (var entry in participantsData)
+        {
+            var participant = JsonSerializer.Deserialize<InternalParticipant>(entry.Value.ToString(), _deserializeOptions);
+            if (participant != null)
+            {
+                playerInfos.Add(new IntegrationPlayerInfo(
+                    participant.UserId,
+                    participant.Nickname,
+                    participant.AvatarUrl ?? "",
+                    participant.UserId == expectedHostId ? "host" : "player"
+                ));
+            }
+        }
+
+        await eventBus.PublishAsync(
+            GameIntegrationChannels.StartMatchRequested,
+            new StartMatchRequestedEvent(
+                matchId,
+                roomCode,
+                hostId,
+                turnTimer,
+                cardSetIds,
+                playerInfos,
+                DateTime.UtcNow
+            )
+        );
+
         await eventBus.PublishAsync(
             EventChannels.RoomMatchStarting,
             new RoomMatchStartingEvent(roomCode, hostId, recipients)
@@ -364,7 +403,7 @@ public class RoomService(
             Guid.Parse(roomDict["host_id"]),
             roomDict["status"],
             bool.Parse(roomDict["is_public"]),
-            new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict["turn_timer"])),
+            new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict.GetValueOrDefault("turn_timer", "0"))),
             cardSets,
             participants,
             await BuildRoomConnectionAsync(code, roomDict["status"], requesterUserId)

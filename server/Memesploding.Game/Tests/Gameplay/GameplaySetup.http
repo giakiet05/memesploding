@@ -1,0 +1,194 @@
+### 
+### Memesploding Gameplay Setup Flow
+### Uses environment variables from ../http-client.env.json
+### In Rider: Select "dev" environment from dropdown before running
+### 
+### Luồng đúng:
+###   Phase 1: Login (3 users)
+###   Phase 2: Load CardSets, Create Room, Join
+###   Phase 3: Set Ready + Start Match (qua WebSocket AppHub :5217)
+###   Phase 4: Sau khi nhận event "RoomMatchStarting" → lấy ticket từ đó
+###             Hoặc: GET /rooms/{code} NGAY SAU KHI match đã start
+### 
+
+### 
+### 1. LOGIN & TOKENS
+### 
+
+# @name aliceLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdAlice}}" }
+
+> {% 
+    client.global.set("aliceToken", response.body.data.accessToken); 
+    client.global.set("aliceId", response.body.data.user.id);
+    client.global.set("aliceUsername", response.body.data.user.username);
+%}
+
+###
+
+# @name bobLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdBob}}" }
+
+> {% 
+    client.global.set("bobToken", response.body.data.accessToken); 
+    client.global.set("bobId", response.body.data.user.id);
+    client.global.set("bobUsername", response.body.data.user.username);
+%}
+
+###
+
+# @name charlieLogin
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{ "deviceId": "{{deviceIdCharlie}}" }
+
+> {% 
+    client.global.set("charlieToken", response.body.data.accessToken); 
+    client.global.set("charlieId", response.body.data.user.id);
+    client.global.set("charlieUsername", response.body.data.user.username);
+%}
+
+### 
+### 2. CREATE & JOIN ROOM
+### 
+
+# @name loadCardSets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("cardSetId", response.body.data.items[0].id); 
+    client.global.set("cardSetName", response.body.data.items[0].name);
+%}
+
+###
+
+# @name createRoom
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 3,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+> {% 
+    client.global.set("roomCode", response.body.data.code); 
+%}
+
+###
+
+# @name bobJoin
+POST {{baseUrl}}/rooms/{{roomCode}}/join
+Authorization: Bearer {{bobToken}}
+
+> {% 
+    client.global.set("bobJoinStatus", response.status);
+%}
+
+###
+
+# @name charlieJoin
+POST {{baseUrl}}/rooms/{{roomCode}}/join
+Authorization: Bearer {{charlieToken}}
+
+> {% 
+    client.global.set("charlieJoinStatus", response.status);
+%}
+
+### 
+### 3. SET READY & START MATCH (QUA WEBSOCKET - KHÔNG PHẢI REST)
+### 
+### ⚠️  SetReadyStatus và StartRoomMatch là SignalR Hub Methods.
+###    Phải gọi qua WebSocket kết nối AppHub tại ws://localhost:5217/ws
+###    với Authorization Bearer token (accessToken thông thường).
+###
+### Dùng websocat để test thủ công:
+###
+### # Alice connect AppHub
+### websocat -n 'ws://localhost:5217/ws?access_token={{aliceToken}}'
+###
+### # Sau khi kết nối, gửi handshake:
+### {"protocol":"json","version":1}
+###
+### # Alice set ready:
+### {"type":1,"target":"SetReadyStatus","arguments":["{{roomCode}}",true]}
+###
+### # Bob + Charlie tương tự với token của họ
+###
+### # Alice (host) start match:
+### {"type":1,"target":"StartRoomMatch","arguments":["{{roomCode}}"]}
+###
+### Khi match start, mỗi user nhận "RoomMatchStarting" event qua ReceiveMessage:
+### {
+###   "Event": "RoomMatchStarting",
+###   "Data": {
+###     "RoomCode": "...",
+###     "StartedByUserId": "...",
+###     "Connection": {
+###       "WsUrl": "ws://localhost:5204/ws",
+###       "WsAccessToken": "eyJ..."   ← Dùng token này để vào Game Server
+###     }
+###   },
+###   "Timestamp": "..."
+### }
+###
+
+### 
+### 4. GET GAME TICKET (SAU KHI MATCH ĐÃ START)
+### 
+### Chỉ chạy request này SAU KHI đã gọi StartRoomMatch qua WebSocket
+### Ticket chỉ được cấp khi room đang ở trạng thái "playing"
+###
+
+# @name getAliceTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{aliceToken}}
+
+> {% 
+    client.global.set("aliceWsAccessToken", response.body.data.connection.wsAccessToken);
+    client.global.set("aliceGameWsUrl", response.body.data.connection.wsUrl);
+    client.global.set("aliceFullWsUrl", response.body.data.connection.wsUrl + "?access_token=" + response.body.data.connection.wsAccessToken);
+%}
+
+###
+
+# @name getBobTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{bobToken}}
+
+> {% 
+    client.global.set("bobWsAccessToken", response.body.data.connection.wsAccessToken);
+    client.global.set("bobFullWsUrl", response.body.data.connection.wsUrl + "?access_token=" + response.body.data.connection.wsAccessToken);
+%}
+
+###
+
+# @name getCharlieTicket
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{charlieToken}}
+
+> {% 
+    client.global.set("charlieWsAccessToken", response.body.data.connection.wsAccessToken);
+    client.global.set("charlieFullWsUrl", response.body.data.connection.wsUrl + "?access_token=" + response.body.data.connection.wsAccessToken);
+%}
+
+###
+### 5. VERIFY TICKET (kiểm tra token có giá trị không)
+### 
+### Nếu wsAccessToken là empty string "" → match chưa start hoặc user không ở trong phòng
+### Nếu có token → kết nối Game Server: ws://localhost:5204/ws?access_token={token}
+###
+
+# @name getRoomDetails
+GET {{baseUrl}}/rooms/{{roomCode}}
+Authorization: Bearer {{aliceToken}}
