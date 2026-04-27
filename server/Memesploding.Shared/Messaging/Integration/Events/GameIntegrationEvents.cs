@@ -11,7 +11,6 @@ public record StartMatchRequestedEvent(
     Guid MatchId,
     string RoomCode,
     Guid StartedByUserId,
-    int TurnTimerSeconds,
     List<Guid> CardSetIds,
     List<IntegrationPlayerInfo> Players,
     DateTime RequestedAt

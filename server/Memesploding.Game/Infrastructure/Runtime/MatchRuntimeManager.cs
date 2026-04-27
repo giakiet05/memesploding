@@ -21,7 +21,7 @@ public class MatchRuntimeManager(
         {
             MatchId = @event.MatchId,
             RoomCode = @event.RoomCode.ToUpperInvariant(),
-            TurnTimerSeconds = @event.TurnTimerSeconds > 0 ? @event.TurnTimerSeconds : _timing.DefaultTurnSeconds,
+            TurnTimerSeconds = _timing.DefaultTurnSeconds,
             NopeWindowSeconds = _timing.NopeWindowSeconds,
             DefuseDecisionSeconds = _timing.DefuseDecisionSeconds,
             BombReinsertSeconds = _timing.BombReinsertSeconds,

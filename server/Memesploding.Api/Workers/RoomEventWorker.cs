@@ -111,7 +111,6 @@ public class RoomEventWorker : BackgroundService
         var roomCode = @event.RoomCode.ToUpperInvariant();
         var roomInfo = await _cache.HashGetAllAsync(CacheKeys.RoomInfo(roomCode));
         var roomInfoDict = roomInfo.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
-        var turnTimer = int.TryParse(roomInfoDict.GetValueOrDefault("turn_timer"), out var turnTimerParsed) ? turnTimerParsed : 15;
         var maxPlayers = int.TryParse(roomInfoDict.GetValueOrDefault("max_players"), out var maxPlayersParsed) ? maxPlayersParsed : 0;
         var cardSetIds = (await _cache.SetMembersAsync(CacheKeys.RoomCardSets(roomCode)))
             .Select(raw => Guid.TryParse(raw, out var id) ? id : Guid.Empty)
@@ -141,8 +140,7 @@ public class RoomEventWorker : BackgroundService
         {
             roomCode,
             cardSetIds,
-            maxPlayers,
-            turnTimer
+            maxPlayers
         });
         var statsJson = JsonSerializer.Serialize(new
         {

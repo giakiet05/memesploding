@@ -8,6 +8,12 @@ public record CreateRoomDto(
     List<Guid> CardSetIds
 );
 
+public record UpdateRoomDto(
+    [Range(2, 6)] int? MaxPlayers,
+    bool? IsPublic,
+    List<Guid>? CardSetIds
+);
+
 public record UpdateReadyStatusDto(
     bool IsReady
 );
@@ -45,8 +51,7 @@ public record RoomDetailDto(
 );
 
 public record RoomSettingsDto(
-    int MaxPlayers,
-    int TurnTimer
+    int MaxPlayers
 );
 
 public record RoomParticipantDto(

@@ -16,7 +16,7 @@ public class MatchmakingService(ICacheStore cache, ApplicationDbContext db, IRoo
         var existingRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
         if (!string.IsNullOrEmpty(existingRoomCode))
         {
-            throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in a room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room");
         }
 
         // 2. Find available public rooms
@@ -31,7 +31,7 @@ public class MatchmakingService(ICacheStore cache, ApplicationDbContext db, IRoo
             {
                 return await roomService.JoinRoomAsync(userId, bestRoom.Code);
             }
-            catch (AppException ex) when (ex.ErrorCode == ErrorCode.ValidationFailed)
+            catch (AppException ex) when (ex.ErrorCode == ErrorCode.ValidationFailed || ex.ErrorCode == ErrorCode.RoomIsFull)
             {
                 // Room might be full now, try next or create
                 return await CreateNewRoomAsync(userId);

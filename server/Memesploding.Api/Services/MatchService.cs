@@ -48,14 +48,13 @@ public class MatchService(ApplicationDbContext db) : IMatchService
 
                 var roomCode = settingsJson.RootElement.GetProperty("roomCode").GetString() ?? "UNKNOWN";
                 var maxPlayers = settingsJson.RootElement.GetProperty("maxPlayers").GetInt32();
-                var turnTimer = settingsJson.RootElement.GetProperty("turnTimer").GetInt32();
 
-                matchSettings[match.Id] = new MatchSettingsDto(roomCode, cardSetIds, maxPlayers, turnTimer);
+                matchSettings[match.Id] = new MatchSettingsDto(roomCode, cardSetIds, maxPlayers);
                 allCardSetIds.AddRange(cardSetIds);
             }
             catch (Exception)
             {
-                matchSettings[match.Id] = new MatchSettingsDto("UNKNOWN", new List<Guid>(), 0, 0);
+                matchSettings[match.Id] = new MatchSettingsDto("UNKNOWN", new List<Guid>(), 0);
             }
         }
 

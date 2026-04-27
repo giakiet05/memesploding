@@ -157,12 +157,12 @@ MATCH_EVENTS=$(printf '%s\x1e%s\x1e' '{"protocol":"json","version":1}' "$START_M
     timeout 10 websocat -n "$APP_HUB_URL?access_token=$ALICE_TOKEN" 2>/dev/null || true)
 
 ALICE_WS_TOKEN=$(echo "$MATCH_EVENTS" | \
-    grep -o '"WsAccessToken":"[^"]*"' | head -1 | \
-    sed 's/"WsAccessToken":"//; s/"//')
+    grep -o '"wsAccessToken":"[^"]*"' | head -1 | \
+    sed 's/"wsAccessToken":"//; s/"//')
 
 GAME_WS_BASE=$(echo "$MATCH_EVENTS" | \
-    grep -o '"WsUrl":"[^"]*"' | head -1 | \
-    sed 's/"WsUrl":"//; s/"//')
+    grep -o '"wsUrl":"[^"]*"' | head -1 | \
+    sed 's/"wsUrl":"//; s/"//')
 
 sleep 1
 
@@ -244,10 +244,10 @@ game_command() {
 
 # Alice connect & get state snapshot
 echo -e "${CYAN}→ Alice connecting to Game Server...${NC}"
-ALICE_CONNECT=$(game_command "$ALICE_WS_TOKEN" "requeststatesnapshot" "{}" 8)
+ALICE_CONNECT=$(game_command "$ALICE_WS_TOKEN" "RequestStateSnapshot" "{}" 8)
 
 
-if echo "$ALICE_CONNECT" | grep -q '"event":"connected"'; then
+if echo "$ALICE_CONNECT" | grep -q '"event":"Connected"'; then
     echo -e "${GREEN}✅ Alice connected to Game Server${NC}"
 else
     echo -e "${YELLOW}⚠️  Alice connection response:${NC}"
@@ -261,15 +261,15 @@ sleep 1
 
 # Bob connect
 echo -e "${CYAN}→ Bob connecting to Game Server...${NC}"
-BOB_CONNECT=$(game_command "$BOB_WS_TOKEN" "requeststatesnapshot" "{}" 5)
-if echo "$BOB_CONNECT" | grep -q '"event":"connected"'; then
+BOB_CONNECT=$(game_command "$BOB_WS_TOKEN" "RequestStateSnapshot" "{}" 5)
+if echo "$BOB_CONNECT" | grep -q '"event":"Connected"'; then
     echo -e "${GREEN}✅ Bob connected${NC}"
 fi
 
 # Charlie connect
 echo -e "${CYAN}→ Charlie connecting to Game Server...${NC}"
-CHARLIE_CONNECT=$(game_command "$CHARLIE_WS_TOKEN" "requeststatesnapshot" "{}" 5)
-if echo "$CHARLIE_CONNECT" | grep -q '"event":"connected"'; then
+CHARLIE_CONNECT=$(game_command "$CHARLIE_WS_TOKEN" "RequestStateSnapshot" "{}" 5)
+if echo "$CHARLIE_CONNECT" | grep -q '"event":"Connected"'; then
     echo -e "${GREEN}✅ Charlie connected${NC}"
 fi
 
@@ -277,9 +277,9 @@ sleep 1
 
 # Alice draw card (turn 1)
 echo -e "${CYAN}→ Alice DrawCard...${NC}"
-DRAW_RESP=$(game_command "$ALICE_WS_TOKEN" "drawcard" "{}" 8)
+DRAW_RESP=$(game_command "$ALICE_WS_TOKEN" "DrawCard" "{}" 8)
 
-if echo "$DRAW_RESP" | grep -q '"event":"ack"'; then
+if echo "$DRAW_RESP" | grep -q '"event":"Ack"'; then
     STATE_VERSION=$(echo "$DRAW_RESP" | grep -o '"stateVersion":[0-9]*' | head -1 | sed 's/"stateVersion"://')
     echo -e "${GREEN}✅ DrawCard ACK - StateVersion: $STATE_VERSION${NC}"
 else
@@ -322,12 +322,12 @@ Manual connection commands:
 
 SignalR Commands (GameHub):
   Handshake:  {"protocol":"json","version":1}
-  Draw card:  {"type":1,"target":"SendCommand","arguments":[{"Event":"drawcard","Data":{}}]}
-  Play card:  {"type":1,"target":"SendCommand","arguments":[{"Event":"playcard","Data":{"cardCode":"Skip"}}]}
-  Nope:       {"type":1,"target":"SendCommand","arguments":[{"Event":"nope","Data":{}}]}
-  Use Defuse: {"type":1,"target":"SendCommand","arguments":[{"Event":"usedefuse","Data":{}}]}
-  Bomb pos:   {"type":1,"target":"SendCommand","arguments":[{"Event":"choosebombinsertposition","Data":{"position":0}}]}
-  State:      {"type":1,"target":"SendCommand","arguments":[{"Event":"requeststatesnapshot","Data":{}}]}
+  Draw card:  {"type":1,"target":"SendCommand","arguments":[{"Event":"DrawCard","Data":{}}]}
+  Play card:  {"type":1,"target":"SendCommand","arguments":[{"Event":"PlayCard","Data":{"cardCode":"Skip"}}]}
+  Nope:       {"type":1,"target":"SendCommand","arguments":[{"Event":"Nope","Data":{}}]}
+  Use Defuse: {"type":1,"target":"SendCommand","arguments":[{"Event":"UseDefuse","Data":{}}]}
+  Bomb pos:   {"type":1,"target":"SendCommand","arguments":[{"Event":"ChooseBombInsertPosition","Data":{"position":0}}]}
+  State:      {"type":1,"target":"SendCommand","arguments":[{"Event":"RequestStateSnapshot","Data":{}}]}
 
 SignalR Commands (AppHub - pre-game):
   Handshake:   {"protocol":"json","version":1}

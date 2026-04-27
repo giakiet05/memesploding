@@ -33,7 +33,7 @@ public class GameHub(
         await Groups.AddToGroupAsync(Context.ConnectionId, GetRoomGroup(connectionContext.RoomCode));
 
         var payload = WsServerEvent<WsConnectedDto>.Create(
-            "connected",
+            "Connected",
             new WsConnectedDto(connectionContext.RoomCode, connectionContext.MatchId)
         );
         await Clients.Caller.SendAsync("ReceiveMessage", payload);
@@ -57,19 +57,19 @@ public class GameHub(
     {
         if (!Connections.TryGetValue(Context.ConnectionId, out var connectionContext))
         {
-            await Clients.Caller.SendAsync("ReceiveMessage", WsServerEvent<WsErrorDto>.Create("error", new WsErrorDto("Unauthorized connection context")));
+            await Clients.Caller.SendAsync("ReceiveMessage", WsServerEvent<WsErrorDto>.Create("Error", new WsErrorDto("Unauthorized connection context")));
             return;
         }
 
         var stateVersion = await commandDispatcher.DispatchAsync(connectionContext, command, Context.ConnectionAborted);
         if (stateVersion.HasValue)
         {
-            await Clients.Caller.SendAsync("ReceiveMessage", WsServerEvent<WsAckDto>.Create("ack", new WsAckDto(stateVersion.Value)));
+            await Clients.Caller.SendAsync("ReceiveMessage", WsServerEvent<WsAckDto>.Create("Ack", new WsAckDto(stateVersion.Value)));
         }
 
-        if (string.Equals(command.Event, "reconnectmatch", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(command.Event, "ackstateversion", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(command.Event, "requeststatesnapshot", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(command.Event, "ReconnectMatch", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(command.Event, "AckStateVersion", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(command.Event, "RequestStateSnapshot", StringComparison.OrdinalIgnoreCase))
         {
             await SendStateSnapshotAsync(connectionContext, Context.ConnectionAborted);
         }
