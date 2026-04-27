@@ -337,11 +337,11 @@ Sự kiện quan trọng nhất, cung cấp toàn bộ dữ liệu bàn chơi đ
       }
     ],
     "selfHand": ["Skip", "Defuse"], // Danh sách lá bài cụ thể TRÊN TAY BẠN
-    "drawPileCount": 42,
-    "discardPile": ["Attack", "Favor"],
-    "turnIndex": 0,
-    "turnEndsAt": "ISO_TIMESTAMP",
-    "stateVersion": 123
+    "drawPileCount": 42, // Số lượng thẻ còn lại ở chồng bài rút
+    "discardPile": ["Attack", "Favor"], // Danh sách mã thẻ bài đã đánh ra ở xấp bài bỏ
+    "turnIndex": 0, // Vị trí (Index) người chơi đang giữ lượt trong danh sách players
+    "turnEndsAt": "ISO_TIMESTAMP", // Thời điểm hết lượt bốc bài (chuẩn ISO 8601)
+    "stateVersion": 123 // Số phiên bản trạng thái hiện tại (dùng để đồng bộ)
   }
 }
 ```
@@ -350,19 +350,68 @@ Sự kiện quan trọng nhất, cung cấp toàn bộ dữ liệu bàn chơi đ
 
 ### 5.4. `GameplayEvent`
 
-Sự kiện thông báo các diễn biến cụ thể trong game (ví dụ: có người vừa đánh bài, bốc bài).
+Sự kiện thông báo các diễn biến cụ thể từng bước trong game (thường dùng để chạy animation).
 
-**Success push**
+**Cấu trúc chung**:
 ```json
 {
   "event": "GameplayEvent",
   "data": {
-    "type": "CardPlayed", // Loại sự kiện (PascalCase). Vd: CardPlayed, CardDrawn, TurnChanged...
-    "payload": "{...}", // Dữ liệu chi tiết của sự kiện dưới dạng JSON string
+    "type": "EventName", // Tên sự kiện (PascalCase)
+    "payload": "string", // Chuỗi JSON chi tiết (cần JSON.parse)
     "stateVersion": 125
   }
 }
 ```
+
+**Danh sách sự kiện và Payload (Bộ Gốc - Original Set)**:
+
+| Loại (`type`)           | Payload (JSON sau khi parse)                                    | Mô tả                                                                |
+| :---------------------- | :-------------------------------------------------------------- | :------------------------------------------------------------------- |
+| **Diễn biến chính**     |                                                                 |                                                                      |
+| `MatchStarted`          | `{}`                                                            | Trận đấu chính thức bắt đầu.                                         |
+| `TurnStarted`           | `{"turnIndex": 0}`                                              | Bắt đầu lượt của người chơi mới.                                     |
+| `TurnChanged`           | `{"turnIndex": 1}`                                              | Chuyển lượt sang người tiếp theo.                                    |
+| `TurnContinues`         | `{"userId": "guid", "pendingDrawCount": 1}`                     | Vẫn là lượt người đó (vd: sau khi bốc 1 lá trong 2 lượt của Attack). |
+| `CardDrawn`             | `{"userId": "guid", "cardCode": "Skip"}`                        | Có người bốc bài (cardCode là `"Hidden"` nếu không phải bạn).        |
+| `CardPlayed`            | `{"userId": "guid", "cardCode": "Skip"}`                        | Có người đánh 1 lá bài.                                              |
+| `ComboPlayed`           | `{"userId": "guid", "comboSize": 2, "cardCode": "Cat1"}`        | Có người đánh combo nhiều lá.                                        |
+| `ExplosionTriggered`    | `{"userId": "guid"}`                                            | Bom nổ (người chơi bốc phải bom).                                    |
+| `DefuseUsed`            | `{"userId": "guid"}`                                            | Người chơi đã sử dụng lá Defuse thành công.                          |
+| `BombReinserted`        | `{"userId": "guid", "position": 5}`                             | Bom đã được giấu lại vào bộ bài.                                     |
+| `BombReinsertAuto`      | `{}`                                                            | Server tự nhét lại bom do người chơi hết giờ.                        |
+| `PlayerEliminated`      | `{"userId": "guid", "reason": "BOMB_EXPLODED"}`                 | Người chơi bị loại (nổ bom hoặc AFK).                                |
+| `MatchFinished`         | `{"winnerUserId": "guid"}`                                      | Trận đấu kết thúc, tìm ra người thắng.                               |
+| **Hiệu ứng bài**        |                                                                 |                                                                      |
+| `AttackApplied`         | `{"from": "guid", "to": "guid", "added": 2}`                    | Áp dụng hiệu ứng Tấn công.                                           |
+| `SkipApplied`           | `{"userId": "guid"}`                                            | Áp dụng hiệu ứng Bỏ lượt.                                            |
+| `ShuffleApplied`        | `{}`                                                            | Bộ bài đã được xáo trộn.                                             |
+| `FuturePeeked`          | `["Skip", "Defuse", "Attack"]`                                  | Kết quả của See The Future (chỉ gửi cho người đánh).                 |
+| `FavorWindowOpened`     | `{"requesterId": "guid", "targetId": "guid"}`                   | Mở cửa sổ chờ nạn nhân tặng bài.                                     |
+| `FavorResolved`         | `{"from": "guid", "to": "guid", "cardCode": "Skip"}`            | Hoàn tất việc tặng bài (cardCode ẩn với người khác).                 |
+| `FavorTargetEmpty`      | `{"from": "guid", "target": "guid"}`                            | Nạn nhân không có bài để tặng.                                       |
+| `ReactionWindowOpened`  | `{"userId": "guid", "cardCode": "Attack"}`                      | Mở 5s chờ người khác Nope.                                           |
+| `ReactionWindowClosed`  | `{"cardCode": "Attack", "nopeCount": 2}`                        | Kết thúc 5s, tính toán số Nope để thực thi/hủy lệnh.                 |
+| **Combo Resolution**    |                                                                 |                                                                      |
+| `CatComboTwoResolved`   | `{"from": "guid", "to": "guid", "cardCode": "Skip"}`            | Combo 2: Trộm bài thành công.                                        |
+| `CatComboThreeResolved` | `{"from": "guid", "to": "guid", "requestedCardCode": "Defuse"}` | Combo 3: Đòi bài và lấy được.                                        |
+| `CatComboThreeMiss`     | `{"from": "guid", "to": "guid", "requestedCardCode": "Defuse"}` | Combo 3: Đòi bài nhưng nạn nhân không có.                            |
+| `CatComboFiveResolved`  | `{"userId": "guid", "discardCardCode": "Defuse"}`               | Combo 5: Lấy lại bài từ xấp bài bỏ thành công.                       |
+
+**Giải thích ý nghĩa các trường (fields) thường gặp trong Payload:**
+- `userId`: ID của người chơi vừa thực hiện hành động hoặc chịu tác động chính của sự kiện.
+- `cardCode`: Mã định danh của thẻ bài (vd: `Skip`, `Attack`, `Cat1`...). Nếu lá bài được giấu hoặc không được phép nhìn thấy, giá trị này có thể là `"Hidden"`.
+- `comboSize`: Số lượng lá bài được dùng để tạo thành một combo (vd: `2`, `3`, `5`).
+- `turnIndex`: Số thứ tự của người đang đến lượt (so khớp với index trong mảng `players` của `StateSnapshot`).
+- `from`: ID của người chơi chủ động gây ra hành động (vd: người tấn công, người xin bài).
+- `to` / `target`: ID của người chơi là mục tiêu hoặc nạn nhân của hành động.
+- `added`: Số lượng (vd: số lượt bị cộng thêm do lá Attack).
+- `position`: Vị trí cụ thể (vd: thứ tự chèn lại quả bom vào chồng bài rút, tính từ trên xuống).
+- `reason`: Mã lỗi hoặc lý do dẫn đến một hành động bắt buộc (vd: `BOMB_EXPLODED`).
+- `winnerUserId`: ID của người chiến thắng cuối cùng của trận đấu.
+- `requestedCardCode`: Mã thẻ bài cụ thể mà người dùng Combo 3 lá yêu cầu từ đối thủ.
+- `discardCardCode`: Mã thẻ bài mà người dùng Combo 5 lá vớt lại từ xấp bài bỏ (Discard Pile).
+- `nopeCount`: Tổng số lá Nope đã được tung ra trong một cửa sổ phản ứng.
 
 ---
 
@@ -391,17 +440,17 @@ Sự kiện thông báo các diễn biến cụ thể trong game (ví dụ: có 
 
 Dưới đây là danh sách `cardCode` và hiệu ứng của các lá bài trong bộ cơ bản.
 
-| cardCode | Tên lá bài | Hiệu ứng |
-| :--- | :--- | :--- |
-| `ExplodingKitten` | Mèo Nổ | Rút phải lá này mà không có Defuse -> Thua ngay lập tức. |
-| `Defuse` | Vô Hiệu Hoá | Ngăn nổ bom. Cho phép nhét lại Mèo Nổ vào vị trí bất kỳ trong bộ bài. |
-| `Skip` | Bỏ Lượt | Kết thúc lượt của bạn ngay lập tức mà không cần rút bài. |
-| `Attack` | Tấn Công | Kết thúc lượt của bạn. Người tiếp theo phải chơi 2 lượt liên tiếp. |
-| `Favor` | Xin Ơn | Chọn một người chơi, họ phải tự chọn 1 lá bài đưa cho bạn. |
-| `Shuffle` | Xáo Trộn | Xáo trộn lại toàn bộ xấp bài rút. |
-| `SeeTheFuture` | Thấy Tương Lai | Xem 3 lá bài trên cùng của xấp bài rút. |
-| `Nope` | Không Đâu | Chặn bất kỳ hành động nào (trừ Mèo Nổ và Defuse). |
-| `Cat1` -> `Cat5` | Các lá Mèo | Không có hiệu ứng riêng. Dùng theo cặp (Combo 2) để lấy bài ngẫu nhiên, hoặc bộ 3 (Combo 3) để chỉ định lá bài từ người khác. |
+| cardCode          | Tên lá bài     | Hiệu ứng                                                                                                                      |
+| :---------------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| `ExplodingKitten` | Mèo Nổ         | Rút phải lá này mà không có Defuse -> Thua ngay lập tức.                                                                      |
+| `Defuse`          | Vô Hiệu Hoá    | Ngăn nổ bom. Cho phép nhét lại Mèo Nổ vào vị trí bất kỳ trong bộ bài.                                                         |
+| `Skip`            | Bỏ Lượt        | Kết thúc lượt của bạn ngay lập tức mà không cần rút bài.                                                                      |
+| `Attack`          | Tấn Công       | Kết thúc lượt của bạn. Người tiếp theo phải chơi 2 lượt liên tiếp.                                                            |
+| `Favor`           | Xin Ơn         | Chọn một người chơi, họ phải tự chọn 1 lá bài đưa cho bạn.                                                                    |
+| `Shuffle`         | Xáo Trộn       | Xáo trộn lại toàn bộ xấp bài rút.                                                                                             |
+| `SeeTheFuture`    | Thấy Tương Lai | Xem 3 lá bài trên cùng của xấp bài rút.                                                                                       |
+| `Nope`            | Không Đâu      | Chặn bất kỳ hành động nào (trừ Mèo Nổ và Defuse).                                                                             |
+| `Cat1` -> `Cat5`  | Các lá Mèo     | Không có hiệu ứng riêng. Dùng theo cặp (Combo 2) để lấy bài ngẫu nhiên, hoặc bộ 3 (Combo 3) để chỉ định lá bài từ người khác. |
 
 ---
 
