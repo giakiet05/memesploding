@@ -51,7 +51,7 @@ public class MatchRuntime
             if (currentTurnUserId.HasValue && State.PendingReactionAction == null && !State.PendingDefuseUserId.HasValue && State.PendingBombCardCode == null)
             {
                 DrawCardForPlayer(currentTurnUserId.Value, fromBottom: false);
-                IncrementVersion("turn_timeout_auto_draw", $"{{\"userId\":\"{currentTurnUserId.Value}\"}}");
+                IncrementVersion("TurnTimeoutAutoDraw", $"{{\"userId\":\"{currentTurnUserId.Value}\"}}");
                 ConsumePendingDraw(currentTurnUserId.Value);
                 if (!IsBombResolutionPendingFor(currentTurnUserId.Value))
                 {
@@ -68,7 +68,7 @@ public class MatchRuntime
             State.ReactionWindowEndsAt = null;
             State.ReactionResolveAt = DateTime.UtcNow.AddMilliseconds(State.EffectResolutionDelayMs);
             IncrementVersion(
-                "reaction_window_closed",
+                "ReactionWindowClosed",
                 $"{{\"cardCode\":\"{State.PendingReactionAction}\",\"nopeCount\":{State.PendingNopeCount}}}"
             );
         }
@@ -98,7 +98,7 @@ public class MatchRuntime
             State.BombReinsertWindowEndsAt = null;
             State.PendingBombOwnerUserId = null;
             State.PendingBombCardCode = null;
-            IncrementVersion("bomb_reinsert_auto", "{}");
+            IncrementVersion("BombReinsertAuto", "{}");
             if (ownerUserId.HasValue && !IsBombResolutionPendingFor(ownerUserId.Value))
             {
                 CompleteCurrentTurnAfterDrawResolution(ownerUserId.Value);
@@ -121,7 +121,7 @@ public class MatchRuntime
         State.Phase = MatchPhase.Playing;
         State.StartedAt = DateTime.UtcNow;
         StartTurnLoop();
-        IncrementVersion("match_started", "{}");
+        IncrementVersion("MatchStarted", "{}");
     }
 
     public void StartTurnLoop()
@@ -134,7 +134,7 @@ public class MatchRuntime
         State.TurnIndex = ((State.TurnIndex % State.Players.Count) + State.Players.Count) % State.Players.Count;
         State.TurnCounter++;
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("turn_started", $"{{\"turnIndex\":{State.TurnIndex}}}");
+        IncrementVersion("TurnStarted", $"{{\"turnIndex\":{State.TurnIndex}}}");
     }
 
     public Guid? GetCurrentTurnUserId()
@@ -183,7 +183,7 @@ public class MatchRuntime
                 HandleChooseFavorCard(command.UserId, command.Payload);
                 break;
             default:
-                IncrementVersion("unknown_command", $"{{\"name\":\"{command.Name}\"}}");
+                IncrementVersion("UnknownCommand", $"{{\"name\":\"{command.Name}\"}}");
                 break;
         }
     }
@@ -192,31 +192,31 @@ public class MatchRuntime
     {
         if (State.Phase != MatchPhase.Playing)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_phase\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_PHASE\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (!IsAlivePlayer(userId))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"player_eliminated\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"PLAYER_ELIMINATED\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (State.PendingReactionAction != null || State.ReactionResolveAt.HasValue)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"reaction_in_progress\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"REACTION_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (State.PendingDefuseUserId.HasValue || State.PendingBombCardCode != null)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"bomb_resolution_pending\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"BOMB_RESOLUTION_PENDING\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (GetCurrentTurnUserId() != userId)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"not_turn\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NOT_TURN\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -232,19 +232,19 @@ public class MatchRuntime
     {
         if (State.Phase != MatchPhase.Playing)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_phase\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_PHASE\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (!IsAlivePlayer(userId))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"player_eliminated\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"PLAYER_ELIMINATED\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (!TryGetCardCode(payload, out var cardCode))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_payload\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_PAYLOAD\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -257,19 +257,19 @@ public class MatchRuntime
 
         if (State.PendingReactionAction != null || State.ReactionWindowEndsAt.HasValue)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"reaction_in_progress\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"REACTION_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (State.PendingDefuseUserId.HasValue || State.PendingBombCardCode != null)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"bomb_resolution_pending\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"BOMB_RESOLUTION_PENDING\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (GetCurrentTurnUserId() != userId)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"not_turn\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NOT_TURN\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -289,12 +289,12 @@ public class MatchRuntime
 
         if (!hand.Remove(cardCode))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"card_not_owned\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"CARD_NOT_OWNED\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
             return;
         }
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
         State.DiscardPile.Add(cardCode);
-        IncrementVersion("card_played", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
+        IncrementVersion("CardPlayed", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
 
         ApplyCardEffect(userId, cardCode, payload);
     }
@@ -303,13 +303,13 @@ public class MatchRuntime
     {
         if (!State.ReactionWindowEndsAt.HasValue || State.ReactionWindowEndsAt.Value < DateTime.UtcNow || State.PendingReactionAction == null)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"no_reaction_window\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NO_REACTION_WINDOW\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (!TryRemoveCardFromHand(userId, "Nope"))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"card_not_owned\",\"userId\":\"{userId}\",\"cardCode\":\"Nope\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"CARD_NOT_OWNED\",\"userId\":\"{userId}\",\"cardCode\":\"Nope\"}}");
             return;
         }
 
@@ -403,13 +403,13 @@ public class MatchRuntime
                 ApplyBarkingKitten(userId, payload);
                 break;
             case "StreakingKitten":
-                IncrementVersion("streaking_kitten_active", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("StreakingKittenActive", $"{{\"userId\":\"{userId}\"}}");
                 break;
             case "FeralCat":
-                IncrementVersion("feral_cat_played", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("FeralCatPlayed", $"{{\"userId\":\"{userId}\"}}");
                 break;
             default:
-                IncrementVersion("card_effect_unhandled", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
+                IncrementVersion("CardEffectUnhandled", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
                 break;
         }
     }
@@ -418,7 +418,7 @@ public class MatchRuntime
     {
         if (State.PendingReactionAction != null)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"reaction_in_progress\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"REACTION_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -428,7 +428,7 @@ public class MatchRuntime
         State.PendingNopeCount = 0;
         State.ReactionResolveAt = null;
         State.ReactionWindowEndsAt = DateTime.UtcNow.AddSeconds(State.NopeWindowSeconds);
-        IncrementVersion("reaction_window_opened", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{actionCardCode}\"}}");
+        IncrementVersion("ReactionWindowOpened", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{actionCardCode}\"}}");
     }
 
     private void ResolvePendingReactionAction()
@@ -508,7 +508,7 @@ public class MatchRuntime
         var currentPending = Math.Max(1, State.Players[targetIndex].PendingDrawCount);
         var added = cardCode == "PersonalAttack" ? 3 : 2;
         State.Players[targetIndex] = State.Players[targetIndex] with { PendingDrawCount = currentPending + added };
-        IncrementVersion("attack_applied", $"{{\"from\":\"{userId}\",\"to\":\"{targetUserId.Value}\",\"added\":{added}}}");
+        IncrementVersion("AttackApplied", $"{{\"from\":\"{userId}\",\"to\":\"{targetUserId.Value}\",\"added\":{added}}}");
     }
 
     private void ApplySkip(Guid userId, bool superSkip)
@@ -531,7 +531,7 @@ public class MatchRuntime
         }
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("turn_continues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
+        IncrementVersion("TurnContinues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
     }
 
     private void ConsumePendingDraw(Guid userId)
@@ -574,7 +574,7 @@ public class MatchRuntime
         }
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("turn_continues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
+        IncrementVersion("TurnContinues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
     }
 
     private bool IsBombResolutionPendingFor(Guid userId)
@@ -592,7 +592,7 @@ public class MatchRuntime
     {
         if (State.DrawPile.Count == 0)
         {
-            IncrementVersion("draw_pile_empty", "{}");
+            IncrementVersion("DrawPileEmpty", "{}");
             return;
         }
 
@@ -605,14 +605,14 @@ public class MatchRuntime
         }
 
         var hand = State.Players[playerIndex].Hand ?? [];
-        IncrementVersion("card_drawn", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{card}\"}}");
+        IncrementVersion("CardDrawn", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{card}\"}}");
 
         if (card == "ExplodingKitten")
         {
             if (HasCardInHand(userId, "StreakingKitten"))
             {
                 hand.Add(card);
-                IncrementVersion("streaking_holds_bomb", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("StreakingHoldsBomb", $"{{\"userId\":\"{userId}\"}}");
             }
             else
             {
@@ -628,7 +628,7 @@ public class MatchRuntime
                 State.DefuseWindowEndsAt = DateTime.UtcNow.AddSeconds(State.DefuseDecisionSeconds);
                 State.PendingBombOwnerUserId = userId;
                 State.PendingBombCardCode = "ExplodingKitten";
-                IncrementVersion("explosion_triggered", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("ExplosionTriggered", $"{{\"userId\":\"{userId}\"}}");
             }
         }
         else if (card == "ImplodingKitten")
@@ -639,7 +639,7 @@ public class MatchRuntime
                 State.PendingBombOwnerUserId = userId;
                 State.PendingBombCardCode = "ImplodingKitten";
                 State.BombReinsertWindowEndsAt = DateTime.UtcNow.AddSeconds(State.BombReinsertSeconds);
-                IncrementVersion("imploding_reinsert_required", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("ImplodingReinsertRequired", $"{{\"userId\":\"{userId}\"}}");
             }
             else
             {
@@ -680,13 +680,13 @@ public class MatchRuntime
         if (State.TurnIndex < 0)
         {
             State.Phase = MatchPhase.Finished;
-            IncrementVersion("match_finished", "{}");
+            IncrementVersion("MatchFinished", "{}");
             return;
         }
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
         State.TurnCounter++;
-        IncrementVersion("turn_changed", $"{{\"turnIndex\":{State.TurnIndex}}}");
+        IncrementVersion("TurnChanged", $"{{\"turnIndex\":{State.TurnIndex}}}");
     }
 
     private int GetNextAliveTurnIndex()
@@ -842,7 +842,7 @@ public class MatchRuntime
     {
         if (State.PendingDefuseUserId != userId || State.PendingBombCardCode == null)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"no_pending_defuse\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NO_PENDING_DEFUSE\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -856,32 +856,32 @@ public class MatchRuntime
         State.PendingDefuseUserId = null;
         State.PendingBombOwnerUserId = userId;
         State.BombReinsertWindowEndsAt = DateTime.UtcNow.AddSeconds(State.BombReinsertSeconds);
-        IncrementVersion("defuse_used", $"{{\"userId\":\"{userId}\"}}");
+        IncrementVersion("DefuseUsed", $"{{\"userId\":\"{userId}\"}}");
     }
 
     private void HandleChooseBombInsertPosition(Guid userId, string payload)
     {
         if (State.PendingBombCardCode == null || !State.BombReinsertWindowEndsAt.HasValue)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"no_pending_bomb\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NO_PENDING_BOMB\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (State.PendingBombOwnerUserId.HasValue && State.PendingBombOwnerUserId.Value != userId)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"not_bomb_owner\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NOT_BOMB_OWNER\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         if (!TryGetInsertPosition(payload, out var pos))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_insert_position\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_INSERT_POSITION\",\"userId\":\"{userId}\"}}");
             return;
         }
 
         pos = Math.Clamp(pos, 0, State.DrawPile.Count);
         State.DrawPile.Insert(pos, State.PendingBombCardCode);
-        IncrementVersion("bomb_reinserted", $"{{\"userId\":\"{userId}\",\"position\":{pos}}}");
+        IncrementVersion("BombReinserted", $"{{\"userId\":\"{userId}\",\"position\":{pos}}}");
         State.PendingBombCardCode = null;
         State.BombReinsertWindowEndsAt = null;
         State.PendingBombOwnerUserId = null;
@@ -904,7 +904,7 @@ public class MatchRuntime
             Connected = true,
             PendingReconnectUntil = null
         };
-        IncrementVersion("reconnect_ack", $"{{\"userId\":\"{userId}\"}}");
+        IncrementVersion("ReconnectAck", $"{{\"userId\":\"{userId}\"}}");
     }
 
     private void EliminatePlayer(Guid userId, string reason)
@@ -938,7 +938,7 @@ public class MatchRuntime
             State.PendingBombCardCode = null;
         }
 
-        IncrementVersion("player_eliminated", $"{{\"userId\":\"{userId}\",\"reason\":\"{reason}\"}}");
+        IncrementVersion("PlayerEliminated", $"{{\"userId\":\"{userId}\",\"reason\":\"{reason}\"}}");
         CheckMatchFinished();
 
         if (State.Phase == MatchPhase.Playing && GetCurrentTurnUserId() == userId)
@@ -962,7 +962,7 @@ public class MatchRuntime
 
         State.Phase = MatchPhase.Finished;
         State.WinnerUserId = alive[0].UserId;
-        IncrementVersion("match_finished", $"{{\"winnerUserId\":\"{alive[0].UserId}\"}}");
+        IncrementVersion("MatchFinished", $"{{\"winnerUserId\":\"{alive[0].UserId}\"}}");
     }
 
     private void InsertBombAtRandom(string bombCode)
@@ -1026,7 +1026,7 @@ public class MatchRuntime
         var count = cardCode == "AlterTheFuture5" ? 5 : 3;
         var peek = State.DrawPile.Take(count).ToList();
         var payload = JsonSerializer.Serialize(new { userId, cardCode, cards = peek });
-        IncrementVersion("future_peeked", payload);
+        IncrementVersion("FuturePeeked", payload);
     }
 
     private bool TryApplyUniversalCombo(Guid userId, int playerIndex, List<string> hand, string cardCode, int comboSize, string payload)
@@ -1041,7 +1041,7 @@ public class MatchRuntime
                 using var doc = JsonDocument.Parse(payload);
                 if (!doc.RootElement.TryGetProperty("cardCodes", out var codesElem) || codesElem.ValueKind != JsonValueKind.Array)
                 {
-                    IncrementVersion("action_rejected", $"{{\"reason\":\"combo5_requires_cardCodes_array\",\"userId\":\"{userId}\"}}");
+                    IncrementVersion("ActionRejected", $"{{\"reason\":\"COMBO5_REQUIRES_CARDCODES_ARRAY\",\"userId\":\"{userId}\"}}");
                     return false;
                 }
                 cardCodes = codesElem.EnumerateArray()
@@ -1052,13 +1052,13 @@ public class MatchRuntime
             }
             catch
             {
-                IncrementVersion("action_rejected", $"{{\"reason\":\"invalid_json_payload\",\"userId\":\"{userId}\"}}");
+                IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_JSON_PAYLOAD\",\"userId\":\"{userId}\"}}");
                 return false;
             }
 
             if (cardCodes.Count != 5 || cardCodes.Distinct().Count() != 5)
             {
-                IncrementVersion("action_rejected", $"{{\"reason\":\"combo5_requires_5_distinct_cards\",\"userId\":\"{userId}\"}}");
+                IncrementVersion("ActionRejected", $"{{\"reason\":\"COMBO5_REQUIRES_5_DISTINCT_CARDS\",\"userId\":\"{userId}\"}}");
                 return false;
             }
 
@@ -1066,7 +1066,7 @@ public class MatchRuntime
             {
                 if (!hand.Remove(code))
                 {
-                    IncrementVersion("action_rejected", $"{{\"reason\":\"card_not_owned\",\"userId\":\"{userId}\",\"cardCode\":\"{code}\"}}");
+                    IncrementVersion("ActionRejected", $"{{\"reason\":\"CARD_NOT_OWNED\",\"userId\":\"{userId}\",\"cardCode\":\"{code}\"}}");
                     return false;
                 }
                 State.DiscardPile.Add(code);
@@ -1077,7 +1077,7 @@ public class MatchRuntime
             var count = hand.Count(c => c == cardCode);
             if (count < comboSize)
             {
-                IncrementVersion("action_rejected", $"{{\"reason\":\"insufficient_combo_cards\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"required\":{comboSize}}}");
+                IncrementVersion("ActionRejected", $"{{\"reason\":\"INSUFFICIENT_COMBO_CARDS\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"required\":{comboSize}}}");
                 return false;
             }
 
@@ -1090,7 +1090,7 @@ public class MatchRuntime
 
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
         var comboCode = $"Combo{comboSize}";
-        IncrementVersion("combo_played", $"{{\"userId\":\"{userId}\",\"comboSize\":{comboSize},\"cardCode\":\"{cardCode}\",\"comboCode\":\"{comboCode}\"}}");
+        IncrementVersion("ComboPlayed", $"{{\"userId\":\"{userId}\",\"comboSize\":{comboSize},\"cardCode\":\"{cardCode}\",\"comboCode\":\"{comboCode}\"}}");
 
         ApplyCardEffect(userId, comboCode, payload);
         return true;
@@ -1130,7 +1130,7 @@ public class MatchRuntime
         var sourceHand = State.Players[sourceIndex].Hand ?? [];
         sourceHand.Add(stolen);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
-        IncrementVersion("cat_combo_two_resolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"cardCode\":\"{stolen}\"}}");
+        IncrementVersion("CatComboTwoResolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"cardCode\":\"{stolen}\"}}");
     }
 
     private void ResolveThreeOfKindCombo(Guid userId, string payload)
@@ -1143,7 +1143,7 @@ public class MatchRuntime
 
         if (!TryGetStringProperty(payload, "requestedCardCode", out var requestedCardCode))
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"missing_requested_card\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"MISSING_REQUESTED_CARD\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -1157,7 +1157,7 @@ public class MatchRuntime
         var targetHand = State.Players[targetIndex].Hand ?? [];
         if (!targetHand.Remove(requestedCardCode))
         {
-            IncrementVersion("cat_combo_three_miss", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"requestedCardCode\":\"{requestedCardCode}\"}}");
+            IncrementVersion("CatComboThreeMiss", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"requestedCardCode\":\"{requestedCardCode}\"}}");
             return;
         }
 
@@ -1165,7 +1165,7 @@ public class MatchRuntime
         var sourceHand = State.Players[sourceIndex].Hand ?? [];
         sourceHand.Add(requestedCardCode);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
-        IncrementVersion("cat_combo_three_resolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"requestedCardCode\":\"{requestedCardCode}\"}}");
+        IncrementVersion("CatComboThreeResolved", $"{{\"from\":\"{targetUserId.Value}\",\"to\":\"{userId}\",\"requestedCardCode\":\"{requestedCardCode}\"}}");
     }
 
     private void ResolveFiveOfKindCombo(Guid userId, string payload)
@@ -1194,7 +1194,7 @@ public class MatchRuntime
         var hand = State.Players[sourceIndex].Hand ?? [];
         hand.Add(discardCardCode);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = hand };
-        IncrementVersion("cat_combo_five_resolved", $"{{\"userId\":\"{userId}\",\"discardCardCode\":\"{discardCardCode}\"}}");
+        IncrementVersion("CatComboFiveResolved", $"{{\"userId\":\"{userId}\",\"discardCardCode\":\"{discardCardCode}\"}}");
     }
 
     private void ApplyFavor(Guid userId, string payload)
@@ -1208,7 +1208,7 @@ public class MatchRuntime
         var targetHand = State.Players[targetIdx].Hand ?? [];
         if (targetHand.Count == 0)
         {
-            IncrementVersion("favor_target_empty", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
+            IncrementVersion("FavorTargetEmpty", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
             return;
         }
 
@@ -1216,14 +1216,14 @@ public class MatchRuntime
         State.PendingFavorRequesterId = userId;
         State.PendingFavorTargetId = target.Value;
         State.FavorWindowEndsAt = DateTime.UtcNow.AddSeconds(15);
-        IncrementVersion("favor_window_opened", $"{{\"requesterId\":\"{userId}\",\"targetId\":\"{target.Value}\"}}");
+        IncrementVersion("FavorWindowOpened", $"{{\"requesterId\":\"{userId}\",\"targetId\":\"{target.Value}\"}}");
     }
 
     private void HandleChooseFavorCard(Guid userId, string payload)
     {
         if (!State.PendingFavorTargetId.HasValue || State.PendingFavorTargetId.Value != userId)
         {
-            IncrementVersion("action_rejected", $"{{\"reason\":\"no_pending_favor\",\"userId\":\"{userId}\"}}");
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"NO_PENDING_FAVOR\",\"userId\":\"{userId}\"}}");
             return;
         }
 
@@ -1260,7 +1260,7 @@ public class MatchRuntime
         var sourceHand = State.Players[sourceIndex].Hand ?? [];
         sourceHand.Add(card);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
-        IncrementVersion("favor_resolved", $"{{\"from\":\"{targetId}\",\"to\":\"{requesterId}\",\"cardCode\":\"{card}\"}}");
+        IncrementVersion("FavorResolved", $"{{\"from\":\"{targetId}\",\"to\":\"{requesterId}\",\"cardCode\":\"{card}\"}}");
     }
 
     private void ApplyBury(Guid userId)
@@ -1275,7 +1275,7 @@ public class MatchRuntime
         {
             InsertBombAtRandom(latest);
             State.DiscardPile.RemoveAt(State.DiscardPile.Count - 1);
-            IncrementVersion("bury_resolved", $"{{\"userId\":\"{userId}\",\"card\":\"{latest}\"}}");
+            IncrementVersion("BuryResolved", $"{{\"userId\":\"{userId}\",\"card\":\"{latest}\"}}");
         }
     }
 
@@ -1287,7 +1287,7 @@ public class MatchRuntime
             return;
         }
 
-        IncrementVersion("ill_take_that_marked", $"{{\"owner\":\"{userId}\",\"target\":\"{target.Value}\"}}");
+        IncrementVersion("IllTakeThatMarked", $"{{\"owner\":\"{userId}\",\"target\":\"{target.Value}\"}}");
     }
 
     private void SetTowerMask(Guid userId, bool active)
@@ -1299,7 +1299,7 @@ public class MatchRuntime
         }
 
         State.Players[idx] = State.Players[idx] with { HasTowerMask = active };
-        IncrementVersion("tower_mask_updated", $"{{\"userId\":\"{userId}\",\"active\":{active.ToString().ToLowerInvariant()}}}");
+        IncrementVersion("TowerMaskUpdated", $"{{\"userId\":\"{userId}\",\"active\":{active.ToString().ToLowerInvariant()}}}");
     }
 
     private void ApplyMark(Guid userId, string payload)
@@ -1317,7 +1317,7 @@ public class MatchRuntime
         }
 
         State.Players[idx] = State.Players[idx] with { IsMarked = true };
-        IncrementVersion("mark_applied", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
+        IncrementVersion("MarkApplied", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
     }
 
     private void ApplyCurseOfCatButt(Guid userId, string payload)
@@ -1335,7 +1335,7 @@ public class MatchRuntime
         }
 
         State.Players[idx] = State.Players[idx] with { IsBlind = true };
-        IncrementVersion("cat_butt_curse_applied", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
+        IncrementVersion("CatButtCurseApplied", $"{{\"from\":\"{userId}\",\"target\":\"{target.Value}\"}}");
     }
 
     private void SwapTopAndBottom()
@@ -1349,7 +1349,7 @@ public class MatchRuntime
         var bottomIndex = State.DrawPile.Count - 1;
         State.DrawPile[0] = State.DrawPile[bottomIndex];
         State.DrawPile[bottomIndex] = top;
-        IncrementVersion("swap_top_bottom", "{}");
+        IncrementVersion("SwapTopBottom", "{}");
     }
 
     private void ApplyGarbageCollection()
@@ -1370,7 +1370,7 @@ public class MatchRuntime
         }
 
         Shuffle(State.DrawPile);
-        IncrementVersion("garbage_collection_resolved", "{}");
+        IncrementVersion("GarbageCollectionResolved", "{}");
     }
 
     private void ApplyCatomicBomb()
@@ -1379,7 +1379,7 @@ public class MatchRuntime
         State.DrawPile = State.DrawPile.Where(c => c is not ("ExplodingKitten" or "ImplodingKitten")).ToList();
         Shuffle(State.DrawPile);
         State.DrawPile.InsertRange(0, bombs);
-        IncrementVersion("catomic_bomb_resolved", $"{{\"bombCount\":{bombs.Count}}}");
+        IncrementVersion("CatomicBombResolved", $"{{\"bombCount\":{bombs.Count}}}");
     }
 
     private void ApplyBarkingKitten(Guid userId, string payload)
@@ -1410,7 +1410,7 @@ public class MatchRuntime
 
         State.Players[targetIdx] = State.Players[targetIdx] with { Hand = targetHand };
         State.Players[sourceIdx] = State.Players[sourceIdx] with { Hand = sourceHand };
-        IncrementVersion("barking_kitten_resolved", $"{{\"from\":\"{target.Value}\",\"to\":\"{userId}\"}}");
+        IncrementVersion("BarkingKittenResolved", $"{{\"from\":\"{target.Value}\",\"to\":\"{userId}\"}}");
     }
 
     private Guid? GetRandomAliveTarget(Guid actor)

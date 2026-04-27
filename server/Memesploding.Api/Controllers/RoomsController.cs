@@ -32,6 +32,14 @@ public class RoomsController(IRoomService roomService) : ControllerBase
         return Ok(new ApiResponse<RoomDetailDto>("Joined room successfully", room));
     }
 
+    [HttpPatch("{code}")]
+    public async Task<IActionResult> UpdateRoomSettings(string code, [FromBody] UpdateRoomDto dto)
+    {
+        var userId = User.GetUserId();
+        var room = await roomService.UpdateRoomSettingsAsync(userId, code, dto);
+        return Ok(new ApiResponse<RoomDetailDto>("Room updated successfully", room));
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetPublicRooms([FromQuery] RoomQueryDto query)
     {

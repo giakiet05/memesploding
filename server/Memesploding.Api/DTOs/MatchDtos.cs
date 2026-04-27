@@ -51,6 +51,5 @@ public record MatchStatsDto(
 public record MatchSettingsDto(
     string RoomCode,
     List<Guid> CardSetIds,
-    int MaxPlayers,
-    int TurnTimer
+    int MaxPlayers
 );

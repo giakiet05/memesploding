@@ -47,7 +47,7 @@ public class RoomService(
 
         var existingRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(hostId));
         if (!string.IsNullOrEmpty(existingRoomCode))
-            throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in a room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room");
 
         var roomCode = await GenerateUniqueRoomCodeAsync();
 
@@ -90,6 +90,71 @@ public class RoomService(
         return await GetRoomByCodeAsync(roomCode, hostId);
     }
 
+    public async Task<RoomDetailDto> UpdateRoomSettingsAsync(Guid hostId, string roomCode, UpdateRoomDto dto)
+    {
+        roomCode = roomCode.ToUpper();
+        
+        var roomInfoKey = CacheKeys.RoomInfo(roomCode);
+        if (!await cache.KeyExistsAsync(roomInfoKey))
+            throw AppException.NotFound("Room not found");
+            
+        var currentHostIdRaw = await cache.HashGetAsync(roomInfoKey, "host_id");
+        if (currentHostIdRaw.ToString() != hostId.ToString())
+            throw AppException.Forbidden("Only host can update room settings");
+            
+        var status = await cache.HashGetAsync(roomInfoKey, "status");
+        if (status != "waiting")
+            throw AppException.BadRequest(ErrorCode.MatchAlreadyStarted, "Cannot update settings after match started");
+
+        var transaction = cache.CreateTransaction();
+        var hasChanges = false;
+        
+        if (dto.MaxPlayers.HasValue)
+        {
+            var currentPlayersCount = await cache.HashLengthAsync(CacheKeys.RoomParticipants(roomCode));
+            if (dto.MaxPlayers.Value < currentPlayersCount)
+                throw AppException.BadRequest(ErrorCode.ValidationFailed, "Max players cannot be less than current players");
+            
+            _ = transaction.HashSetAsync(roomInfoKey, "max_players", dto.MaxPlayers.Value.ToString());
+            hasChanges = true;
+        }
+        
+        if (dto.IsPublic.HasValue)
+        {
+            _ = transaction.HashSetAsync(roomInfoKey, "is_public", dto.IsPublic.Value.ToString().ToLower());
+            if (dto.IsPublic.Value)
+                _ = transaction.SetAddAsync(CacheKeys.PublicRooms(), roomCode);
+            else
+                _ = transaction.SetRemoveAsync(CacheKeys.PublicRooms(), roomCode);
+            hasChanges = true;
+        }
+        
+        if (dto.CardSetIds != null)
+        {
+            var cardSetIds = dto.CardSetIds.Distinct().ToList();
+            var cardSets = await db.CardSets
+                .Where(cs => cardSetIds.Contains(cs.Id) && cs.IsActive)
+                .Select(cs => new { cs.Id, cs.Name })
+                .ToListAsync();
+
+            if (cardSets.Count != cardSetIds.Count)
+                throw AppException.BadRequest(ErrorCode.ValidationFailed, "One or more card sets are invalid or inactive");
+                
+            var cardSetsKey = CacheKeys.RoomCardSets(roomCode);
+            _ = transaction.KeyDeleteAsync(cardSetsKey); // delete old
+            foreach (var csId in cardSetIds)
+                _ = transaction.SetAddAsync(cardSetsKey, csId.ToString());
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            await transaction.ExecuteAsync();
+        }
+
+        return await GetRoomByCodeAsync(roomCode, hostId);
+    }
+
     public async Task<RoomDetailDto> JoinRoomAsync(Guid userId, string roomCode)
     {
         roomCode = roomCode.ToUpper();
@@ -98,7 +163,7 @@ public class RoomService(
         if (!string.IsNullOrEmpty(existingRoom))
         {
             if (existingRoom == roomCode) return await GetRoomByCodeAsync(roomCode, userId);
-            throw AppException.BadRequest(ErrorCode.ValidationFailed, "You are already in another room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in another room");
         }
 
         var roomInfoKey = CacheKeys.RoomInfo(roomCode);
@@ -296,7 +361,6 @@ public class RoomService(
         var recipients = await GetParticipantIdsAsync(roomCode);
 
         var matchId = Guid.NewGuid();
-        var turnTimer = 0; // Let Game Server handle the default turn timer
         var cardSetIds = (await cache.SetMembersAsync(CacheKeys.RoomCardSets(roomCode)))
             .Select(x => Guid.TryParse(x, out var id) ? id : Guid.Empty)
             .Where(id => id != Guid.Empty)
@@ -323,7 +387,6 @@ public class RoomService(
                 matchId,
                 roomCode,
                 hostId,
-                turnTimer,
                 cardSetIds,
                 playerInfos,
                 DateTime.UtcNow
@@ -403,7 +466,7 @@ public class RoomService(
             Guid.Parse(roomDict["host_id"]),
             roomDict["status"],
             bool.Parse(roomDict["is_public"]),
-            new RoomSettingsDto(int.Parse(roomDict["max_players"]), int.Parse(roomDict.GetValueOrDefault("turn_timer", "0"))),
+            new RoomSettingsDto(int.Parse(roomDict["max_players"])),
             cardSets,
             participants,
             await BuildRoomConnectionAsync(code, roomDict["status"], requesterUserId)
