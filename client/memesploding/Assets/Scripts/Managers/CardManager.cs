@@ -20,10 +20,7 @@ namespace Managers
                 Instance = this;
         }
 
-        [SerializeField] private Canvas canvas;
-        [SerializeField] private CardDatabase cardDatabase;
-        [SerializeField] private DisplayCard displayCardPrefab;
-        [SerializeField] private PlayableCard playableCardPrefab;
+        [SerializeField] private CardFactory factory;
         [SerializeField] private HandLayout handLayout;
         [SerializeField] private RectTransform dragLayer;
 
@@ -44,57 +41,19 @@ namespace Managers
             EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
         }
 
-        public void SetCardDatabase(CardDatabase database)
-        {
-            cardDatabase = database;
-        }
-
         //For testing
         private void InitStartingHand(int amount, string cardName)
         {
             for (int i = 0; i < amount; i++)
             {
-                PlayableCard card = CreatePlayableCard(cardName);
+                PlayableCard card = factory.CreatePlayable(cardName, HandLayout.transform);
                 handLayout.AddCard(card);
             }
         }
 
-        public PlayableCard CreatePlayableCard(string cardName, Transform parent = null)
+        public PlayableCard CreatePlayableCard(string cardName, Transform parent)
         {
-            CardData data = cardDatabase.Get(cardName);
-
-            if (data == null)
-            {
-                Debug.LogError($"Card not found: {cardName}");
-                return null;
-            }
-
-            if (parent == null)
-                parent = canvas.transform;
-
-            PlayableCard card = Instantiate(playableCardPrefab, parent, false);
-            card.Initialize(data);
-
-            return card;
-        }
-
-        public DisplayCard CreateDisplayCard(string cardName, Transform parent = null)
-        {
-            CardData data = cardDatabase.Get(cardName);
-
-            if (data == null)
-            {
-                Debug.LogError($"Card not found: {cardName}");
-                return null;
-            }
-
-            if (parent == null)
-                parent = canvas.transform;
-
-            DisplayCard card = Instantiate(displayCardPrefab, parent, false);
-            card.Initialize(data);
-
-            return card;
+            return factory.CreatePlayable(cardName, parent);
         }
 
         private void OnCardPlayed(CardPlayedEventPayload payload)
@@ -105,15 +64,6 @@ namespace Managers
 
         private void ValidateReferences()
         {
-            if (!canvas)
-                Debug.LogError("Canvas not assigned in CardManager", this);
-
-            if (!cardDatabase)
-                Debug.LogError("CardDatabase not assigned in CardManager", this);
-
-            if (!playableCardPrefab)
-                Debug.LogError("CardPrefab not assigned in CardManager", this);
-
             if (!handLayout)
                 Debug.LogError("HandLayout not assigned in CardManager", this);
 

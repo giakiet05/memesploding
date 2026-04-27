@@ -1,4 +1,9 @@
-﻿using UnityEngine;
+﻿using Gameplay;
+using Models;
+using Network.Websocket;
+using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Managers
 {
@@ -14,6 +19,105 @@ namespace Managers
                 Instance = this;
         }
 
+        [SerializeField] private Canvas canvas;
+        [SerializeField] private RectTransform playingArea;
         [SerializeField] private RectTransform uiArea;
+
+        [Header("Opponent Organization")]
+        [SerializeField] private OpponentProfile opponentProfilePrefab;
+        [SerializeField] private RectTransform fanCenter;   // assign in inspector
+        [SerializeField] private float radiusX = 400f; // horizontal spread
+        [SerializeField] private float radiusY = 200f; // vertical height
+        [SerializeField, Range(0f, 360f)] private float totalAngle = 180f;
+        [SerializeField] private bool autoCenter = true;
+        [SerializeField] private float startAngle = -90f;
+
+        private Dictionary<string, OpponentProfile> _opponentsUI;
+
+        // For testing only
+        //private void Start()
+        //{
+        //    var players = new List<WsPlayerPublicStateDto>();
+
+        //    // Fake current player
+        //    string myId = "P0";
+
+        //    // Inject into your GameManager for the test
+        //    //GameManager.Instance.Player = new Player { ID = myId };
+
+        //    // Create dummy players (including yourself)
+        //    for (int i = 0; i <= 3; i++)
+        //    {
+        //        players.Add(new WsPlayerPublicStateDto
+        //        {
+        //            userId = "P" + i,
+        //            // add other fields if your UI needs them
+        //        });
+        //    }
+
+        //    InitOpponentUI(players);
+        //}
+
+        public void InitOpponentUI(List<WsPlayerPublicStateDto> players)
+        {
+            if (players == null || players.Count == 0) 
+                return;
+
+            string myId = GameManager.Instance.Player.ID;
+            int myIndex = players.FindIndex(p => p.userId == myId);
+            if (myIndex == -1) return;
+
+            int count = players.Count;
+
+            var rects = new List<RectTransform>();
+
+            for (int offset = 1; offset < count; offset++)
+            {
+                int index = (myIndex + offset) % count;
+                var opponent = players[index];
+
+                var ui = Instantiate(opponentProfilePrefab, playingArea.transform);
+                ui.Init(opponent);
+
+                rects.Add(ui.GetComponent<RectTransform>());
+            }
+
+            LayoutOpponent(rects);
+        }
+
+        private void LayoutOpponent(List<RectTransform> items)
+        {
+            if (items == null || items.Count == 0) return;
+
+            int count = items.Count;
+
+            float effectiveStart = autoCenter
+                ? -totalAngle * 0.5f
+                : startAngle;
+
+            float step = count > 1 ? totalAngle / (count - 1) : 0f;
+
+            // Convert center
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                playingArea,
+                RectTransformUtility.WorldToScreenPoint(null, fanCenter.position),
+                null,
+                out var centerLocalPos
+            );
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = effectiveStart + step * i;
+                float rad = angle * Mathf.Deg2Rad;
+
+                // Key difference from circle:
+                float x = Mathf.Sin(rad) * radiusX;
+                float y = Mathf.Cos(rad) * radiusY;
+
+                var rect = items[i];
+                rect.SetParent(playingArea, false);
+                rect.anchoredPosition = centerLocalPos + new Vector2(x, y);
+            }
+        }
     }
 }

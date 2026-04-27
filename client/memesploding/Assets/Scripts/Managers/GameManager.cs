@@ -17,6 +17,12 @@ namespace Managers
                 Destroy(gameObject);
             else
                 Instance = this;
+
+            Player = new Player
+            {
+                ID = "P0",
+                Username = "HelloKitty"
+            };
         }
 
         public Player Player { get; set; }
@@ -87,6 +93,7 @@ namespace Managers
             }
 
             _session.ApplySnapshot(payload.Data);
+            UIManager.Instance.InitOpponentUI(_session.GameState.players);
         }
 
         private void OnWsError(WsErrorEventPayload payload)

@@ -3,6 +3,7 @@ using Managers;
 using System.Collections;
 using Events.GameEvents;
 using Gameplay.Card;
+using Network.Websocket;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;
@@ -10,7 +11,7 @@ using Random = UnityEngine.Random;
 
 namespace Gameplay
 {
-    public class Opponent : MonoBehaviour
+    public class OpponentProfile : MonoBehaviour
     {
         [SerializeField] private RectTransform playArea;
         [SerializeField] private RectTransform spawnPoint;
@@ -36,6 +37,11 @@ namespace Gameplay
                 PlayCard("DEFUSE");
                 yield return new WaitForSeconds(2f);
             }
+        }
+
+        public void Init(WsPlayerPublicStateDto player)
+        {
+
         }
 
         public void PlayCard(string cardName)
