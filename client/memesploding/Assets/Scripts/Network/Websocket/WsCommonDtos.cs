@@ -32,10 +32,10 @@ namespace Network.Websocket
         public long stateVersion;
 
         [JsonIgnore]
-        public WsGameplayEventType eventType
-        {
-            get { return WsEventTypeParser.ParseGameplayEvent(type); }
-        }
+        public WsGameplayEventType EventType => WsEventTypeParser.ParseGameplayEvent(type);
+
+        [JsonIgnore]
+        public WsGameplayPayloadBase ParsedPayload => WsGameplayPayloadParser.Parse(EventType, payload);
     }
 
     [Serializable]

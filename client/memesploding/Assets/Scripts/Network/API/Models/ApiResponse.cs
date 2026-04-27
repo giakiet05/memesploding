@@ -1,7 +1,6 @@
 ﻿using System;
-using UnityEngine;
 
-namespace API
+namespace Network.API.Models
 {
     [Serializable]
     public class ApiResponse<T>

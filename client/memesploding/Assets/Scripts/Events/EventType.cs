@@ -5,6 +5,12 @@ namespace Events
     public enum EventType
     {
         CardPlayedEvent,
-        CardDraw,
+        DrawCardEvent,
+        WsConnected,
+        WsAck,
+        WsGameplayEvent,
+        WsStateSnapshot,
+        WsError,
+        WsStatusChanged
     }
 }

@@ -1,6 +1,5 @@
-﻿using Gameplay;
 using Gameplay.Card;
-using UnityEngine;
+using Network.Websocket;
 
 namespace Events
 {
@@ -8,23 +7,79 @@ namespace Events
 
     public class CardPlayedEventPayload : BaseEventPayload
     {
-        public CardPlayedEventPayload(BaseCard card, string playerName)
+        public CardPlayedEventPayload(BaseCard card, string playerID)
         {
             PlayedCard = card;
-            PlayerName = playerName;
+            PlayerID = playerID;
         }
 
         public BaseCard PlayedCard { get; }
-        public string PlayerName { get; }
+        public string PlayerID { get; }
     }
 
-    public class CardDrawEventPayload : BaseEventPayload
+    public class WsConnectedEventPayload : BaseEventPayload
     {
-        public CardDrawEventPayload(string cardName)
+        public WsConnectedEventPayload(WsConnectedDto data)
         {
-            CardName = cardName;
+            Data = data;
         }
 
-        public string CardName { get; }
+        public WsConnectedDto Data { get; }
+    }
+
+    public class WsAckEventPayload : BaseEventPayload
+    {
+        public WsAckEventPayload(WsAckDto data)
+        {
+            Data = data;
+        }
+
+        public WsAckDto Data { get; }
+    }
+
+    public class WsGameplayEventPayload : BaseEventPayload
+    {
+        public WsGameplayEventPayload(WsGameplayEventDto data)
+        {
+            Data = data;
+            EventType = data != null ? data.EventType : WsGameplayEventType.Unknown;
+            ParsedPayload = data != null ? data.ParsedPayload : null;
+        }
+
+        public WsGameplayEventDto Data { get; }
+        public WsGameplayEventType EventType { get; }
+        public WsGameplayPayloadBase ParsedPayload { get; }
+    }
+
+    public class WsStateSnapshotEventPayload : BaseEventPayload
+    {
+        public WsStateSnapshotEventPayload(WsStateSnapshotDto data, WsServerEventType serverEventType)
+        {
+            Data = data;
+            ServerEventType = serverEventType;
+        }
+
+        public WsStateSnapshotDto Data { get; }
+        public WsServerEventType ServerEventType { get; }
+    }
+
+    public class WsErrorEventPayload : BaseEventPayload
+    {
+        public WsErrorEventPayload(WsErrorDto data)
+        {
+            Data = data;
+        }
+
+        public WsErrorDto Data { get; }
+    }
+
+    public class WsStatusChangedEventPayload : BaseEventPayload
+    {
+        public WsStatusChangedEventPayload(WebsocketConnectionStatus status)
+        {
+            Status = status;
+        }
+
+        public WebsocketConnectionStatus Status { get; }
     }
 }

@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Events;
+using Events.GameEvents;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using EventType = Events.EventType;
 
 namespace Network.Websocket
 {
@@ -49,9 +53,11 @@ namespace Network.Websocket
         }
 
         private readonly object _sync = new object();
+        private readonly object _dispatcherSync = new object();
         private ClientWebSocket _socket;
         private CancellationTokenSource _receiveCts;
         private Task _receiveTask;
+        private EventQueueDispatcher _eventDispatcher;
 
         public WebsocketConnectionStatus Status { get; private set; } = WebsocketConnectionStatus.Disconnected;
         public WebsocketSessionInfo Session { get; } = new WebsocketSessionInfo();
@@ -86,6 +92,7 @@ namespace Network.Websocket
             Session.wsAccessToken = wsAccessToken;
             Session.roomCode = roomCode;
             Session.lastError = null;
+            EnsureEventDispatcher();
 
             var uri = BuildUriWithAccessToken(wsUrl, wsAccessToken);
             _socket = new ClientWebSocket();
@@ -170,6 +177,67 @@ namespace Network.Websocket
             return SendCommandAsync(commandName, data, cancellationToken);
         }
 
+        public Task SendHeartbeatAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.Heartbeat, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendDrawCardAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.DrawCard, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendDrawFromBottomAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.DrawFromBottom, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendNopeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.Nope, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendUseDefuseAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.UseDefuse, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendReconnectMatchAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.ReconnectMatch, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendRequestStateSnapshotAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(WsClientCommandType.RequestStateSnapshot, new WsEmptyCommandData(), cancellationToken);
+        }
+
+        public Task SendChooseBombInsertPositionAsync(int position, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(
+                WsClientCommandType.ChooseBombInsertPosition,
+                new WsChooseBombInsertPositionData { position = position },
+                cancellationToken
+            );
+        }
+
+        public Task SendChooseFavorCardAsync(string cardCode, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return SendCommandAsync(
+                WsClientCommandType.ChooseFavorCard,
+                new WsChooseFavorCardData { cardCode = cardCode },
+                cancellationToken
+            );
+        }
+
+        public Task SendPlayCardAsync(WsPlayCardData data, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            return SendCommandAsync(WsClientCommandType.PlayCard, data, cancellationToken);
+        }
+
         public async Task<bool> HealthCheckAsync(int timeoutMs = 5000, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_socket == null || _socket.State != WebSocketState.Open)
@@ -181,7 +249,7 @@ namespace Network.Websocket
             var before = Session.lastMessageAtUtc;
             Session.lastHealthCheckAtUtc = DateTime.UtcNow;
 
-            await SendCommandAsync(WsClientCommandType.Heartbeat, new object(), cancellationToken);
+            await SendHeartbeatAsync(cancellationToken);
 
             var started = DateTime.UtcNow;
             while ((DateTime.UtcNow - started).TotalMilliseconds < timeoutMs)
@@ -264,8 +332,9 @@ namespace Network.Websocket
             Session.lastMessageAtUtc = DateTime.UtcNow;
             Session.isHealthy = true;
 
+            // SignalR handshake ACK
             if (message == "{}")
-                return; // SignalR handshake ACK
+                return;
 
             JObject root;
             try
@@ -278,9 +347,10 @@ namespace Network.Websocket
                 return;
             }
 
+            // SignalR ping frame
             var type = root.Value<int?>("type");
             if (type == 6)
-                return; // SignalR ping frame
+                return; 
 
             if (type == 7)
             {
@@ -318,6 +388,8 @@ namespace Network.Websocket
                             Session.roomCode = dto.roomCode;
                             Session.matchId = dto.matchId;
                             OnConnectedEvent?.Invoke(dto);
+                            PublishToEventBus(() =>
+                                EventBus.Publish(EventType.WsConnected, new WsConnectedEventPayload(dto)));
                         }
                         break;
                     }
@@ -328,6 +400,8 @@ namespace Network.Websocket
                         {
                             Session.stateVersion = dto.stateVersion;
                             OnAckEvent?.Invoke(dto);
+                            PublishToEventBus(() =>
+                                EventBus.Publish(EventType.WsAck, new WsAckEventPayload(dto)));
                         }
                         break;
                     }
@@ -341,6 +415,12 @@ namespace Network.Websocket
                             Session.roomCode = dto.roomCode;
                             Session.matchId = dto.matchId;
                             OnStateSnapshot?.Invoke(dto);
+                            PublishToEventBus(() =>
+                                EventBus.Publish(
+                                    EventType.WsStateSnapshot,
+                                    new WsStateSnapshotEventPayload(dto, serverEventType)
+                                )
+                            );
                         }
                         break;
                     }
@@ -351,6 +431,8 @@ namespace Network.Websocket
                         {
                             Session.stateVersion = dto.stateVersion;
                             OnGameplayEvent?.Invoke(dto);
+                            PublishToEventBus(() =>
+                                EventBus.Publish(EventType.WsGameplayEvent, new WsGameplayEventPayload(dto)));
                         }
                         break;
                     }
@@ -361,6 +443,8 @@ namespace Network.Websocket
                         {
                             Session.lastError = dto.message;
                             OnErrorEvent?.Invoke(dto);
+                            PublishToEventBus(() =>
+                                EventBus.Publish(EventType.WsError, new WsErrorEventPayload(dto)));
                         }
                         break;
                     }
@@ -394,6 +478,74 @@ namespace Network.Websocket
             }
 
             OnStatusChanged?.Invoke(status);
+            PublishToEventBus(() =>
+                EventBus.Publish(EventType.WsStatusChanged, new WsStatusChangedEventPayload(status)));
+        }
+
+        private void EnsureEventDispatcher()
+        {
+            if (_eventDispatcher != null)
+                return;
+
+            lock (_dispatcherSync)
+            {
+                if (_eventDispatcher != null)
+                    return;
+
+                _eventDispatcher = EventQueueDispatcher.Instance;
+            }
+        }
+
+        private void PublishToEventBus(Action publishAction)
+        {
+            if (publishAction == null)
+                return;
+
+            EnsureEventDispatcher();
+            _eventDispatcher.Enqueue(publishAction);
+        }
+
+        private class EventQueueDispatcher : MonoBehaviour
+        {
+            private static EventQueueDispatcher _instance;
+            private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
+
+            public static EventQueueDispatcher Instance
+            {
+                get
+                {
+                    if (_instance != null)
+                        return _instance;
+
+                    var go = new GameObject("[WsEventDispatcher]");
+                    _instance = go.AddComponent<EventQueueDispatcher>();
+                    DontDestroyOnLoad(go);
+                    return _instance;
+                }
+            }
+
+            public void Enqueue(Action action)
+            {
+                if (action == null)
+                    return;
+
+                _queue.Enqueue(action);
+            }
+
+            private void Update()
+            {
+                while (_queue.TryDequeue(out var action))
+                {
+                    try
+                    {
+                        action.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[WS] Event dispatch error: {ex.Message}");
+                    }
+                }
+            }
         }
     }
 }

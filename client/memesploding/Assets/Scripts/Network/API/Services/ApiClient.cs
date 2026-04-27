@@ -1,10 +1,11 @@
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Network.API.Models;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace API.Services
+namespace Network.API.Services
 {
     public class ApiClient
     {
@@ -36,9 +37,27 @@ namespace API.Services
             return await SendRequestAsync<T>(url, "PUT", body, token);
         }
 
+        public async Task<ApiResponse<T>> PatchAsync<T>(string url, object body = null, string token = null)
+        {
+            return await SendRequestAsync<T>(url, "PATCH", body, token);
+        }
+
+        public async Task<ApiResponse<T>> DeleteAsync<T>(string url, string token = null)
+        {
+            using (UnityWebRequest request = UnityWebRequest.Delete(url))
+            {
+                SetHeaders(request, token);
+
+                var operation = request.SendWebRequest();
+                while (!operation.isDone) await Task.Yield();
+
+                return HandleResponse<T>(request);
+            }
+        }
+
         private async Task<ApiResponse<T>> SendRequestAsync<T>(string url, string method, object body, string token)
         {
-            string json = JsonConvert.SerializeObject(body);
+            string json = JsonConvert.SerializeObject(body ?? new object());
 
             using (UnityWebRequest request = new UnityWebRequest(url, method))
             {
