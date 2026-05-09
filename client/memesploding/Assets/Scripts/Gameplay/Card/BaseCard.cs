@@ -8,7 +8,7 @@ namespace Gameplay.Card
     public class BaseCard : MonoBehaviour
     {
         public string Id { get; private set; }
-        public CardData Data { get; set; }
+        public CardData Data { get; private set; }
         public RectTransform RectTransform { get; private set; }
         [SerializeField] protected Image cardImage;
 

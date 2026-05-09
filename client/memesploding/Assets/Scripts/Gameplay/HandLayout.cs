@@ -59,8 +59,6 @@ namespace Gameplay
 
             if (card != null)
                 RemoveCard(card);
-
-            UpdateVisual();
         }
 
         void LateUpdate()
@@ -181,22 +179,44 @@ namespace Gameplay
             RefreshRenderOrder();
         }
 
-        public void RemoveCard(BaseCard card)
+        public bool RemoveCardById(string cardId)
         {
-            int index = _slots.IndexOf(card);
+            if (string.IsNullOrEmpty(cardId))
+                return false;
 
+            if (!_cardById.TryGetValue(cardId, out var card))
+            {
+                return false;
+            }
+
+            int index = _slots.IndexOf(card);
             if (index >= 0)
             {
                 _slots.RemoveAt(index);
-                _previousSlot.Remove(card.Id);
             }
 
-            _cardById.Remove(card.Id);
-            
-            // Immediately update _targetOrder to stay in sync with _slots
+            _cardById.Remove(cardId);
+            _previousSlot.Remove(cardId);
+
             _targetOrder.Remove(card);
-            
+
+            if (card != null)
+            {
+                Destroy(card.gameObject);
+            }
+
             RefreshRenderOrder();
+            UpdateVisual();
+
+            return true;
+        }
+
+        public bool RemoveCard(BaseCard card)
+        {
+            if (card == null)
+                return false;
+
+            return RemoveCardById(card.Id);
         }
 
         public void UpdateVisual()

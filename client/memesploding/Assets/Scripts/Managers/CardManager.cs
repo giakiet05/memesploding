@@ -3,6 +3,7 @@ using Events.GameEvents;
 using Gameplay;
 using Gameplay.Card;
 using ScriptableObjects;
+using System.Collections.Generic;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -46,14 +47,39 @@ namespace Managers
         {
             for (int i = 0; i < amount; i++)
             {
-                PlayableCard card = factory.CreatePlayable(cardName, HandLayout.transform);
+                PlayableCard card = factory.Create<PlayableCard>(cardName, HandLayout.transform);
                 handLayout.AddCard(card);
             }
         }
 
+        public void AddCardToHand(string cardCode)
+        {
+            PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+            handLayout.AddCard(card);
+        }
+
+        public void AddCardsToHand(List<string> cardCodes)
+        {
+            foreach (var cardCode in cardCodes)
+            {
+                PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+                handLayout.AddCard(card);
+            }
+        }
+
+        public bool RemoveCardFromHand(string cardCode)
+        {
+            return handLayout.RemoveCardById(cardCode);
+        }
+
         public PlayableCard CreatePlayableCard(string cardName, Transform parent)
         {
-            return factory.CreatePlayable(cardName, parent);
+            return factory.Create<PlayableCard>(cardName, parent);
+        }
+
+        public DisplayCard CreateDisplayCard(string cardName, Transform parent)
+        {
+            return factory.Create<DisplayCard>(cardName, parent);
         }
 
         private void OnCardPlayed(CardPlayedEventPayload payload)

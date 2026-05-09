@@ -3,6 +3,8 @@ using Models;
 using Network.Websocket;
 using System;
 using System.Collections.Generic;
+using Gameplay.Card;
+using UI;
 using UnityEngine;
 
 namespace Managers
@@ -22,6 +24,9 @@ namespace Managers
         [SerializeField] private Canvas canvas;
         [SerializeField] private RectTransform playingArea;
         [SerializeField] private RectTransform uiArea;
+
+        [SerializeField] private CardDisplayer cardDisplayer;
+        [SerializeField] private CardSelector cardSelector;
 
         [Header("Opponent Organization")]
         [SerializeField] private OpponentProfile opponentProfilePrefab;
@@ -58,6 +63,38 @@ namespace Managers
         //    InitOpponentUI(players);
         //}
 
+        public void ResetUI()
+        {
+            uiArea.gameObject.SetActive(false);
+            cardDisplayer.gameObject.SetActive(false);
+            cardSelector.gameObject.SetActive(false);
+        }
+
+        //Draw Card
+        public void DrawCard()
+        {
+            uiArea.gameObject.SetActive(true);
+        }
+
+        //Card Displayer
+        public void DisplayCards(List<string> cardCodes)
+        {
+            uiArea.gameObject.SetActive(true);
+            cardDisplayer.gameObject.SetActive(true);
+
+            cardDisplayer.Clear();
+            foreach (var cardCode in cardCodes)
+            {
+                CardManager.Instance.CreateDisplayCard(cardCode, cardDisplayer.transform);
+            }
+        }
+
+        public void CloseCardDisplayer()
+        {
+            ResetUI();
+        }
+
+        //Opponent UI
         public void InitOpponentUI(List<WsPlayerPublicStateDto> players)
         {
             if (players == null || players.Count == 0) 

@@ -1,27 +1,25 @@
-﻿using ScriptableObjects;
+﻿using Gameplay.Card;
+using ScriptableObjects;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Gameplay
 {
-    public class PlayerDrawCard : MonoBehaviour
+    public class PlayerDrawCard : BaseCard
     {
-        public CardData Data { get; private set; }
-
         private Animator _animator;
-        private RectTransform _rect;
 
         [SerializeField] private Image frontImage;
 
-        void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             _animator = GetComponent<Animator>();
-            _rect = GetComponent<RectTransform>();
         }
 
-        public void Initialize(CardData cardData)
+        public override void Initialize(CardData cardData)
         {
-            Data = cardData;
+            base.Initialize(cardData);
 
             if (cardData.artwork != null)
                 frontImage.sprite = cardData.artwork;
@@ -34,12 +32,12 @@ namespace Gameplay
 
         public void SetPosition(Vector2 pos)
         {
-            _rect.anchoredPosition = pos;
+            RectTransform.anchoredPosition = pos;
         }
 
         public void SetScale(Vector3 scale)
         {
-            _rect.localScale = scale;
+            RectTransform.localScale = scale;
         }
     }
 }

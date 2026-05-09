@@ -79,7 +79,10 @@ namespace Gameplay
                     GameState.drawPileCount = Math.Max(0, GameState.drawPileCount - 1);
                     ChangePlayerHandCount(cardDrawn.userId, +1);
                     if (IsSelf(cardDrawn.userId) && !string.IsNullOrWhiteSpace(cardDrawn.cardCode))
+                    {
+                        HandleDrawnCard(cardDrawn.cardCode);
                         GameState.selfHand.Add(cardDrawn.cardCode);
+                    }
                     break;
 
                 case WsGameplayEventType.CardPlayed:
@@ -270,6 +273,15 @@ namespace Gameplay
         {
             GameState.turnIndex = newTurnIndex;
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
+        }
+
+        private async void HandleDrawnCard(string cardCode)
+        {
+            //TODO: Add displaying the card just drawn
+            //await
+
+            //Handle UI and add to hand
+            CardManager.Instance.AddCardToHand(cardCode);
         }
 
         private bool IsSelf(string userId)

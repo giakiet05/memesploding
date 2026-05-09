@@ -37,7 +37,9 @@ namespace Managers
             WsPlayCardData cardData = new WsPlayCardData
             {
                 //TODO Add additional information needed
-                cardCode = payload.PlayedCard.Id
+                cardCode = payload.PlayedCard.Id,
+                targetUserId = payload.TargetID
+
             };
 
             // Can add await and handle error

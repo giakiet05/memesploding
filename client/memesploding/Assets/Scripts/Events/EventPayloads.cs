@@ -7,14 +7,16 @@ namespace Events
 
     public class CardPlayedEventPayload : BaseEventPayload
     {
-        public CardPlayedEventPayload(BaseCard card, string playerID)
+        public CardPlayedEventPayload(BaseCard card, string playerID, string targetID = null)
         {
             PlayedCard = card;
             PlayerID = playerID;
+            TargetID = targetID;
         }
 
         public BaseCard PlayedCard { get; }
         public string PlayerID { get; }
+        public string TargetID { get; }
     }
 
     public class WsConnectedEventPayload : BaseEventPayload
