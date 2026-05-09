@@ -119,7 +119,12 @@ namespace Managers
 
         public void DrawCard()
         {
+            if (_session?.GameState == null || !_session.GameState.IsPlayerTurn)
+                return;
+
+            //UIManager.Instance.DrawCard();
             NetworkManager.Instance.SendDrawCardCommand();
+            //TODO: Using loading screen
         }
     }
 }

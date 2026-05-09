@@ -277,10 +277,10 @@ namespace Gameplay
 
         private async void HandleDrawnCard(string cardCode)
         {
-            //TODO: Add displaying the card just drawn
-            //await
+            //Displaying the card just drawn
+            UIManager.Instance.DisplayDrawnCard();
 
-            //Handle UI and add to hand
+            //Handle add card to hand
             CardManager.Instance.AddCardToHand(cardCode);
         }
 

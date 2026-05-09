@@ -1,9 +1,6 @@
 ﻿using Gameplay;
-using Models;
 using Network.Websocket;
-using System;
 using System.Collections.Generic;
-using Gameplay.Card;
 using UI;
 using UnityEngine;
 
@@ -27,6 +24,7 @@ namespace Managers
 
         [SerializeField] private CardDisplayer cardDisplayer;
         [SerializeField] private CardSelector cardSelector;
+        [SerializeField] private DrawnCardDisplayer drawnCardDisplayer;
 
         [Header("Opponent Organization")]
         [SerializeField] private OpponentProfile opponentProfilePrefab;
@@ -38,6 +36,8 @@ namespace Managers
         [SerializeField] private float startAngle = -90f;
 
         private Dictionary<string, OpponentProfile> _opponentsUI;
+
+        //TODO: Add loading screen
 
         // For testing only
         //private void Start()
@@ -68,12 +68,14 @@ namespace Managers
             uiArea.gameObject.SetActive(false);
             cardDisplayer.gameObject.SetActive(false);
             cardSelector.gameObject.SetActive(false);
+            drawnCardDisplayer.gameObject.SetActive(false);
         }
 
         //Draw Card
-        public void DrawCard()
+        public void DisplayDrawnCard()
         {
             uiArea.gameObject.SetActive(true);
+            drawnCardDisplayer.gameObject.SetActive(true);
         }
 
         //Card Displayer
