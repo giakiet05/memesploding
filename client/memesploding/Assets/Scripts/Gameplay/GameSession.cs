@@ -1,5 +1,8 @@
 using Events;
+using Managers;
 using Network.Websocket;
+using System;
+using System.Linq;
 using UnityEngine;
 
 namespace Gameplay
@@ -8,7 +11,7 @@ namespace Gameplay
     {
         private readonly string _matchId;
         private readonly string _roomCode;
-        private GameState _gameState;
+        public GameState GameState { get; private set; }
 
         public GameSession(string matchId, string roomCode)
         {
@@ -23,11 +26,11 @@ namespace Gameplay
             if (snapshot.matchId != _matchId || snapshot.roomCode != _roomCode)
                 return;
 
-            if (_gameState != null && snapshot.stateVersion <= _gameState.stateVersion)
+            if (GameState != null && snapshot.stateVersion <= GameState.stateVersion)
                 return;
 
-            _gameState ??= new GameState();
-            _gameState.UpdateState(snapshot);
+            GameState ??= new GameState();
+            GameState.UpdateState(snapshot);
         }
 
         public void HandleGameplayEvent(WsGameplayEventPayload payload)
@@ -35,128 +38,401 @@ namespace Gameplay
             if (payload?.Data == null)
                 return;
 
+            if (GameState == null)
+            {
+                Debug.LogWarning("Game state is null");
+                return;
+            }
+
+            if (payload.Data.stateVersion <= GameState.stateVersion)
+                return;
+
             WsGameplayPayloadBase parsedPayload = payload.ParsedPayload ?? payload.Data.ParsedPayload;
+            GameState.stateVersion = payload.Data.stateVersion;
 
             switch (payload.EventType)
             {
                 case WsGameplayEventType.MatchStarted:
-                    var matchStarted = parsedPayload as WsEmptyGameplayPayload ?? new WsEmptyGameplayPayload();
+                    GameState.phase = "Playing";
                     // TODO: Start local match flow (timer/UI/input unlock) from MatchStarted.
                     break;
 
                 case WsGameplayEventType.TurnStarted:
                 case WsGameplayEventType.TurnChanged:
-                    var turnPayload = parsedPayload as WsTurnIndexPayload ?? new WsTurnIndexPayload();
-                    // TODO: Update active player indicator and timers with turnPayload.turnIndex.
+                    if (parsedPayload is not WsTurnIndexPayload turnPayload)
+                        return;
                     UpdateTurn(turnPayload.turnIndex);
                     break;
 
                 case WsGameplayEventType.TurnContinues:
-                    var turnContinues = parsedPayload as WsTurnContinuesPayload ?? new WsTurnContinuesPayload();
-                    // TODO: Reflect pending draw chain state using turnContinues.pendingDrawCount.
+                    if (parsedPayload is not WsTurnContinuesPayload turnContinues)
+                        return;
+
+                    SetPlayerPendingDraw(turnContinues.userId, turnContinues.pendingDrawCount);
+                    //TODO: Display that a player turn is still continue
                     break;
 
                 case WsGameplayEventType.CardDrawn:
+                    if (parsedPayload is not WsCardActionPayload cardDrawn)
+                        return;
+                    //TODO: Update opponent card counter
+                    //TODO: Make opponent draw a card
+                    GameState.drawPileCount = Math.Max(0, GameState.drawPileCount - 1);
+                    ChangePlayerHandCount(cardDrawn.userId, +1);
+
+                    //Handle player draw event
+                    if (IsSelf(cardDrawn.userId) && !string.IsNullOrWhiteSpace(cardDrawn.cardCode))
+                    {
+                        HandleDrawnCard(cardDrawn.cardCode);
+                        GameState.selfHand.Add(cardDrawn.cardCode);
+                    }
+                    break;
+
                 case WsGameplayEventType.CardPlayed:
-                    var cardAction = parsedPayload as WsCardActionPayload ?? new WsCardActionPayload();
-                    // TODO: Animate draw/play and sync hand/discard from cardAction.userId + cardAction.cardCode.
+                    if (parsedPayload is not WsCardActionPayload cardPlayed)
+                        return;
+
+                    if (!string.IsNullOrWhiteSpace(cardPlayed.cardCode))
+                    {
+                        Debug.LogError("Card code is null or empty");
+                        break;
+                    }
+
+                    ChangePlayerHandCount(cardPlayed.userId, -1);
+                    GameState.discardPile.Add(cardPlayed.cardCode);
+
+                    if (IsSelf(cardPlayed.userId))
+                        RemoveOneCardFromSelfHand(cardPlayed.cardCode);
+                    else
+                    {
+                        //Make opponent play a card
+                        UIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
+                    }
                     break;
 
                 case WsGameplayEventType.ComboPlayed:
-                    var comboPlayed = parsedPayload as WsComboPlayedPayload ?? new WsComboPlayedPayload();
-                    // TODO: Show combo indicator using comboPlayed.comboSize/cardCode/comboCode.
+                    if (parsedPayload is not WsComboPlayedPayload comboPlayed)
+                        return;
+
+                    if (comboPlayed.comboSize > 0)
+                        ChangePlayerHandCount(comboPlayed.userId, -comboPlayed.comboSize);
+
+                    if (!string.IsNullOrWhiteSpace(comboPlayed.comboCode))
+                        GameState.discardPile.Add(comboPlayed.comboCode);
+                    else if (!string.IsNullOrWhiteSpace(comboPlayed.cardCode))
+                        GameState.discardPile.Add(comboPlayed.cardCode);
                     break;
 
                 case WsGameplayEventType.ExplosionTriggered:
+                    if (parsedPayload is not WsUserPayload explosion)
+                        return;
+
+                    GameState.pendingDefuseUserId = explosion.userId;
+                    GameState.pendingBombOwnerUserId = explosion.userId;
+                    GameState.pendingBombCardCode = "ExplodingKitten";
+                    // TODO: Server should include window timestamps in event payload for precise countdown.
+                    break;
+
                 case WsGameplayEventType.DefuseUsed:
+                    if (parsedPayload is not WsUserPayload defuseUsed)
+                        return;
+
+                    GameState.pendingDefuseUserId = null;
+                    if (string.Equals(GameState.pendingBombOwnerUserId, defuseUsed.userId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        GameState.pendingBombCardCode = "ExplodingKitten";
+                    }
+                    //TODO: Display that a defuse card has been used
+
+                    break;
+
                 case WsGameplayEventType.SkipApplied:
-                    var userPayload = parsedPayload as WsUserPayload ?? new WsUserPayload();
-                    // TODO: Play VFX/SFX for user-targeted effect with userPayload.userId.
+                    if (parsedPayload is not WsUserPayload skipApplied)
+                        return;
+
+                    SetPlayerPendingDraw(skipApplied.userId, Math.Max(0, GetPlayerPendingDraw(skipApplied.userId) - 1));
                     break;
 
                 case WsGameplayEventType.BombReinserted:
-                    var bombReinserted = parsedPayload as WsBombReinsertedPayload ?? new WsBombReinsertedPayload();
-                    // TODO: Update deck preview / bomb marker by bombReinserted.position.
+                    if (parsedPayload is not WsBombReinsertedPayload bombReinserted)
+                        return;
+
+                    GameState.pendingBombOwnerUserId = null;
+                    GameState.pendingBombCardCode = null;
+                    GameState.pendingDefuseUserId = null;
+                    GameState.bombReinsertWindowEndsAt = null;
+                    GameState.defuseWindowEndsAt = null;
                     break;
 
                 case WsGameplayEventType.BombReinsertAuto:
+                    GameState.pendingBombOwnerUserId = null;
+                    GameState.pendingBombCardCode = null;
+                    GameState.bombReinsertWindowEndsAt = null;
+                    break;
+
                 case WsGameplayEventType.ShuffleApplied:
-                    var emptyPayload = parsedPayload as WsEmptyGameplayPayload ?? new WsEmptyGameplayPayload();
-                    // TODO: Sync deck ordering state after server-side automatic update.
+                    // No deterministic local mutation besides visual feedback.
+                    // TODO: Add deck shuffle animation hook.
                     break;
 
                 case WsGameplayEventType.PlayerEliminated:
-                    var eliminated = parsedPayload as WsPlayerEliminatedPayload ?? new WsPlayerEliminatedPayload();
-                    // TODO: Mark player KO and update ranking with eliminated.reason.
+                    if (parsedPayload is not WsPlayerEliminatedPayload eliminated)
+                        return;
+
+                    SetPlayerLifeState(eliminated.userId, "Eliminated");
+
+                    //TODO: set a player is eliminated in the UI
                     break;
 
                 case WsGameplayEventType.MatchFinished:
-                    var finished = parsedPayload as WsMatchFinishedPayload ?? new WsMatchFinishedPayload();
-                    // TODO: Transition to result screen with finished.winnerUserId.
+                    GameState.phase = "Finished";
+                    // TODO: Persist and present winner/ranking panel.
                     break;
 
                 case WsGameplayEventType.AttackApplied:
-                    var attack = parsedPayload as WsAttackAppliedPayload ?? new WsAttackAppliedPayload();
-                    // TODO: Show attack transfer from attack.fromUserId to attack.toUserId (added draws: attack.added).
+                    if (parsedPayload is not WsAttackAppliedPayload attack)
+                        return;
+
+                    SetPlayerPendingDraw(attack.toUserId, Math.Max(0, GetPlayerPendingDraw(attack.toUserId) + attack.added));
+
+                    //TODO: Display attack effect
                     break;
 
                 case WsGameplayEventType.FuturePeeked:
-                    var peek = parsedPayload as WsFuturePeekedPayload ?? new WsFuturePeekedPayload();
-                    // TODO: Render peeked top cards UI using peek.cards.
+                    if (parsedPayload is not WsFuturePeekedPayload peek)
+                        return;
+
+                    // TODO: Store peek.cards in dedicated UI state instead of GameState when UI model is introduced.
+                    //TODO: Display card
                     break;
 
                 case WsGameplayEventType.FavorWindowOpened:
-                    var favorWindow = parsedPayload as WsFavorWindowOpenedPayload ?? new WsFavorWindowOpenedPayload();
-                    // TODO: Open favor selection UI for requester/target IDs.
+                    if (parsedPayload is not WsFavorWindowOpenedPayload favorWindow)
+                        return;
+
+                    GameState.pendingFavorRequesterId = favorWindow.requesterId;
+                    GameState.pendingFavorTargetId = favorWindow.targetId;
+                    // TODO: Server should provide favorWindowEndsAt in payload for accurate local timer.
                     break;
 
                 case WsGameplayEventType.FavorResolved:
+                    if (parsedPayload is not WsTransferPayload favorResolved)
+                        return;
+
+                    ApplyCardTransfer(favorResolved.fromUserId, favorResolved.toUserId, favorResolved.cardCode);
+                    GameState.pendingFavorRequesterId = null;
+                    GameState.pendingFavorTargetId = null;
+                    GameState.favorWindowEndsAt = null;
+                    break;
+
                 case WsGameplayEventType.CatComboTwoResolved:
-                    var transfer = parsedPayload as WsTransferPayload ?? new WsTransferPayload();
-                    // TODO: Apply card transfer animation with transfer.fromUserId/toUserId/cardCode.
+                    if (parsedPayload is not WsTransferPayload comboTwoResolved)
+                        return;
+
+                    ApplyCardTransfer(comboTwoResolved.fromUserId, comboTwoResolved.toUserId, comboTwoResolved.cardCode);
                     break;
 
                 case WsGameplayEventType.FavorTargetEmpty:
-                    var favorEmpty = parsedPayload as WsFavorTargetEmptyPayload ?? new WsFavorTargetEmptyPayload();
-                    // TODO: Show no-card feedback for favor target.
+                    GameState.pendingFavorRequesterId = null;
+                    GameState.pendingFavorTargetId = null;
+                    GameState.favorWindowEndsAt = null;
                     break;
 
                 case WsGameplayEventType.ReactionWindowOpened:
-                    var reactionOpen = parsedPayload as WsCardActionPayload ?? new WsCardActionPayload();
-                    // TODO: Open reaction/nope prompt for reactionOpen.cardCode.
+                    if (parsedPayload is not WsCardActionPayload reactionOpen)
+                        return;
+
+                    GameState.pendingReactionUserId = reactionOpen.userId;
+                    GameState.pendingReactionAction = reactionOpen.cardCode;
+                    GameState.pendingNopeCount = 0;
+                    // TODO: Server should include reactionWindowEndsAt in payload for accurate local timer.
                     break;
 
                 case WsGameplayEventType.ReactionWindowClosed:
-                    var reactionClosed = parsedPayload as WsReactionWindowClosedPayload ?? new WsReactionWindowClosedPayload();
-                    // TODO: Close reaction UI and display final nope count (reactionClosed.nopeCount).
+                    if (parsedPayload is not WsReactionWindowClosedPayload reactionClosed)
+                        return;
+
+                    GameState.pendingNopeCount = Math.Max(0, reactionClosed.nopeCount);
+                    GameState.pendingReactionUserId = null;
+                    GameState.pendingReactionAction = null;
+                    GameState.reactionWindowEndsAt = null;
                     break;
 
                 case WsGameplayEventType.CatComboThreeResolved:
+                    if (parsedPayload is not WsCatComboThreePayload comboThreeResolved)
+                        return;
+
+                    if (!string.IsNullOrWhiteSpace(comboThreeResolved.requestedCardCode))
+                    {
+                        ApplyCardTransfer(comboThreeResolved.fromUserId, comboThreeResolved.toUserId, comboThreeResolved.requestedCardCode);
+                    }
+                    break;
+
                 case WsGameplayEventType.CatComboThreeMiss:
-                    var comboThree = parsedPayload as WsCatComboThreePayload ?? new WsCatComboThreePayload();
-                    // TODO: Show combo-3 result using comboThree.requestedCardCode.
+                    // No card transfer to apply.
                     break;
 
                 case WsGameplayEventType.CatComboFiveResolved:
-                    var comboFive = parsedPayload as WsCatComboFiveResolvedPayload ?? new WsCatComboFiveResolvedPayload();
-                    // TODO: Apply discard retrieval for combo-5 with comboFive.discardCardCode.
+                    if (parsedPayload is not WsCatComboFiveResolvedPayload comboFive)
+                        return;
+
+                    ChangePlayerHandCount(comboFive.userId, +1);
+                    if (IsSelf(comboFive.userId) && !string.IsNullOrWhiteSpace(comboFive.discardCardCode))
+                        GameState.selfHand.Add(comboFive.discardCardCode);
+
+                    RemoveOneCardFromDiscard(comboFive.discardCardCode);
                     break;
 
                 default:
-                    Debug.Log($"[GameSession] Unsupported gameplay event '{payload.EventType}'");
+                    Debug.LogWarning($"[GameSession] Unsupported gameplay event '{payload.EventType}'");
                     break;
             }
         }
 
         public void UpdateTurn(int newTurnIndex)
         {
-            if (_gameState == null)
-            {
-                Debug.LogWarning("Game state is null");
-                return;
-            }
+            GameState.turnIndex = newTurnIndex;
+            GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
 
-            _gameState.turnIndex = newTurnIndex;
+            //Set current active player
+            UIManager.Instance.SetActivePlayer(GameState.players[newTurnIndex].userId);
+        }
+
+        private void HandleDrawnCard(string cardCode)
+        {
+            //Displaying the card just drawn
+            UIManager.Instance.DisplayDrawnCard();
+
+            //Handle add card to hand
+            CardManager.Instance.AddCardToHand(cardCode);
+        }
+
+        private bool IsSelf(string userId)
+        {
+            var player = GameManager.Instance != null ? GameManager.Instance.Player : null;
+            return player != null &&
+                   !string.IsNullOrWhiteSpace(userId) &&
+                   string.Equals(player.ID, userId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ChangePlayerHandCount(string userId, int delta)
+        {
+            if (GameState?.players == null || string.IsNullOrWhiteSpace(userId) || delta == 0)
+                return;
+
+            var index = GameState.players.FindIndex(x =>
+                string.Equals(x.userId, userId, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+                return;
+
+            var player = GameState.players[index];
+            var next = Math.Max(0, player.handCount + delta);
+            GameState.players[index] = new WsPlayerPublicStateDto
+            {
+                userId = player.userId,
+                nickname = player.nickname,
+                connected = player.connected,
+                lifeState = player.lifeState,
+                handCount = next,
+                pendingDrawCount = player.pendingDrawCount,
+                pendingReconnectUntil = player.pendingReconnectUntil
+            };
+        }
+
+        private void SetPlayerPendingDraw(string userId, int pendingDrawCount)
+        {
+            if (GameState?.players == null || string.IsNullOrWhiteSpace(userId))
+                return;
+
+            var index = GameState.players.FindIndex(x =>
+                string.Equals(x.userId, userId, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+                return;
+
+            var player = GameState.players[index];
+            GameState.players[index] = new WsPlayerPublicStateDto
+            {
+                userId = player.userId,
+                nickname = player.nickname,
+                connected = player.connected,
+                lifeState = player.lifeState,
+                handCount = player.handCount,
+                pendingDrawCount = Math.Max(0, pendingDrawCount),
+                pendingReconnectUntil = player.pendingReconnectUntil
+            };
+        }
+
+        private int GetPlayerPendingDraw(string userId)
+        {
+            if (GameState?.players == null || string.IsNullOrWhiteSpace(userId))
+                return 0;
+
+            var player = GameState.players.FirstOrDefault(x =>
+                string.Equals(x.userId, userId, StringComparison.OrdinalIgnoreCase));
+            return player?.pendingDrawCount ?? 0;
+        }
+
+        private void SetPlayerLifeState(string userId, string lifeState)
+        {
+            if (GameState?.players == null || string.IsNullOrWhiteSpace(userId))
+                return;
+
+            var index = GameState.players.FindIndex(x =>
+                string.Equals(x.userId, userId, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+                return;
+
+            var player = GameState.players[index];
+            GameState.players[index] = new WsPlayerPublicStateDto
+            {
+                userId = player.userId,
+                nickname = player.nickname,
+                connected = player.connected,
+                lifeState = lifeState,
+                handCount = player.handCount,
+                pendingDrawCount = player.pendingDrawCount,
+                pendingReconnectUntil = player.pendingReconnectUntil
+            };
+        }
+
+        private void ApplyCardTransfer(string fromUserId, string toUserId, string cardCode)
+        {
+            ChangePlayerHandCount(fromUserId, -1);
+            ChangePlayerHandCount(toUserId, +1);
+
+            if (!string.IsNullOrWhiteSpace(cardCode))
+            {
+                if (IsSelf(fromUserId))
+                    RemoveOneCardFromSelfHand(cardCode);
+                if (IsSelf(toUserId))
+                    GameState.selfHand.Add(cardCode);
+            }
+        }
+
+        private void RemoveOneCardFromSelfHand(string cardCode)
+        {
+            if (GameState?.selfHand == null || string.IsNullOrWhiteSpace(cardCode))
+                return;
+
+            var index = GameState.selfHand.FindIndex(c =>
+                string.Equals(c, cardCode, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+                GameState.selfHand.RemoveAt(index);
+        }
+
+        private void RemoveOneCardFromDiscard(string cardCode)
+        {
+            if (GameState?.discardPile == null || string.IsNullOrWhiteSpace(cardCode))
+                return;
+
+            for (int i = GameState.discardPile.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(GameState.discardPile[i], cardCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    GameState.discardPile.RemoveAt(i);
+                    return;
+                }
+            }
         }
     }
 }

@@ -33,7 +33,7 @@ namespace Gameplay
                 return;
 
             Debug.Log("Card is play");
-            CardPlayedEventPayload payload = new CardPlayedEventPayload(card, "Vak0506");
+            CardPlayedEventPayload payload = new CardPlayedEventPayload(card, GameManager.Instance.Player.ID);
             EventBus.Publish(EventType.CardPlayedEvent, payload);
 
             if (_newestCard != null && _newestCard != card)

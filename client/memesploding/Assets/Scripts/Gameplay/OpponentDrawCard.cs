@@ -1,9 +1,11 @@
 ﻿using System.Collections;
+using Gameplay.Card;
+using ScriptableObjects;
 using UnityEngine;
 
 namespace Gameplay
 {
-    public class OpponentDrawCard : MonoBehaviour
+    public class OpponentDrawCard : BaseCard
     {
         [Header("Animation Settings")]
         [SerializeField] private float duration = 0.5f;
@@ -19,20 +21,15 @@ namespace Gameplay
         [SerializeField] private float startRotation = 15f;
         [SerializeField] private float endRotation = -10f;
         [SerializeField] private bool alignRotationToPath = true;
-        [SerializeField][Range(1f, 30f)] private float rotationSmoothing = 8f; // Higher = snappier, lower = lazier
+        [SerializeField][Range(1f, 30f)] private float rotationSmoothing = 8f;
 
         [Header("References")]
         [SerializeField] private RectTransform targetRect;
 
-        private RectTransform _rectTransform;
-
-        void Start()
+        public override void Initialize(CardData data)
         {
-            _rectTransform = GetComponent<RectTransform>();
-
-            //Vector2 start = _rectTransform.anchoredPosition;
-            //Vector2 target = GetAnchoredPosition(targetRect);
-            //Play(start, target);
+            base.Initialize(data);
+            // Add opponent-specific setup here if needed
         }
 
         public void Play(Vector2 startPosition, Vector2 targetPosition)
@@ -42,11 +39,11 @@ namespace Gameplay
 
         private IEnumerator PlayRoutine(Vector2 startPosition, Vector2 targetPosition)
         {
-            _rectTransform.anchoredPosition = startPosition;
-            _rectTransform.localScale = Vector3.one;
+            RectTransform.anchoredPosition = startPosition;
+            RectTransform.localScale = Vector3.one;
 
             Quaternion currentRotation = Quaternion.Euler(0f, 0f, startRotation);
-            _rectTransform.localRotation = currentRotation;
+            RectTransform.localRotation = currentRotation;
 
             float effectiveDuration = duration / Mathf.Max(speed, 0.01f);
             float time = 0f;
@@ -56,8 +53,8 @@ namespace Gameplay
             float dist = (targetPosition - startPosition).magnitude;
 
             Vector2 p0 = startPosition;
-            Vector2 p1 = startPosition + perpendicular * curveOffsetX + Vector2.up * curveOffsetY + direction * 0.25f * dist;
-            Vector2 p2 = targetPosition + perpendicular * (curveOffsetX * 0.5f) + Vector2.up * (jumpHeight * 0.5f) - direction * 0.15f * dist;
+            Vector2 p1 = startPosition + perpendicular * curveOffsetX + Vector2.up * curveOffsetY + direction * (0.25f * dist);
+            Vector2 p2 = targetPosition + perpendicular * (curveOffsetX * 0.5f) + Vector2.up * (jumpHeight * 0.5f) - direction * (0.15f * dist);
             Vector2 p3 = targetPosition;
 
             Vector2 prevPos = startPosition;
@@ -68,7 +65,7 @@ namespace Gameplay
                 float t = easeCurve.Evaluate(rawT);
 
                 Vector2 pos = CubicBezier(p0, p1, p2, p3, t);
-                _rectTransform.anchoredPosition = pos;
+                RectTransform.anchoredPosition = pos;
 
                 if (alignRotationToPath)
                 {
@@ -78,34 +75,34 @@ namespace Gameplay
                         float targetAngle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg - 90f;
                         Quaternion targetRotation = Quaternion.Euler(0f, 0f, targetAngle);
 
-                        // Smoothly lag behind the actual path direction
                         currentRotation = Quaternion.Slerp(
                             currentRotation,
                             targetRotation,
                             rotationSmoothing * Time.deltaTime
                         );
-                        _rectTransform.localRotation = currentRotation;
+
+                        RectTransform.localRotation = currentRotation;
                     }
                 }
                 else
                 {
                     float angle = Mathf.Lerp(startRotation, endRotation, t);
                     currentRotation = Quaternion.Euler(0f, 0f, angle);
-                    _rectTransform.localRotation = currentRotation;
+                    RectTransform.localRotation = currentRotation;
                 }
 
-                _rectTransform.localScale = Vector3.Lerp(Vector3.one, Vector3.zero, t);
+                RectTransform.localScale = Vector3.Lerp(Vector3.one, Vector3.zero, t);
 
                 prevPos = pos;
                 time += Time.deltaTime;
                 yield return null;
             }
 
-            _rectTransform.anchoredPosition = p3;
-            _rectTransform.localScale = Vector3.zero;
-            _rectTransform.localRotation = Quaternion.Euler(0f, 0f, endRotation);
+            RectTransform.anchoredPosition = p3;
+            RectTransform.localScale = Vector3.zero;
+            RectTransform.localRotation = Quaternion.Euler(0f, 0f, endRotation);
 
-            Destroy(this.gameObject);
+            Destroy(gameObject);
         }
 
         private Vector2 CubicBezier(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
@@ -117,12 +114,16 @@ namespace Gameplay
                  + (t * t * t) * p3;
         }
 
-        private Vector2 GetAnchoredPosition(RectTransform target)
+        public Vector2 GetTargetAnchoredPosition()
         {
-            RectTransform parent = _rectTransform.parent as RectTransform;
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, target.position);
-            Vector2 localPoint;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, null, out localPoint);
+            if (targetRect == null)
+                return RectTransform.anchoredPosition;
+
+            RectTransform parent = RectTransform.parent as RectTransform;
+
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, targetRect.position);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, null, out Vector2 localPoint);
+
             return localPoint;
         }
     }

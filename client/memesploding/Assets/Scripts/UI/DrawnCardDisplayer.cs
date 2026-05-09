@@ -1,0 +1,37 @@
+﻿using Gameplay;
+using Managers;
+using UnityEngine;
+
+namespace UI
+{
+    public class DrawnCardDisplayer : MonoBehaviour
+    { 
+        [SerializeField] private PlayerDrawCard playerDrawCard;
+
+        private void Start()
+        {
+            playerDrawCard.OnAnimationFinished += OnAnimationFinished;
+        }
+
+        private void OnAnimationFinished(PlayerDrawCard obj)
+        {
+            UIManager.Instance.ResetUI();
+        }
+
+        private void OnEnable()
+        {
+            PlayDrawCardAnimation();
+        }
+
+        private void OnDisable()
+        {
+            playerDrawCard.gameObject.SetActive(false);
+        }
+
+        public void PlayDrawCardAnimation()
+        {
+            //playerDrawCard.Reset();
+            playerDrawCard.gameObject.SetActive(true);
+        }
+    }
+}

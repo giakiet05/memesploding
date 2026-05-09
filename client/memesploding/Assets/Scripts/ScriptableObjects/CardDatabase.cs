@@ -15,7 +15,7 @@ namespace ScriptableObjects
             _lookup = new Dictionary<string, CardData>();
 
             foreach (var card in cards)
-                _lookup[card.cardName] = card;
+                _lookup[card.cardCode] = card;
         }
 
         public CardData Get(string cardName)

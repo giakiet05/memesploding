@@ -2,7 +2,7 @@
 using Events.GameEvents;
 using Gameplay;
 using Gameplay.Card;
-using ScriptableObjects;
+using System.Collections.Generic;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -20,10 +20,7 @@ namespace Managers
                 Instance = this;
         }
 
-        [SerializeField] private Canvas canvas;
-        [SerializeField] private CardDatabase cardDatabase;
-        [SerializeField] private DisplayCard displayCardPrefab;
-        [SerializeField] private PlayableCard playableCardPrefab;
+        [SerializeField] private CardFactory factory;
         [SerializeField] private HandLayout handLayout;
         [SerializeField] private RectTransform dragLayer;
 
@@ -32,21 +29,9 @@ namespace Managers
 
         private void Start()
         {
-            EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
-
             ValidateReferences();
 
             InitStartingHand(30, "DEFUSE");
-        }
-
-        private void OnDestroy()
-        {
-            EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
-        }
-
-        public void SetCardDatabase(CardDatabase database)
-        {
-            cardDatabase = database;
         }
 
         //For testing
@@ -54,66 +39,43 @@ namespace Managers
         {
             for (int i = 0; i < amount; i++)
             {
-                PlayableCard card = CreatePlayableCard(cardName);
+                PlayableCard card = factory.Create<PlayableCard>(cardName, HandLayout.transform);
                 handLayout.AddCard(card);
             }
         }
 
-        public PlayableCard CreatePlayableCard(string cardName, Transform parent = null)
+        public void AddCardToHand(string cardCode)
         {
-            CardData data = cardDatabase.Get(cardName);
-
-            if (data == null)
-            {
-                Debug.LogError($"Card not found: {cardName}");
-                return null;
-            }
-
-            if (parent == null)
-                parent = canvas.transform;
-
-            PlayableCard card = Instantiate(playableCardPrefab, parent, false);
-            card.Initialize(data);
-
-            return card;
+            PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+            handLayout.AddCard(card);
         }
 
-        public DisplayCard CreateDisplayCard(string cardName, Transform parent = null)
+        public void AddCardsToHand(List<string> cardCodes)
         {
-            CardData data = cardDatabase.Get(cardName);
-
-            if (data == null)
+            foreach (var cardCode in cardCodes)
             {
-                Debug.LogError($"Card not found: {cardName}");
-                return null;
+                PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+                handLayout.AddCard(card);
             }
-
-            if (parent == null)
-                parent = canvas.transform;
-
-            DisplayCard card = Instantiate(displayCardPrefab, parent, false);
-            card.Initialize(data);
-
-            return card;
         }
 
-        private void OnCardPlayed(CardPlayedEventPayload payload)
+        public bool RemoveCardFromHand(string cardCode)
         {
-            //TODO: Handle when a card is play
-            Debug.Log("Card played event receive");
+            return handLayout.RemoveCardById(cardCode);
+        }
+
+        public PlayableCard CreatePlayableCard(string cardName, Transform parent)
+        {
+            return factory.Create<PlayableCard>(cardName, parent);
+        }
+
+        public DisplayCard CreateDisplayCard(string cardName, Transform parent)
+        {
+            return factory.Create<DisplayCard>(cardName, parent);
         }
 
         private void ValidateReferences()
         {
-            if (!canvas)
-                Debug.LogError("Canvas not assigned in CardManager", this);
-
-            if (!cardDatabase)
-                Debug.LogError("CardDatabase not assigned in CardManager", this);
-
-            if (!playableCardPrefab)
-                Debug.LogError("CardPrefab not assigned in CardManager", this);
-
             if (!handLayout)
                 Debug.LogError("HandLayout not assigned in CardManager", this);
 
