@@ -37,10 +37,10 @@ namespace Gameplay.Card
             if (Data == null)
                 return;
 
-            if (Data.artwork == null)
+            if (Data.artworks == null)
                 return;
 
-            cardImage.sprite = Data.artwork;
+            cardImage.sprite = Data.Artwork;
         }
 
         public void SetNewest(bool isNewest)

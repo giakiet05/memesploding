@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: SeeTheFuture
   m_EditorClassIdentifier: 
-  cardName: SEE_THE_FUTURE
+  cardCode: SEE_THE_FUTURE
   description: "Xem ba l\xE1 b\xE0i tr\xEAn c\xF9ng c\u1EE7a b\u1ED9 b\xE0i"
-  artwork: {fileID: -1941167871159462604, guid: b8bc339b2106fe7469c897098d965542, type: 3}
+  artworks:
+  - {fileID: -6452501744056975456, guid: fcea34179da50504aa0cc46484707dc0, type: 3}
+  - {fileID: -3007888597198994306, guid: 60c23d9eaf1894c43a681c13d4c966e4, type: 3}
+  - {fileID: -8887249598951484531, guid: 7a1de35b66141354a840f23ac52cc5c8, type: 3}
+  - {fileID: -7977866304877543169, guid: ddbcf0608001cc24a8023820fa4cd1d9, type: 3}
+  - {fileID: -4628586872042370051, guid: 9d8e653395154f04c803d5edbe088fd5, type: 3}

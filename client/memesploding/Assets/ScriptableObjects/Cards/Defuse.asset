@@ -12,8 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Defuse
   m_EditorClassIdentifier: 
-  cardName: DEFUSE
+  cardCode: DEFUSE
   description: "S\u1ED1ng s\xF3t! \u0110\u1EB7t l\xE1 m\xE8o n\u1ED5 b\u1EA1n v\u1EEBa
     b\u1ED1c \u0111\u01B0\u1EE3c v\xE0o ch\u1ED3ng b\xE0i \u1EDF b\u1EA5t k\u1EF3
     v\u1ECB tr\xED n\xE0o b\u1EA1n mu\u1ED1n"
-  artwork: {fileID: 3020386585502892647, guid: 7730efbdcdcd0ea4cad762cbc8714fa5, type: 3}
+  artworks:
+  - {fileID: -5878674093484245202, guid: 8bb3aacf3a5f3e146be632b99ed675c5, type: 3}
+  - {fileID: -5416303454380258110, guid: 43df46a3479e40f468d7ed3ccb93e14a, type: 3}
+  - {fileID: 5937544230787016395, guid: 684b4513fddd6a74785d6de129991072, type: 3}
+  - {fileID: -7021715188395428757, guid: f8c7cf453aa16bb4995fc9908afcf373, type: 3}
+  - {fileID: 3020386585502892647, guid: 1556cc559bdb477408b7d7cfe47356b9, type: 3}
+  - {fileID: -1060766637688638573, guid: da95c737aac554844a5d134b438a34c9, type: 3}

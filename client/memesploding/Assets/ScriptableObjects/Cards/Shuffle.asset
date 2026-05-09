@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Shuffle
   m_EditorClassIdentifier: 
-  cardName: SHUFFLE
+  cardCode: SHUFFLE
   description: "X\xE1o tr\u1ED9n b\u1ED9 b\xE0i"
-  artwork: {fileID: -1941167871159462604, guid: b8bc339b2106fe7469c897098d965542, type: 3}
+  artworks:
+  - {fileID: -9152602170097570199, guid: 9e4f2000a8af88a4789cba9ebb97d952, type: 3}
+  - {fileID: -5345066815291614858, guid: 0cfd7aac43e8f604e8b95ceaded08d19, type: 3}
+  - {fileID: -7131341005424513858, guid: c602d53c863c48f4186b1d23a2ad5f36, type: 3}
+  - {fileID: -2714077410580391306, guid: d9b60bec218ee92449f6fb0d5e625007, type: 3}

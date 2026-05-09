@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace ScriptableObjects
@@ -8,6 +9,7 @@ namespace ScriptableObjects
     {
         [FormerlySerializedAs("cardName")] public string cardCode;
         public string description;
-        public Sprite artwork;
+        public List<Sprite> artworks;
+        public Sprite Artwork => artworks[Random.Range(0, artworks.Count)];
     }
 }

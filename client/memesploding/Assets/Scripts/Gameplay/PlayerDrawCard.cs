@@ -25,8 +25,8 @@ namespace Gameplay
         {
             base.Initialize(cardData);
 
-            if (cardData.artwork != null)
-                cardImage.sprite = cardData.artwork;
+            if (cardData.artworks != null)
+                cardImage.sprite = cardData.Artwork;
 
             _originalPosition = transform.position;
             _originalRotation = transform.rotation;
