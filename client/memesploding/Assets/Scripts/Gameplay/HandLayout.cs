@@ -229,7 +229,7 @@ namespace Gameplay
 
             _targetOrder.Sort((a, b) =>
             {
-                int cmp = string.Compare(a.Data.cardName, b.Data.cardName, System.StringComparison.Ordinal);
+                int cmp = string.Compare(a.Data.cardCode, b.Data.cardCode, System.StringComparison.Ordinal);
 
                 if (cmp != 0)
                     return cmp;

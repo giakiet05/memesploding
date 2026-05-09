@@ -1,8 +1,12 @@
-﻿using Gameplay;
+﻿using Events;
+using Gameplay;
 using Network.Websocket;
+using System;
 using System.Collections.Generic;
+using Events.GameEvents;
 using UI;
 using UnityEngine;
+using EventType = Events.EventType;
 
 namespace Managers
 {
@@ -63,12 +67,62 @@ namespace Managers
         //    InitOpponentUI(players);
         //}
 
+        private void Start()
+        {
+            EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+        }
+
         public void ResetUI()
         {
             uiArea.gameObject.SetActive(false);
             cardDisplayer.gameObject.SetActive(false);
             cardSelector.gameObject.SetActive(false);
             drawnCardDisplayer.gameObject.SetActive(false);
+        }
+
+        //TODO: Handle player used card effect
+        private void OnCardPlayed(CardPlayedEventPayload obj)
+        {
+            //Call this function to send command to server and actually play the card
+            //GameManager.Instance.PlayCard();
+
+            // Handle UI and effect for card
+            switch (obj.PlayedCard.Data.cardCode)
+            {
+                case "DEFUSE":
+                    break;
+
+                case "EXPLODING":
+                    break;
+
+                case "SHUFFLE":
+                    break;
+
+                case "SKIP":
+                    break;
+
+                case "SEE_THE_FUTURE":
+                    break;
+
+                case "ATTACK":
+                    break;
+
+                case "FAVOR":
+                    break;
+
+                case "NOPE":
+                    break;
+
+                default:
+                    Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
+                    break;
+            }
         }
 
         //Draw Card
@@ -94,6 +148,25 @@ namespace Managers
         public void CloseCardDisplayer()
         {
             ResetUI();
+        }
+
+        public void SetActivePlayer(string userID)
+        {
+            if (GameManager.Instance.Player.ID == userID)
+            {
+                //TODO: Handle player turn
+                return;
+            }
+
+            foreach (var opponent in _opponentsUI.Values)
+            {
+                if (opponent.IsActive)
+                {
+                    opponent.IsActive = false;
+                    break;
+                }
+            }
+            _opponentsUI[userID].IsActive = true;
         }
 
         //Opponent UI
@@ -157,6 +230,17 @@ namespace Managers
                 rect.SetParent(playingArea, false);
                 rect.anchoredPosition = centerLocalPos + new Vector2(x, y);
             }
+        }
+
+        public void PlayOpponentCard(string userID, string cardCode)
+        {
+            if (!_opponentsUI.TryGetValue(userID, out var opponent))
+                return;
+
+            if (opponent == null)
+                return;
+
+            opponent.PlayCard(cardCode);
         }
     }
 }

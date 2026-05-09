@@ -1,7 +1,8 @@
 using Events;
-using Models;
 using Events.GameEvents;
 using Gameplay;
+using Models;
+using System.Collections.Generic;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -31,7 +32,6 @@ namespace Managers
 
         private void Start()
         {
-            EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
             EventBus.Subscribe<WsConnectedEventPayload>(EventType.WsConnected, OnWsConnected);
             EventBus.Subscribe<WsAckEventPayload>(EventType.WsAck, OnWsAck);
             EventBus.Subscribe<WsGameplayEventPayload>(EventType.WsGameplayEvent, OnWsGameplayEvent);
@@ -42,7 +42,6 @@ namespace Managers
 
         private void OnDestroy()
         {
-            EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
             EventBus.Unsubscribe<WsConnectedEventPayload>(EventType.WsConnected, OnWsConnected);
             EventBus.Unsubscribe<WsAckEventPayload>(EventType.WsAck, OnWsAck);
             EventBus.Unsubscribe<WsGameplayEventPayload>(EventType.WsGameplayEvent, OnWsGameplayEvent);
@@ -109,12 +108,21 @@ namespace Managers
             Debug.Log($"[GameManager] WS status={payload?.Status}");
         }
 
-        private void OnCardPlayed(CardPlayedEventPayload payload)
+        public void PlayCard(
+            string targetUserId = null,
+            int comboSize = 0,
+            List<string> cardCodes = null,
+            string requestedCardCode = null,
+            string discardCardCode = null)
         {
-            if (payload.PlayerID == Player.ID)
-            {
-                NetworkManager.Instance.SendPlayCardCommand(payload);
-            }
+            NetworkManager.Instance.SendPlayCardCommand(
+                cardCode: Player.ID,
+                targetUserId: targetUserId,
+                comboSize: comboSize,
+                cardCodes: cardCodes,
+                requestedCardCode: requestedCardCode,
+                discardCardCode: discardCardCode
+            );
         }
 
         public void DrawCard()

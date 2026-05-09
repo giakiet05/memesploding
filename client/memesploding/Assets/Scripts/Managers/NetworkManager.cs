@@ -1,6 +1,7 @@
-﻿using System;
-using Events;
+﻿using Events;
 using Network.Websocket;
+using System;
+using System.Collections.Generic;
 
 namespace Managers
 {
@@ -32,20 +33,29 @@ namespace Managers
             }
         }
 
-        public void SendPlayCardCommand(CardPlayedEventPayload payload)
+        public void SendPlayCardCommand(
+            string cardCode,
+            string targetUserId = null,
+            int comboSize = 0,
+            List<string> cardCodes = null,
+            string requestedCardCode = null,
+            string discardCardCode = null)
         {
-            WsPlayCardData cardData = new WsPlayCardData
+            var cardData = new WsPlayCardData
             {
-                //TODO Add additional information needed
-                cardCode = payload.PlayedCard.Id,
-                targetUserId = payload.TargetID
-
+                cardCode = cardCode,
+                targetUserId = targetUserId,
+                comboSize = comboSize,
+                cardCodes = cardCodes,
+                requestedCardCode = requestedCardCode,
+                discardCardCode = discardCardCode
             };
 
-            // Can add await and handle error
-            WebsocketClient.SendCommandAsync(WsClientCommandType.PlayCard, cardData);
+            WebsocketClient.SendCommandAsync(
+                WsClientCommandType.PlayCard,
+                cardData
+            );
         }
-
         public void SendDrawCardCommand()
         {
             WebsocketClient.SendCommandAsync(WsClientCommandType.DrawCard, null);

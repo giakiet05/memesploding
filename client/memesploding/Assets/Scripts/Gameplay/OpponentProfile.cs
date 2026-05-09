@@ -24,10 +24,29 @@ namespace Gameplay
         //For testing only
         [SerializeField] private bool autoPlay = false;
 
+        private string _userID;
+
+        private bool _isActive;
+
+        public bool IsActive
+        {
+            get => _isActive;
+            set
+            {
+                if (_isActive == value)
+                    return;
+
+                _isActive = value;
+
+                OnActiveChanged();
+            }
+        }
+
         private void Start()
         {
             if (autoPlay)
                 StartCoroutine(AutoPlay());
+            IsActive = false;
         }
 
         private IEnumerator AutoPlay()
@@ -41,7 +60,7 @@ namespace Gameplay
 
         public void Init(WsPlayerPublicStateDto player)
         {
-
+            _userID = player.userId;
         }
 
         public void PlayCard(string cardName)
@@ -98,6 +117,12 @@ namespace Gameplay
             float y = Random.Range(-height * 0.5f, height * 0.5f);
 
             return new Vector2(x, y);
+        }
+
+        private void OnActiveChanged()
+        {
+            //TODO: Add active player effect
+            Debug.Log($"Player {_userID} is active. Remember to add effect");
         }
     }
 }

@@ -61,7 +61,6 @@ namespace Gameplay
                 case WsGameplayEventType.TurnChanged:
                     if (parsedPayload is not WsTurnIndexPayload turnPayload)
                         return;
-                    // TODO: Update active player indicator and turn timer from authoritative snapshot fields.
                     UpdateTurn(turnPayload.turnIndex);
                     break;
 
@@ -70,14 +69,18 @@ namespace Gameplay
                         return;
 
                     SetPlayerPendingDraw(turnContinues.userId, turnContinues.pendingDrawCount);
+                    //TODO: Display that a player turn is still continue
                     break;
 
                 case WsGameplayEventType.CardDrawn:
                     if (parsedPayload is not WsCardActionPayload cardDrawn)
                         return;
-
+                    //TODO: Update opponent card counter
+                    //TODO: Make opponent draw a card
                     GameState.drawPileCount = Math.Max(0, GameState.drawPileCount - 1);
                     ChangePlayerHandCount(cardDrawn.userId, +1);
+
+                    //Handle player draw event
                     if (IsSelf(cardDrawn.userId) && !string.IsNullOrWhiteSpace(cardDrawn.cardCode))
                     {
                         HandleDrawnCard(cardDrawn.cardCode);
@@ -89,12 +92,22 @@ namespace Gameplay
                     if (parsedPayload is not WsCardActionPayload cardPlayed)
                         return;
 
-                    ChangePlayerHandCount(cardPlayed.userId, -1);
                     if (!string.IsNullOrWhiteSpace(cardPlayed.cardCode))
-                        GameState.discardPile.Add(cardPlayed.cardCode);
+                    {
+                        Debug.LogError("Card code is null or empty");
+                        break;
+                    }
 
-                    if (IsSelf(cardPlayed.userId) && !string.IsNullOrWhiteSpace(cardPlayed.cardCode))
+                    ChangePlayerHandCount(cardPlayed.userId, -1);
+                    GameState.discardPile.Add(cardPlayed.cardCode);
+
+                    if (IsSelf(cardPlayed.userId))
                         RemoveOneCardFromSelfHand(cardPlayed.cardCode);
+                    else
+                    {
+                        //Make opponent play a card
+                        UIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
+                    }
                     break;
 
                 case WsGameplayEventType.ComboPlayed:
@@ -129,6 +142,8 @@ namespace Gameplay
                     {
                         GameState.pendingBombCardCode = "ExplodingKitten";
                     }
+                    //TODO: Display that a defuse card has been used
+
                     break;
 
                 case WsGameplayEventType.SkipApplied:
@@ -165,6 +180,8 @@ namespace Gameplay
                         return;
 
                     SetPlayerLifeState(eliminated.userId, "Eliminated");
+
+                    //TODO: set a player is eliminated in the UI
                     break;
 
                 case WsGameplayEventType.MatchFinished:
@@ -177,6 +194,8 @@ namespace Gameplay
                         return;
 
                     SetPlayerPendingDraw(attack.toUserId, Math.Max(0, GetPlayerPendingDraw(attack.toUserId) + attack.added));
+
+                    //TODO: Display attack effect
                     break;
 
                 case WsGameplayEventType.FuturePeeked:
@@ -184,6 +203,7 @@ namespace Gameplay
                         return;
 
                     // TODO: Store peek.cards in dedicated UI state instead of GameState when UI model is introduced.
+                    //TODO: Display card
                     break;
 
                 case WsGameplayEventType.FavorWindowOpened:
@@ -273,9 +293,12 @@ namespace Gameplay
         {
             GameState.turnIndex = newTurnIndex;
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
+
+            //Set current active player
+            UIManager.Instance.SetActivePlayer(GameState.players[newTurnIndex].userId);
         }
 
-        private async void HandleDrawnCard(string cardCode)
+        private void HandleDrawnCard(string cardCode)
         {
             //Displaying the card just drawn
             UIManager.Instance.DisplayDrawnCard();
