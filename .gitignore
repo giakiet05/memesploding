@@ -47,3 +47,12 @@ Secret/
 .gitnexus
 output
 node_modules
+[Ll]ibrary/
+[Tt]emp/
+[Ll]ogs/
+UserSettings/
+.vs/
+
+*.csproj
+*.sln
+*.slnx
