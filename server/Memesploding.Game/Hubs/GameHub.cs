@@ -61,6 +61,12 @@ public class GameHub(
             return;
         }
 
+        if (string.Equals(command.Event, "RequestServerTime", StringComparison.OrdinalIgnoreCase))
+        {
+            await SendServerTimeAsync(command, Context.ConnectionAborted);
+            return;
+        }
+
         var stateVersion = await commandDispatcher.DispatchAsync(connectionContext, command, Context.ConnectionAborted);
         if (stateVersion.HasValue)
         {
@@ -73,6 +79,45 @@ public class GameHub(
         {
             await SendStateSnapshotAsync(connectionContext, Context.ConnectionAborted);
         }
+    }
+
+    private async Task SendServerTimeAsync(WsClientCommand command, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var payload = WsServerEvent<WsServerTimeDto>.Create(
+            "ServerTime",
+            new WsServerTimeDto(
+                now.UtcDateTime,
+                now.ToUnixTimeMilliseconds(),
+                GetClientSentAtMs(command)
+            )
+        );
+
+        await Clients.Caller.SendAsync("ReceiveMessage", payload, cancellationToken);
+    }
+
+    private static long? GetClientSentAtMs(WsClientCommand command)
+    {
+        if (command.Data.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (command.Data.TryGetProperty("clientSentAtMs", out var camelCaseValue) &&
+            camelCaseValue.ValueKind == System.Text.Json.JsonValueKind.Number &&
+            camelCaseValue.TryGetInt64(out var camelCaseTimestamp))
+        {
+            return camelCaseTimestamp;
+        }
+
+        if (command.Data.TryGetProperty("ClientSentAtMs", out var pascalCaseValue) &&
+            pascalCaseValue.ValueKind == System.Text.Json.JsonValueKind.Number &&
+            pascalCaseValue.TryGetInt64(out var pascalCaseTimestamp))
+        {
+            return pascalCaseTimestamp;
+        }
+
+        return null;
     }
 
     private async Task SendStateSnapshotAsync(GameConnectionContext connectionContext, CancellationToken cancellationToken)
