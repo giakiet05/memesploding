@@ -6,6 +6,10 @@ namespace Events
     {
         CardPlayedEvent,
         DrawCardEvent,
+
+        TurnStart,
+        TurnEnd,
+
         WsConnected,
         WsAck,
         WsGameplayEvent,
