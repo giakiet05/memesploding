@@ -1,25 +1,40 @@
 using Events;
-using Managers;
-using System.Collections;
 using Events.GameEvents;
 using Gameplay.Card;
+using Managers;
 using Network.Websocket;
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;
 using Random = UnityEngine.Random;
 
-namespace Gameplay
+namespace UI
 {
     public class OpponentProfile : MonoBehaviour
     {
-        [SerializeField] private RectTransform playArea;
+        #region References
+
+        [Header("Layout")]
         [SerializeField] private RectTransform spawnPoint;
 
+        [Header("UI Elements")]
+        [SerializeField] private Image selectArrow;
+        [SerializeField] private TextMeshProUGUI cardCounterText;
+        [SerializeField] private Image profileImage;
+
+        #endregion
+
+        #region Animation Settings
+
+        [Header("Card Animation")]
         [SerializeField] private float jumpHeight = 150f;
         [SerializeField] private float duration = 0.5f;
 
-        [SerializeField] private Image selectArrow;
+        #endregion
+        //TODO: Assign play area for opponent to play card in
+        private RectTransform playArea;
 
         //For testing only
         [SerializeField] private bool autoPlay = false;
@@ -27,6 +42,11 @@ namespace Gameplay
         private string _userID;
 
         private bool _isActive;
+
+        public OpponentProfile(RectTransform playArea)
+        {
+            this.playArea = playArea;
+        }
 
         public bool IsActive
         {
@@ -58,9 +78,10 @@ namespace Gameplay
             }
         }
 
-        public void Init(WsPlayerPublicStateDto player)
+        public void Init(WsPlayerPublicStateDto player, Sprite profileSprite)
         {
             _userID = player.userId;
+            profileImage.sprite = profileSprite;
         }
 
         public void PlayCard(string cardName)

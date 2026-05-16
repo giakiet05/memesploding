@@ -189,7 +189,8 @@ namespace Managers
                 var opponent = players[index];
 
                 var ui = Instantiate(opponentProfilePrefab, playingArea.transform);
-                ui.Init(opponent);
+                //TODO: pass in user profile
+                ui.Init(opponent, null);
 
                 rects.Add(ui.GetComponent<RectTransform>());
             }

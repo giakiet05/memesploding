@@ -2469,6 +2469,7 @@ GameObject:
   - component: {fileID: 807179964}
   - component: {fileID: 807179966}
   - component: {fileID: 807179965}
+  - component: {fileID: 807179967}
   m_Layer: 5
   m_Name: MainUserProfile
   m_TagString: Untagged
@@ -2536,6 +2537,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 807179963}
   m_CullTransparentMesh: 1
+--- !u!114 &807179967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 807179963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9f06809274b8bc4d82b3b012e2d5271, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cardCounterText: {fileID: 1138845430}
+  profileImage: {fileID: 1378042375}
 --- !u!1 &819832655
 GameObject:
   m_ObjectHideFlags: 0
@@ -2932,9 +2947,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 1235173173}
   spawnPoint: {fileID: 871951509}
+  selectArrow: {fileID: 0}
+  cardCounterText: {fileID: 0}
+  profileImage: {fileID: 0}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 0}
   autoPlay: 0
 --- !u!1 &898687504 stripped
 GameObject:
@@ -3242,9 +3259,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 181947790}
   spawnPoint: {fileID: 271447151}
+  selectArrow: {fileID: 0}
+  cardCounterText: {fileID: 0}
+  profileImage: {fileID: 0}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 0}
   autoPlay: 0
 --- !u!224 &1027026882 stripped
 RectTransform:
@@ -3634,9 +3653,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 1508687534}
   spawnPoint: {fileID: 1103199257}
+  selectArrow: {fileID: 0}
+  cardCounterText: {fileID: 0}
+  profileImage: {fileID: 0}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 0}
   autoPlay: 0
 --- !u!1 &1138845428
 GameObject:
@@ -4923,9 +4944,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 1440869572}
   spawnPoint: {fileID: 50035161}
+  selectArrow: {fileID: 0}
+  cardCounterText: {fileID: 0}
+  profileImage: {fileID: 0}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 0}
   autoPlay: 0
 --- !u!1 &1888024834 stripped
 GameObject:
@@ -5442,9 +5465,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 937259358}
   spawnPoint: {fileID: 1983141316}
+  selectArrow: {fileID: 0}
+  cardCounterText: {fileID: 0}
+  profileImage: {fileID: 0}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 0}
   autoPlay: 0
 --- !u!1 &2018314983
 GameObject:

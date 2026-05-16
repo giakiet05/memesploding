@@ -554,7 +554,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playArea: {fileID: 0}
   spawnPoint: {fileID: 1153562653841305991}
+  selectArrow: {fileID: 7886613633168118050}
+  cardCounterText: {fileID: 7983245395690080412}
+  profileImage: {fileID: 4766078203587048263}
   jumpHeight: 150
   duration: 0.5
-  selectArrow: {fileID: 7886613633168118050}
   autoPlay: 0
