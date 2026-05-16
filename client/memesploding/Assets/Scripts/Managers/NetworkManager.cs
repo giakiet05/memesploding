@@ -65,5 +65,10 @@ namespace Managers
         {
             WebsocketClient.SendCommandAsync(WsClientCommandType.DrawFromBottom, null);
         }
+
+        public void SendChooseBombInsertPositionCommand(int position)
+        {
+            WebsocketClient.SendCommandAsync(WsClientCommandType.ChooseBombInsertPosition, position);
+        }
     }
 }

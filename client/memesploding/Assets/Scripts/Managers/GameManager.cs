@@ -108,6 +108,7 @@ namespace Managers
             Debug.Log($"[GameManager] WS status={payload?.Status}");
         }
 
+
         public void PlayCard(
             string targetUserId = null,
             int comboSize = 0,
@@ -134,5 +135,12 @@ namespace Managers
             NetworkManager.Instance.SendDrawCardCommand();
             //TODO: Using loading screen
         }
+        public int GetDrawPileCount() => _session?.GameState?.drawPileCount ?? 0;
+
+        public void ChooseBombInsertPosition(int position)
+        {
+            NetworkManager.Instance.SendChooseBombInsertPositionCommand(position);
+        }
+       
     }
 }
