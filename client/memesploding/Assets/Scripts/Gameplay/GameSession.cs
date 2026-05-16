@@ -108,7 +108,7 @@ namespace Gameplay
                     else
                     {
                         //Make opponent play a card
-                        UIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
+                        GameplayUIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
                     }
                     break;
 
@@ -305,7 +305,7 @@ namespace Gameplay
         private void HandleDrawnCard(string cardCode)
         {
             //Displaying the card just drawn
-            UIManager.Instance.DisplayDrawnCard();
+            GameplayUIManager.Instance.DisplayDrawnCard();
 
             //Handle add card to hand
             CardManager.Instance.AddCardToHand(cardCode);

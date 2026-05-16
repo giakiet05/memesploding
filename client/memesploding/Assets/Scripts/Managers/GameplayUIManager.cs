@@ -10,9 +10,9 @@ using EventType = Events.EventType;
 
 namespace Managers
 {
-    public class UIManager : MonoBehaviour
+    public class GameplayUIManager : MonoBehaviour
     {
-        public static UIManager Instance;
+        public static GameplayUIManager Instance;
 
         private void Awake()
         {

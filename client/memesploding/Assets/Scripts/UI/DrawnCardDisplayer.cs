@@ -15,7 +15,7 @@ namespace UI
 
         private void OnAnimationFinished(PlayerDrawCard obj)
         {
-            UIManager.Instance.ResetUI();
+            GameplayUIManager.Instance.ResetUI();
         }
 
         private void OnEnable()

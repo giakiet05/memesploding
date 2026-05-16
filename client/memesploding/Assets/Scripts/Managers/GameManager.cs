@@ -92,7 +92,7 @@ namespace Managers
             }
 
             _session.ApplySnapshot(payload.Data);
-            UIManager.Instance.InitOpponentUI(_session.GameState.players);
+            GameplayUIManager.Instance.InitOpponentUI(_session.GameState.players);
         }
 
         private void OnWsError(WsErrorEventPayload payload)
