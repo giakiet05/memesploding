@@ -32,7 +32,11 @@ namespace UI
         [SerializeField] private float jumpHeight = 150f;
         [SerializeField] private float duration = 0.5f;
 
+        [Header("Other Animation")]
+        [SerializeField] private GlowImage glowImage;
+
         #endregion
+
         //TODO: Assign play area for opponent to play card in
         private RectTransform playArea;
 
@@ -48,25 +52,17 @@ namespace UI
             this.playArea = playArea;
         }
 
-        public bool IsActive
-        {
-            get => _isActive;
-            set
-            {
-                if (_isActive == value)
-                    return;
-
-                _isActive = value;
-
-                OnActiveChanged();
-            }
-        }
-
         private void Start()
         {
+            EventBus.Subscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+
             if (autoPlay)
                 StartCoroutine(AutoPlay());
-            IsActive = false;
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Unsubscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
         }
 
         private IEnumerator AutoPlay()
@@ -82,6 +78,18 @@ namespace UI
         {
             _userID = player.userId;
             profileImage.sprite = profileSprite;
+        }
+
+        public void OnTurnStart(TurnStartEventPayload payload)
+        {
+            if (payload.UserID != _userID)
+            {
+                glowImage.gameObject.SetActive(false);
+                return;
+            }
+
+            //TODO: Add current turn effect for opponent
+            glowImage.gameObject.SetActive(true);
         }
 
         public void PlayCard(string cardName)
@@ -138,12 +146,6 @@ namespace UI
             float y = Random.Range(-height * 0.5f, height * 0.5f);
 
             return new Vector2(x, y);
-        }
-
-        private void OnActiveChanged()
-        {
-            //TODO: Add active player effect
-            Debug.Log($"Player {_userID} is active. Remember to add effect");
         }
     }
 }

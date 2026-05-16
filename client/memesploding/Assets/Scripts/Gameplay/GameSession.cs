@@ -3,7 +3,9 @@ using Managers;
 using Network.Websocket;
 using System;
 using System.Linq;
+using Events.GameEvents;
 using UnityEngine;
+using EventType = Events.EventType;
 
 namespace Gameplay
 {
@@ -295,7 +297,9 @@ namespace Gameplay
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
 
             //Set current active player
-            UIManager.Instance.SetActivePlayer(GameState.players[newTurnIndex].userId);
+            var curUserID = GameState.players[newTurnIndex].userId;
+
+            EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(curUserID));
         }
 
         private void HandleDrawnCard(string cardCode)

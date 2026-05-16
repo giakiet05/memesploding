@@ -263,7 +263,84 @@ Chủ động yêu cầu server gửi lại toàn bộ trạng thái bàn chơi 
 
 ---
 
-### 4.10. `AckStateVersion`
+### 4.10. `RequestServerTime`
+
+Yêu cầu Game Server trả về thời gian hiện tại của chính Game Server. Dùng event này để client ước lượng lệch giờ giữa máy client và Game Server khi render countdown như `turnEndsAt`, `reactionWindowEndsAt`, `defuseWindowEndsAt`.
+
+Event này không thay đổi game state, không tạo `Ack`, và server chỉ trả kết quả cho chính connection đã gửi request.
+
+**Client request**
+```json
+{
+  "event": "RequestServerTime",
+  "data": {
+    "clientSentAtMs": 1788888888000
+  }
+}
+```
+
+`clientSentAtMs` là Unix time milliseconds theo đồng hồ local của client tại thời điểm gửi message. Trường này optional nhưng nên gửi để client tính RTT/offset chính xác hơn.
+
+**Server push: `ServerTime`**
+```json
+{
+  "event": "ServerTime",
+  "data": {
+    "serverTimeUtc": "2026-04-25T15:00:00.123Z",
+    "serverUnixTimeMs": 1788888888123,
+    "clientSentAtMs": 1788888888000
+  },
+  "timestamp": "2026-04-25T15:00:00.123Z"
+}
+```
+
+**Công thức client ước lượng server time**
+```text
+clientSentAtMs = data.clientSentAtMs
+clientReceivedAtMs = local Unix time milliseconds lúc nhận ServerTime
+
+rttMs = clientReceivedAtMs - clientSentAtMs
+oneWayDelayMs = rttMs / 2
+
+estimatedServerNowMs = data.serverUnixTimeMs + oneWayDelayMs
+serverOffsetMs = estimatedServerNowMs - clientReceivedAtMs
+```
+
+Ý nghĩa:
+- `rttMs`: tổng thời gian message đi từ client tới server rồi quay lại client.
+- `oneWayDelayMs`: độ trễ một chiều ước lượng. Giả định đường đi và đường về gần tương đương.
+- `serverOffsetMs`: độ lệch giữa đồng hồ client và Game Server. Client nên cache giá trị này.
+
+Sau đó khi render countdown từ timestamp server gửi trong snapshot/event như `turnEndsAt`, `reactionWindowEndsAt`, `defuseWindowEndsAt`:
+
+```text
+serverNowApproxMs = localNowMs + serverOffsetMs
+remainingMs = serverEndsAtMs - serverNowApproxMs
+remainingMs = max(0, remainingMs)
+```
+
+Ví dụ:
+```text
+clientSentAtMs = 1000
+serverUnixTimeMs = 5050
+clientReceivedAtMs = 1200
+
+rttMs = 200
+oneWayDelayMs = 100
+estimatedServerNowMs = 5150
+serverOffsetMs = 5150 - 1200 = 3950
+
+localNowMs = 2000
+serverNowApproxMs = 2000 + 3950 = 5950
+```
+
+Nếu client không gửi `clientSentAtMs`, server vẫn trả `ServerTime` nhưng client không tính RTT được. Khi đó chỉ nên dùng `serverUnixTimeMs - clientReceivedAtMs` làm offset tạm, độ chính xác thấp hơn vì chưa bù network delay.
+
+Client nên gọi `RequestServerTime` khi vừa connect Game WS, sau reconnect, và có thể ping lại định kỳ nếu thấy drift lớn. Không cần gọi liên tục mỗi frame. Nếu muốn ổn định hơn, client có thể gọi 3-5 lần, bỏ mẫu có `rttMs` cao bất thường, rồi lấy offset trung bình hoặc median.
+
+---
+
+### 4.11. `AckStateVersion`
 
 Xác nhận với server rằng client đã nhận và xử lý thành công phiên bản trạng thái (State Version) cụ thể.
 

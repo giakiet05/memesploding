@@ -13,6 +13,12 @@ public record WsErrorDto(
     string Message
 );
 
+public record WsServerTimeDto(
+    DateTime ServerTimeUtc,
+    long ServerUnixTimeMs,
+    long? ClientSentAtMs
+);
+
 public record WsGameplayEventDto(
     string Type,
     string Payload,

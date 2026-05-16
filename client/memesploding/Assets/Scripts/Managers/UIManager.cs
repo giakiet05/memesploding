@@ -157,25 +157,6 @@ namespace Managers
             ResetUI();
         }
 
-        public void SetActivePlayer(string userID)
-        {
-            if (GameManager.Instance.Player.ID == userID)
-            {
-                //TODO: Handle player turn
-                return;
-            }
-
-            foreach (var opponent in _opponentsUI.Values)
-            {
-                if (opponent.IsActive)
-                {
-                    opponent.IsActive = false;
-                    break;
-                }
-            }
-            _opponentsUI[userID].IsActive = true;
-        }
-
         //Opponent UI
         public void InitOpponentUI(List<WsPlayerPublicStateDto> players)
         {
