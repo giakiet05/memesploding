@@ -31,7 +31,7 @@ namespace Managers
         {
             ValidateReferences();
 
-            InitStartingHand(30, "DEFUSE");
+            InitStartingHand(30, "Defuse");
         }
 
         //For testing

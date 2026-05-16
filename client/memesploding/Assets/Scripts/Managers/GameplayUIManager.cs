@@ -5,9 +5,9 @@ using System;
 using System.Collections.Generic;
 using Events.GameEvents;
 using UI;
-using UI.Gameplay;
 using UnityEngine;
 using EventType = Events.EventType;
+using UI.Gameplay;
 
 namespace Managers
 {

@@ -85,14 +85,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 396341544455023925}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b658efebb7417bb49aeedd077a22a99d, type: 3}
+  m_Script: {fileID: 11500000, guid: 15b2a9bae643e9247ba2e64492ebe758, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   pulseSpeed: 2
-  minAlpha: 0.5
-  maxAlpha: 0.8
+  minAlpha: 0.15
+  maxAlpha: 0.65
   minScale: 1
-  maxScale: 1.05
+  maxScale: 1.12
   startEnabled: 1
 --- !u!1 &2381785557404094643
 GameObject:
@@ -565,7 +565,7 @@ GameObject:
   - component: {fileID: 1153562653841305991}
   - component: {fileID: 7655224764429717728}
   - component: {fileID: 3865165675071803017}
-  - component: {fileID: 625055292398873894}
+  - component: {fileID: 8972708911853373389}
   m_Layer: 5
   m_Name: OpponentProfile
   m_TagString: Untagged
@@ -635,7 +635,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &625055292398873894
+--- !u!114 &8972708911853373389
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -644,14 +644,43 @@ MonoBehaviour:
   m_GameObject: {fileID: 8886795637514968351}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
+  m_Script: {fileID: 11500000, guid: 01ce733108caa5241ba87d10960c94b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 1153562653841305991}
-  selectArrow: {fileID: 7886613633168118050}
-  cardCounterText: {fileID: 7983245395690080412}
-  profileImage: {fileID: 4766078203587048263}
-  jumpHeight: 150
+  cardImage: {fileID: 4766078203587048263}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  inactiveColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
   duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
+  speed: 1
+  jumpHeight: 40
+  curveOffsetX: 30
+  curveOffsetY: 60
+  easeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  startRotation: 15
+  endRotation: -10
+  alignRotationToPath: 1
+  rotationSmoothing: 8
+  targetRect: {fileID: 0}
