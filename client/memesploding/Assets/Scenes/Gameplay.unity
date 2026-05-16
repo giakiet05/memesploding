@@ -2821,9 +2821,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9f06809274b8bc4d82b3b012e2d5271, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cardCounterText: {fileID: 1138845430}
-  profileImage: {fileID: 1378042375}
-  glowImage: {fileID: 0}
 --- !u!1 &816703346
 GameObject:
   m_ObjectHideFlags: 0
@@ -2874,12 +2871,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b658efebb7417bb49aeedd077a22a99d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pulseSpeed: 2
-  minAlpha: 0.5
-  maxAlpha: 1
-  minScale: 1
-  maxScale: 1.05
-  startEnabled: 1
 --- !u!114 &816703349
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3312,14 +3303,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 871951509}
-  selectArrow: {fileID: 0}
-  cardCounterText: {fileID: 0}
-  profileImage: {fileID: 0}
-  jumpHeight: 150
-  duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
 --- !u!1 &898687504 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8886795637514968351, guid: 95a21c25c2f05e84b9a328b65c6b3641, type: 3}
@@ -3624,14 +3607,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 271447151}
-  selectArrow: {fileID: 0}
-  cardCounterText: {fileID: 0}
-  profileImage: {fileID: 0}
-  jumpHeight: 150
-  duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
 --- !u!1 &1066128586
 GameObject:
   m_ObjectHideFlags: 0
@@ -3887,7 +3862,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9357fa571323b394ab160e43fcb73570, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerDrawCard: {fileID: 4708302356720904087}
 --- !u!1001 &1103199256
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4013,14 +3987,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 1103199257}
-  selectArrow: {fileID: 0}
-  cardCounterText: {fileID: 0}
-  profileImage: {fileID: 0}
-  jumpHeight: 150
-  duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
 --- !u!1 &1138845428
 GameObject:
   m_ObjectHideFlags: 0
@@ -4480,9 +4446,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e51d2f46f712eee489ca30bf7da7b3bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scrollRect: {fileID: 0}
-  content: {fileID: 0}
-  snapSpeed: 10
 --- !u!1 &1335461078
 GameObject:
   m_ObjectHideFlags: 0
@@ -4758,12 +4721,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b658efebb7417bb49aeedd077a22a99d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pulseSpeed: 2
-  minAlpha: 0.5
-  maxAlpha: 1
-  minScale: 1
-  maxScale: 1.1
-  startEnabled: 1
 --- !u!114 &1501933100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5398,14 +5355,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 50035161}
-  selectArrow: {fileID: 0}
-  cardCounterText: {fileID: 0}
-  profileImage: {fileID: 0}
-  jumpHeight: 150
-  duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
 --- !u!114 &1888024838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5903,14 +5852,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 049a9818389b7fb4ab287d2d4c2f86f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {fileID: 1983141316}
-  selectArrow: {fileID: 0}
-  cardCounterText: {fileID: 0}
-  profileImage: {fileID: 0}
-  jumpHeight: 150
-  duration: 0.5
-  glowImage: {fileID: 0}
-  autoPlay: 0
 --- !u!1 &2018314983
 GameObject:
   m_ObjectHideFlags: 0
@@ -6026,8 +5967,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 85}
-  m_SizeDelta: {x: -1000, y: -730}
+  m_AnchoredPosition: {x: 320.46405, y: 102.069}
+  m_SizeDelta: {x: -1536.575, y: -544.312}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2068881227
 MonoBehaviour:
@@ -6193,8 +6134,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1920, y: 0}
+  m_AnchoredPosition: {x: 0, y: -85}
+  m_SizeDelta: {x: 1920, y: -170}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2101275439
 MonoBehaviour:
@@ -6217,11 +6158,14 @@ MonoBehaviour:
   reorderSpeed: 10
   scrollSpeed: 10
   extraSpace: 500
-  boardArea: {fileID: 0}
+  boardArea: {fileID: 2068881227}
   playAnimationSpeed: 1
   scrollToCardDuration: 0.25
   moveToBoardDuration: 0.35
   effectPauseDuration: 0.5
+  invalidSelectionShakeDuration: 0.25
+  invalidSelectionShakeDistance: 18
+  invalidSelectionShakeCycles: 4
 --- !u!1 &2104828726
 GameObject:
   m_ObjectHideFlags: 0
@@ -6410,7 +6354,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc47a844a60fff84c91b35b0dac8790a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  contentRect: {fileID: 1803834169}
 --- !u!1 &2139770465
 GameObject:
   m_ObjectHideFlags: 0
@@ -6703,6 +6646,10 @@ PrefabInstance:
     - target: {fileID: 6288048455633012342, guid: 150459f806d5dd442b73000aa9f540c2, type: 3}
       propertyPath: m_Name
       value: OpponenDrawCard
+      objectReference: {fileID: 0}
+    - target: {fileID: 6288048455633012342, guid: 150459f806d5dd442b73000aa9f540c2, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

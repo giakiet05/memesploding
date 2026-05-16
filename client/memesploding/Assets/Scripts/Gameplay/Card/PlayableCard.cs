@@ -49,6 +49,9 @@ namespace Gameplay.Card
             if (IsSelectedForPlay == isSelected)
                 return;
 
+            if (isSelected && _handLayout != null && !_handLayout.CanSelectMoreCards())
+                return;
+
             IsSelectedForPlay = isSelected;
             _handLayout?.NotifyCardSelectionChanged();
         }
