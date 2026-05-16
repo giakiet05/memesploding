@@ -92,7 +92,7 @@ namespace Managers
             }
 
             _session.ApplySnapshot(payload.Data);
-            UIManager.Instance.InitOpponentUI(_session.GameState.players);
+            GameplayUIManager.Instance.InitOpponentUI(_session.GameState.players);
         }
 
         private void OnWsError(WsErrorEventPayload payload)
@@ -107,6 +107,7 @@ namespace Managers
         {
             Debug.Log($"[GameManager] WS status={payload?.Status}");
         }
+
 
         public void PlayCard(
             string targetUserId = null,
@@ -134,5 +135,12 @@ namespace Managers
             NetworkManager.Instance.SendDrawCardCommand();
             //TODO: Using loading screen
         }
+        public int GetDrawPileCount() => _session?.GameState?.drawPileCount ?? 0;
+
+        public void ChooseBombInsertPosition(int position)
+        {
+            NetworkManager.Instance.SendChooseBombInsertPositionCommand(position);
+        }
+       
     }
 }

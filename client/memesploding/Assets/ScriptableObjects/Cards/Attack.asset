@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Attack
   m_EditorClassIdentifier: 
-  cardCode: ATTACK
+  cardCode: Attack
   description: "K\u1EBFt th\xFAc l\u01B0\u1EE3t c\u1EE7a b\u1EA1n v\xE0 bu\u1ED9c
     ng\u01B0\u1EDDi ch\u01A1i k\u1EBF ti\u1EBFp ph\u1EA3i b\u1ED1c th\xEAm hai l\u01B0\u1EE3t
     n\u1EEFa"

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Skip
   m_EditorClassIdentifier: 
-  cardCode: SKIP
+  cardCode: Skip
   description: "K\u1EBFt th\xFAc l\u01B0\u1EE3t c\u1EE7a b\u1EA1n m\xE0 kh\xF4ng
     ph\u1EA3i b\u1ED1c b\xE0i"
   artworks:

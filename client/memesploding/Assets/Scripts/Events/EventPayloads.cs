@@ -17,6 +17,26 @@ namespace Events
         public string PlayerID { get; }
     }
 
+    public class TurnStartEventPayload : BaseEventPayload
+    {
+        public TurnStartEventPayload(string userID)
+        {
+            UserID = userID;
+        }
+
+        public string UserID { get; }
+    }
+
+    public class TurnEndEventPayload : BaseEventPayload
+    {
+        public TurnEndEventPayload(string userID)
+        {
+            UserID = userID;
+        }
+
+        public string UserID { get; }
+    }
+
     public class WsConnectedEventPayload : BaseEventPayload
     {
         public WsConnectedEventPayload(WsConnectedDto data)
