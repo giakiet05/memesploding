@@ -1,8 +1,8 @@
-using Gameplay.Card;
 using System.Collections.Generic;
+using Gameplay.Card;
 using UnityEngine;
 
-namespace UI
+namespace UI.Gameplay
 {
     public class CardDisplayer : MonoBehaviour
     {

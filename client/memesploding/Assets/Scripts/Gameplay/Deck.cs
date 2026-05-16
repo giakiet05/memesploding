@@ -3,6 +3,7 @@ using Managers;
 using System;
 using Events.GameEvents;
 using UI;
+using UI.Gameplay;
 using UnityEngine;
 using EventType = Events.EventType;
 

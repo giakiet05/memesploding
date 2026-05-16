@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.Gameplay
 {
     [RequireComponent(typeof(Image))]
     public class GlowImage : MonoBehaviour

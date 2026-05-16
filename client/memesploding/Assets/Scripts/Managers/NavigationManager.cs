@@ -3,9 +3,9 @@ using UnityEngine.SceneManagement;
 
 namespace Managers
 {
-    public class MenuManager : MonoBehaviour
+    public class NavigationManager : MonoBehaviour
     {
-        public static MenuManager Instance;
+        public static NavigationManager Instance;
 
         private void Awake()
         {

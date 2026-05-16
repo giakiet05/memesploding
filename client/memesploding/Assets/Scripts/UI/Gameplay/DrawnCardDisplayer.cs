@@ -2,7 +2,7 @@
 using Managers;
 using UnityEngine;
 
-namespace UI
+namespace UI.Gameplay
 {
     public class DrawnCardDisplayer : MonoBehaviour
     { 

@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;
 
-namespace UI
+namespace UI.Gameplay
 {
     public class MainUserProfile : MonoBehaviour
     {

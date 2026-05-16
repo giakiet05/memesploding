@@ -1,16 +1,16 @@
+using System.Collections;
 using Events;
 using Events.GameEvents;
 using Gameplay.Card;
 using Managers;
 using Network.Websocket;
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;
 using Random = UnityEngine.Random;
 
-namespace UI
+namespace UI.Gameplay
 {
     public class OpponentProfile : MonoBehaviour
     {
