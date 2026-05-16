@@ -2,7 +2,9 @@ using Events;
 using Events.GameEvents;
 using Gameplay;
 using Models;
+using Network.Websocket;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -38,6 +40,7 @@ namespace Managers
             EventBus.Subscribe<WsStateSnapshotEventPayload>(EventType.WsStateSnapshot, OnWsStateSnapshot);
             EventBus.Subscribe<WsErrorEventPayload>(EventType.WsError, OnWsError);
             EventBus.Subscribe<WsStatusChangedEventPayload>(EventType.WsStatusChanged, OnWsStatusChanged);
+       
         }
 
         private void OnDestroy()
@@ -140,6 +143,11 @@ namespace Managers
         public void ChooseBombInsertPosition(int position)
         {
             NetworkManager.Instance.SendChooseBombInsertPositionCommand(position);
+        }
+
+        public List<WsPlayerPublicStateDto> GetAlivePlayers()
+        {
+            return _session?.GameState?.players?.Where(p => p.lifeState == "Alive" && p.userId != Player.ID).ToList();
         }
        
     }

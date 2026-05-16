@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Events;
 using Events.GameEvents;
@@ -36,6 +37,8 @@ namespace UI.Gameplay
         [SerializeField] private GlowImage glowImage;
 
         #endregion
+
+        public event Action<string> OnProfileClickedEvent;
 
         //TODO: Assign play area for opponent to play card in
         private RectTransform playArea;
@@ -146,6 +149,19 @@ namespace UI.Gameplay
             float y = Random.Range(-height * 0.5f, height * 0.5f);
 
             return new Vector2(x, y);
+        }
+        public void SetArrowActive(bool active)
+        {
+            selectArrow.gameObject.SetActive(active);
+        }
+        public void OnProfileClicked()
+        {
+            
+            if (selectArrow.gameObject.activeSelf)
+            {
+                OnProfileClickedEvent?.Invoke(_userID);
+                Debug.Log($"Profile clicked: {_userID}");
+            }
         }
     }
 }

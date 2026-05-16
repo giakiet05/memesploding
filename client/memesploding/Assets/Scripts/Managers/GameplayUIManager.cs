@@ -4,16 +4,18 @@ using Network.Websocket;
 using System;
 using System.Collections.Generic;
 using Events.GameEvents;
-using UI;
+using UI;  
+using UI.Gameplay;
+  
 using UnityEngine;
 using EventType = Events.EventType;
-using UI.Gameplay;
 
 namespace Managers
 {
     public class GameplayUIManager : MonoBehaviour
     {
         public static GameplayUIManager Instance;
+        public static event Action<string> OnOpponentProfileSelected;   
 
         private void Awake()
         {
@@ -71,7 +73,7 @@ namespace Managers
         private void Start()
         {
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
-
+            
         }
 
         private void OnDestroy()
@@ -96,12 +98,8 @@ namespace Managers
             switch (obj.PlayedCard.Data.cardCode)
             {
                 case "Defuse":
-             
-                    break;
 
-                case "ExplodingKitten":
-                // 
-                    break;
+               // case "ExplodingKitten":
 
                 case "Shuffle":
 
@@ -111,19 +109,33 @@ namespace Managers
                
                 case "Attack":               
 
-                case "Favor":
-
                 case "Nope":
-                GameManager.Instance.PlayCard(
-                    cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
-                break;
+                    GameManager.Instance.PlayCard(
+                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
+                    break;
 
+                case "Favor":
+                    string targetUserId = OpenTargetUserSelector(GameManager.Instance.GetAlivePlayers());
+                    GameManager.Instance.PlayCard(
+                        targetUserId: targetUserId,
+                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
+                    break;
                 default:
                     Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
                     break;
             }
         }
-
+        public void HandleProfileClicked(string userID)
+        {
+            Debug.Log($"Profile clicked: {userID}");
+            OnOpponentProfileSelected?.Invoke(userID);
+        }
+        public string OpenTargetUserSelector(List<WsPlayerPublicStateDto> targetUsers)
+        {
+            //
+            //TODO: Open a UI to let player select target user, then return the selected user's ID
+            return null;
+        }
         public void OpenBombReinsertWindow()
         {
             int drawPileCount = GameManager.Instance.GetDrawPileCount();
@@ -133,6 +145,7 @@ namespace Managers
             //Sau khi chọn vị trí, gọi API để đặt bomb vào vị trí đã chọn
             GameManager.Instance.ChooseBombInsertPosition(selectedPosition); 
         }
+        
         //Draw Card
         public void DisplayDrawnCard()
         {
@@ -180,6 +193,7 @@ namespace Managers
                 var ui = Instantiate(opponentProfilePrefab, playingArea.transform);
                 //TODO: pass in user profile
                 ui.Init(opponent, null);
+                ui.OnProfileClickedEvent += HandleProfileClicked;
 
                 rects.Add(ui.GetComponent<RectTransform>());
             }
