@@ -12,6 +12,8 @@ namespace Gameplay
 {
     public class HandLayout : MonoBehaviour
     {
+        private const int MaxSelectedCards = 5;
+
         public float baseSpacing = 120f;
         public float minSpacing = 60f;
         public float selectedYOffset = 80f;
@@ -31,6 +33,9 @@ namespace Gameplay
         [SerializeField] private float scrollToCardDuration = 0.25f;
         [SerializeField] private float moveToBoardDuration = 0.35f;
         [SerializeField, Min(0f)] private float effectPauseDuration = 0.5f;
+        [SerializeField, Min(0f)] private float invalidSelectionShakeDuration = 0.25f;
+        [SerializeField, Min(0f)] private float invalidSelectionShakeDistance = 18f;
+        [SerializeField, Min(1)] private int invalidSelectionShakeCycles = 4;
 
         private readonly List<BaseCard> _slots = new();
         private readonly List<BaseCard> _targetOrder = new();
@@ -281,6 +286,11 @@ namespace Gameplay
             return selectedCards;
         }
 
+        public bool CanSelectMoreCards()
+        {
+            return GetSelectedPlayableCards().Count < MaxSelectedCards;
+        }
+
         public void NotifyCardSelectionChanged()
         {
             RefreshRenderOrder();
@@ -309,33 +319,213 @@ namespace Gameplay
             if (selectedCards.Count == 0)
                 yield break;
 
+            if (!IsValidPlaySelection(selectedCards))
+            {
+                _isPlayingSelectedCards = true;
+                yield return ShakeAndClearSelection(selectedCards);
+                _isPlayingSelectedCards = false;
+                yield break;
+            }
+
             _isPlayingSelectedCards = true;
+
+            if (selectedCards.Count > 1)
+            {
+                yield return PlayComboCards(selectedCards);
+            }
+            else
+            {
+                yield return PlaySingleCard(selectedCards[0]);
+            }
+
+            UpdateVisual();
+            _isPlayingSelectedCards = false;
+        }
+
+        private bool IsValidPlaySelection(List<PlayableCard> selectedCards)
+        {
+            if (selectedCards == null || selectedCards.Count == 0)
+                return false;
+
+            if (selectedCards.Count == 1)
+                return true;
+
+            if (IsCompleteCombo(selectedCards))
+                return true;
+
+            Debug.LogWarning("Selected cards are not a valid combo. Play one card, 2 matching cards, 3 matching cards, or 5 different cards.", this);
+            return false;
+        }
+
+        private bool IsCompleteCombo(List<PlayableCard> cards)
+        {
+            int count = cards.Count;
+
+            if ((count == 2 || count == 3) && HaveSameCardCode(cards))
+                return true;
+
+            return count == 5 && HaveDifferentCardCodes(cards);
+        }
+
+        private bool HaveSameCardCode(List<PlayableCard> cards)
+        {
+            string cardCode = GetCardCode(cards[0]);
+
+            if (string.IsNullOrEmpty(cardCode))
+                return false;
+
+            for (int i = 1; i < cards.Count; i++)
+            {
+                if (GetCardCode(cards[i]) != cardCode)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool HaveDifferentCardCodes(List<PlayableCard> cards)
+        {
+            HashSet<string> cardCodes = new();
+
+            foreach (PlayableCard card in cards)
+            {
+                string cardCode = GetCardCode(card);
+
+                if (string.IsNullOrEmpty(cardCode))
+                    return false;
+
+                if (!cardCodes.Add(cardCode))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private string GetCardCode(PlayableCard card)
+        {
+            return card != null && card.Data != null ? card.Data.cardCode : null;
+        }
+
+        private IEnumerator ShakeAndClearSelection(List<PlayableCard> selectedCards)
+        {
+            if (selectedCards == null || selectedCards.Count == 0)
+                yield break;
+
+            Dictionary<PlayableCard, Vector2> originalPositions = new();
 
             foreach (PlayableCard card in selectedCards)
             {
                 if (card == null)
                     continue;
 
-                yield return ScrollCardToCenter(card);
+                originalPositions[card] = card.RectTransform.anchoredPosition;
+            }
+
+            float duration = GetScaledDuration(invalidSelectionShakeDuration);
+
+            if (duration > 0f && invalidSelectionShakeDistance > 0f)
+            {
+                float time = 0f;
+                while (time < duration)
+                {
+                    float t = time / duration;
+                    float offset = Mathf.Sin(t * Mathf.PI * 2f * invalidSelectionShakeCycles) * invalidSelectionShakeDistance;
+
+                    foreach (var pair in originalPositions)
+                    {
+                        if (pair.Key != null)
+                            pair.Key.RectTransform.anchoredPosition = pair.Value + new Vector2(offset, 0f);
+                    }
+
+                    time += Time.deltaTime;
+                    yield return null;
+                }
+            }
+
+            foreach (var pair in originalPositions)
+            {
+                if (pair.Key == null)
+                    continue;
+
+                pair.Key.RectTransform.anchoredPosition = pair.Value;
+                pair.Key.SetSelectedForPlay(false);
+            }
+        }
+
+        private IEnumerator PlaySingleCard(PlayableCard card)
+        {
+            if (card == null)
+                yield break;
+
+            yield return PlayCard(card);
+        }
+
+        private IEnumerator PlayComboCards(List<PlayableCard> cards)
+        {
+            if (cards == null || cards.Count == 0)
+                yield break;
+
+            yield return ScrollCardsToCenter(cards);
+
+            foreach (PlayableCard card in cards)
+            {
+                if (card == null)
+                    continue;
 
                 DetachCard(card);
                 card.DisableDrag();
+            }
+
+            List<Coroutine> playAnimations = new();
+
+            foreach (PlayableCard card in cards)
+            {
+                if (card == null)
+                    continue;
 
                 Vector2 boardPosition = boardArea.GetRandomCardPosition();
-                yield return card.PlayToBoard(
+                playAnimations.Add(StartCoroutine(card.PlayToBoard(
                     boardArea.PlayableArea,
                     boardPosition,
-                    GetScaledDuration(moveToBoardDuration));
+                    GetScaledDuration(moveToBoardDuration))));
+            }
+
+            foreach (Coroutine playAnimation in playAnimations)
+            {
+                yield return playAnimation;
+            }
+
+            foreach (PlayableCard card in cards)
+            {
+                if (card == null)
+                    continue;
 
                 CardPlayedEventPayload payload = new CardPlayedEventPayload(card, GameManager.Instance.Player.ID);
                 EventBus.Publish(EventType.CardPlayedEvent, payload);
-
-                if (effectPauseDuration > 0f)
-                    yield return new WaitForSeconds(GetScaledDuration(effectPauseDuration));
             }
 
-            UpdateVisual();
-            _isPlayingSelectedCards = false;
+            if (effectPauseDuration > 0f)
+                yield return new WaitForSeconds(GetScaledDuration(effectPauseDuration));
+        }
+
+        private IEnumerator PlayCard(PlayableCard card)
+        {
+            yield return ScrollCardToCenter(card);
+
+            DetachCard(card);
+            card.DisableDrag();
+
+            Vector2 boardPosition = boardArea.GetRandomCardPosition();
+            yield return card.PlayToBoard(
+                boardArea.PlayableArea,
+                boardPosition,
+                GetScaledDuration(moveToBoardDuration));
+
+            CardPlayedEventPayload payload = new CardPlayedEventPayload(card, GameManager.Instance.Player.ID);
+            EventBus.Publish(EventType.CardPlayedEvent, payload);
+
+            if (effectPauseDuration > 0f)
+                yield return new WaitForSeconds(GetScaledDuration(effectPauseDuration));
         }
 
         private IEnumerator ScrollCardToCenter(BaseCard card)
@@ -352,6 +542,59 @@ namespace Gameplay
             Vector3 cardViewportPosition = viewport.InverseTransformPoint(cardWorldCenter);
 
             float xOffsetFromCenter = cardViewportPosition.x - viewport.rect.center.x;
+            Vector2 startPosition = _rect.anchoredPosition;
+            Vector2 targetPosition = startPosition - new Vector2(xOffsetFromCenter, 0f);
+            targetPosition.x = ClampScrollContentX(targetPosition.x, viewport);
+
+            float duration = GetScaledDuration(scrollToCardDuration);
+
+            if (duration <= 0f)
+            {
+                _rect.anchoredPosition = targetPosition;
+                yield break;
+            }
+
+            float time = 0f;
+            while (time < duration)
+            {
+                float t = Mathf.SmoothStep(0f, 1f, time / duration);
+                _rect.anchoredPosition = Vector2.Lerp(startPosition, targetPosition, t);
+                time += Time.deltaTime;
+                yield return null;
+            }
+
+            _rect.anchoredPosition = targetPosition;
+        }
+
+        private IEnumerator ScrollCardsToCenter(List<PlayableCard> cards)
+        {
+            if (cards == null || cards.Count == 0 || _scrollRect == null || _scrollRect.viewport == null)
+                yield break;
+
+            Canvas.ForceUpdateCanvases();
+            _scrollRect.StopMovement();
+            _scrollRect.velocity = Vector2.zero;
+
+            RectTransform viewport = _scrollRect.viewport;
+            float totalX = 0f;
+            int validCount = 0;
+
+            foreach (PlayableCard card in cards)
+            {
+                if (card == null)
+                    continue;
+
+                Vector3 cardWorldCenter = card.RectTransform.TransformPoint(card.RectTransform.rect.center);
+                Vector3 cardViewportPosition = viewport.InverseTransformPoint(cardWorldCenter);
+                totalX += cardViewportPosition.x;
+                validCount++;
+            }
+
+            if (validCount == 0)
+                yield break;
+
+            float groupCenterX = totalX / validCount;
+            float xOffsetFromCenter = groupCenterX - viewport.rect.center.x;
             Vector2 startPosition = _rect.anchoredPosition;
             Vector2 targetPosition = startPosition - new Vector2(xOffsetFromCenter, 0f);
             targetPosition.x = ClampScrollContentX(targetPosition.x, viewport);
