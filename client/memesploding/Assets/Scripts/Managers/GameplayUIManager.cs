@@ -90,34 +90,32 @@ namespace Managers
         private void OnCardPlayed(CardPlayedEventPayload obj)
         {
             //Call this function to send command to server and actually play the card
-            //GameManager.Instance.PlayCard();
-
+            
             // Handle UI and effect for card
             switch (obj.PlayedCard.Data.cardCode)
             {
-                case "DEFUSE":
+                case "Defuse":
+             
                     break;
 
-                case "EXPLODING":
+                case "ExplodingKitten":
+                // 
                     break;
 
-                case "SHUFFLE":
-                    break;
+                case "Shuffle":
 
-                case "SKIP":
-                    break;
+                case "Skip":
 
-                case "SEE_THE_FUTURE":
-                    break;
+                case "SeeTheFuture":
+               
+                case "Attack":               
 
-                case "ATTACK":
-                    break;
+                case "Favor":
 
-                case "FAVOR":
-                    break;
-
-                case "NOPE":
-                    break;
+                case "Nope":
+                GameManager.Instance.PlayCard(
+                    cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
+                break;
 
                 default:
                     Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
@@ -125,6 +123,15 @@ namespace Managers
             }
         }
 
+        public void OpenBombReinsertWindow()
+        {
+            int drawPileCount = GameManager.Instance.GetDrawPileCount();
+            // TODO: Mở slider để chọn vị trí đặt bomb (từ 0 đến drawPileCount)
+            int selectedPosition = 0; // Lấy giá trị từ slider
+
+            //Sau khi chọn vị trí, gọi API để đặt bomb vào vị trí đã chọn
+            GameManager.Instance.ChooseBombInsertPosition(selectedPosition); 
+        }
         //Draw Card
         public void DisplayDrawnCard()
         {
