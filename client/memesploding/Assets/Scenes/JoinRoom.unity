@@ -1502,7 +1502,7 @@ MonoBehaviour:
   m_text: Enter room code
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
-  m_sharedMaterial: {fileID: -1371716421733087253, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+  m_sharedMaterial: {fileID: -6701659835728018022, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2200,7 +2200,7 @@ MonoBehaviour:
   m_text: Ask your friend for the room code
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
-  m_sharedMaterial: {fileID: 8393488311830011952, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
+  m_sharedMaterial: {fileID: 1742337123619735987, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2606,6 +2606,10 @@ PrefabInstance:
       value: -0.10000038
       objectReference: {fileID: 0}
     - target: {fileID: 3420972685974579658, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 3420972685974579658, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
       propertyPath: m_fontColor.b
       value: 0
       objectReference: {fileID: 0}
@@ -2618,8 +2622,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3420972685974579658, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -6701659835728018022, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 3420972685974579658, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
       propertyPath: m_fontColor32.rgba
       value: 4278190080
+      objectReference: {fileID: 0}
+    - target: {fileID: 3420972685974579658, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4349039563965961043, guid: 33e226c864e89dc4194ffdfb3af9b726, type: 3}
       propertyPath: m_Color.b
@@ -3249,6 +3261,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8994074034713356362, guid: 8e49faf92869945478bb5c97552b4ae1, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 8994074034713356362, guid: 8e49faf92869945478bb5c97552b4ae1, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -6701659835728018022, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 8994074034713356362, guid: 8e49faf92869945478bb5c97552b4ae1, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3634,6 +3658,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3225964166548271930, guid: c72298a259db00a4ab596f3852c05973, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
+    - target: {fileID: 3225964166548271930, guid: c72298a259db00a4ab596f3852c05973, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 1742337123619735987, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
+    - target: {fileID: 3225964166548271930, guid: c72298a259db00a4ab596f3852c05973, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5241333665038950055, guid: c72298a259db00a4ab596f3852c05973, type: 3}
       propertyPath: m_Name
       value: EnterCode Box
@@ -3733,6 +3769,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7257807037118130271, guid: e76652c8642d19e438103c40b4cc070c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8528006579076450187, guid: e76652c8642d19e438103c40b4cc070c, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 8528006579076450187, guid: e76652c8642d19e438103c40b4cc070c, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -6701659835728018022, guid: f2ed534482c9af2448b8058c7821dde6, type: 2}
+    - target: {fileID: 8528006579076450187, guid: e76652c8642d19e438103c40b4cc070c, type: 3}
+      propertyPath: m_hasFontAssetChanged
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
