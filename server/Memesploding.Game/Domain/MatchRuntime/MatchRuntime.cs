@@ -134,7 +134,7 @@ public class MatchRuntime
         State.TurnIndex = ((State.TurnIndex % State.Players.Count) + State.Players.Count) % State.Players.Count;
         State.TurnCounter++;
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("TurnStarted", $"{{\"turnIndex\":{State.TurnIndex}}}");
+        IncrementVersion("TurnStarted", CreateTurnTimingPayload(State.TurnIndex));
     }
 
     public Guid? GetCurrentTurnUserId()
@@ -531,7 +531,7 @@ public class MatchRuntime
         }
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("TurnContinues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
+        IncrementVersion("TurnContinues", CreateTurnContinuesPayload(userId, pending));
     }
 
     private void ConsumePendingDraw(Guid userId)
@@ -574,7 +574,7 @@ public class MatchRuntime
         }
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
-        IncrementVersion("TurnContinues", $"{{\"userId\":\"{userId}\",\"pendingDrawCount\":{pending}}}");
+        IncrementVersion("TurnContinues", CreateTurnContinuesPayload(userId, pending));
     }
 
     private bool IsBombResolutionPendingFor(Guid userId)
@@ -686,7 +686,30 @@ public class MatchRuntime
 
         State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
         State.TurnCounter++;
-        IncrementVersion("TurnChanged", $"{{\"turnIndex\":{State.TurnIndex}}}");
+        IncrementVersion("TurnChanged", CreateTurnTimingPayload(State.TurnIndex));
+    }
+
+    private string CreateTurnTimingPayload(int turnIndex)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            turnIndex,
+            turnEndsAt = State.TurnEndsAt,
+            turnTimerSeconds = State.TurnTimerSeconds,
+            serverTimeUtc = DateTime.UtcNow
+        });
+    }
+
+    private string CreateTurnContinuesPayload(Guid userId, int pendingDrawCount)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            userId,
+            pendingDrawCount,
+            turnEndsAt = State.TurnEndsAt,
+            turnTimerSeconds = State.TurnTimerSeconds,
+            serverTimeUtc = DateTime.UtcNow
+        });
     }
 
     private int GetNextAliveTurnIndex()

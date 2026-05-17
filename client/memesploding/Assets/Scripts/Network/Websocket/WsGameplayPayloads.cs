@@ -20,6 +20,9 @@ namespace Network.Websocket
     public class WsTurnIndexPayload : WsGameplayPayloadBase
     {
         public int turnIndex;
+        public DateTime? turnEndsAt;
+        public int turnTimerSeconds;
+        public DateTime serverTimeUtc;
     }
 
     [Serializable]
@@ -68,6 +71,9 @@ namespace Network.Websocket
     {
         public string userId;
         public int pendingDrawCount;
+        public DateTime? turnEndsAt;
+        public int turnTimerSeconds;
+        public DateTime serverTimeUtc;
     }
 
     [Serializable]

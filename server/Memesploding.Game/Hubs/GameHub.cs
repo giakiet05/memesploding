@@ -145,8 +145,11 @@ public class GameHub(
                 snapshot.RoomCode,
                 snapshot.StateVersion,
                 snapshot.Phase.ToString(),
+                snapshot.StartedAt,
+                DateTime.UtcNow,
                 snapshot.TurnIndex,
                 snapshot.TurnCounter,
+                snapshot.TurnTimerSeconds,
                 snapshot.TurnEndsAt,
                 snapshot.Players
                     .Select(player => new WsPlayerPublicStateDto(

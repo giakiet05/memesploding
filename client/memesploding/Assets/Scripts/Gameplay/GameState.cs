@@ -27,8 +27,11 @@ namespace Gameplay
         public string roomCode;
         public long stateVersion;
         public string phase;
+        public DateTime? startedAt;
+        public DateTime serverTimeUtc;
         public int turnIndex;
         public int turnCounter;
+        public int turnTimerSeconds;
         public DateTime? turnEndsAt;
         public List<WsPlayerPublicStateDto> players;
         public List<string> selfHand;
@@ -55,8 +58,11 @@ namespace Gameplay
             roomCode = state.roomCode;
             stateVersion = state.stateVersion;
             phase = state.phase;
+            startedAt = state.startedAt;
+            serverTimeUtc = state.serverTimeUtc;
             turnIndex = state.turnIndex;
             turnCounter = state.turnCounter;
+            turnTimerSeconds = state.turnTimerSeconds;
             turnEndsAt = state.turnEndsAt;
 
             // Replace collections (avoid shared references if mutation is possible)

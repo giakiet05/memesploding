@@ -3,6 +3,7 @@ using Events.GameEvents;
 using Gameplay;
 using Models;
 using Network.Websocket;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -139,6 +140,8 @@ namespace Managers
             //TODO: Using loading screen
         }
         public int GetDrawPileCount() => _session?.GameState?.drawPileCount ?? 0;
+        public TimeSpan GetCurrentTurnTimeLeft() => _session?.Clock.CurrentTurnTimeLeft ?? TimeSpan.Zero;
+        public TimeSpan GetOverallPlaytime() => _session?.Clock.OverallPlaytime ?? TimeSpan.Zero;
 
         public void ChooseBombInsertPosition(int position)
         {

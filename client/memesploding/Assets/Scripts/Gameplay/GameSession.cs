@@ -14,6 +14,7 @@ namespace Gameplay
         private readonly string _matchId;
         private readonly string _roomCode;
         public GameState GameState { get; private set; }
+        public GameClock Clock { get; } = new();
 
         public GameSession(string matchId, string roomCode)
         {
@@ -33,6 +34,7 @@ namespace Gameplay
 
             GameState ??= new GameState();
             GameState.UpdateState(snapshot);
+            Clock.ApplySnapshot(snapshot);
         }
 
         public void HandleGameplayEvent(WsGameplayEventPayload payload)
@@ -63,7 +65,7 @@ namespace Gameplay
                 case WsGameplayEventType.TurnChanged:
                     if (parsedPayload is not WsTurnIndexPayload turnPayload)
                         return;
-                    UpdateTurn(turnPayload.turnIndex);
+                    UpdateTurn(turnPayload.turnIndex, turnPayload.turnEndsAt, turnPayload.turnTimerSeconds, turnPayload.serverTimeUtc);
                     break;
 
                 case WsGameplayEventType.TurnContinues:
@@ -71,6 +73,7 @@ namespace Gameplay
                         return;
 
                     SetPlayerPendingDraw(turnContinues.userId, turnContinues.pendingDrawCount);
+                    UpdateTurnClock(turnContinues.turnEndsAt, turnContinues.turnTimerSeconds, turnContinues.serverTimeUtc);
                     //TODO: Display that a player turn is still continue
                     break;
 
@@ -291,15 +294,34 @@ namespace Gameplay
             }
         }
 
-        public void UpdateTurn(int newTurnIndex)
+        public void UpdateTurn(int newTurnIndex, DateTime? turnEndsAt, int turnTimerSeconds, DateTime serverTimeUtc)
         {
             GameState.turnIndex = newTurnIndex;
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
+            GameState.turnEndsAt = turnEndsAt;
+            if (turnTimerSeconds > 0)
+                GameState.turnTimerSeconds = turnTimerSeconds;
+
+            UpdateTurnClock(turnEndsAt, turnTimerSeconds, serverTimeUtc);
 
             //Set current active player
             var curUserID = GameState.players[newTurnIndex].userId;
 
             EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(curUserID));
+        }
+
+        private void UpdateTurnClock(DateTime? turnEndsAt, int turnTimerSeconds, DateTime serverTimeUtc)
+        {
+            if (turnEndsAt.HasValue)
+                GameState.turnEndsAt = turnEndsAt;
+
+            if (turnTimerSeconds > 0)
+                GameState.turnTimerSeconds = turnTimerSeconds;
+
+            if (serverTimeUtc != default)
+                GameState.serverTimeUtc = serverTimeUtc;
+
+            Clock.UpdateTurn(GameState.turnEndsAt, GameState.turnTimerSeconds, GameState.serverTimeUtc);
         }
 
         private void HandleDrawnCard(string cardCode)

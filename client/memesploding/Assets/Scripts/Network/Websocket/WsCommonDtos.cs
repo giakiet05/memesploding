@@ -45,8 +45,11 @@ namespace Network.Websocket
         public string roomCode;
         public long stateVersion;
         public string phase;
+        public DateTime? startedAt;
+        public DateTime serverTimeUtc;
         public int turnIndex;
         public int turnCounter;
+        public int turnTimerSeconds;
         public DateTime? turnEndsAt;
         public List<WsPlayerPublicStateDto> players;
         public List<string> selfHand;
