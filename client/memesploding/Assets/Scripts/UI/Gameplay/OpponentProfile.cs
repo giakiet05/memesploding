@@ -1,25 +1,47 @@
-using Events;
-using Managers;
+using System;
 using System.Collections;
+using Events;
 using Events.GameEvents;
 using Gameplay.Card;
+using Managers;
 using Network.Websocket;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using EventType = Events.EventType;
 using Random = UnityEngine.Random;
 
-namespace Gameplay
+namespace UI.Gameplay
 {
     public class OpponentProfile : MonoBehaviour
     {
-        [SerializeField] private RectTransform playArea;
+        #region References
+
+        [Header("Layout")]
         [SerializeField] private RectTransform spawnPoint;
 
+        [Header("UI Elements")]
+        [SerializeField] private Image selectArrow;
+        [SerializeField] private TextMeshProUGUI cardCounterText;
+        [SerializeField] private Image profileImage;
+
+        #endregion
+
+        #region Animation Settings
+
+        [Header("Card Animation")]
         [SerializeField] private float jumpHeight = 150f;
         [SerializeField] private float duration = 0.5f;
 
-        [SerializeField] private Image selectArrow;
+        [Header("Other Animation")]
+        [SerializeField] private GlowImage glowImage;
+
+        #endregion
+
+        public event Action<string> OnProfileClickedEvent;
+
+        //TODO: Assign play area for opponent to play card in
+        private RectTransform playArea;
 
         //For testing only
         [SerializeField] private bool autoPlay = false;
@@ -28,25 +50,22 @@ namespace Gameplay
 
         private bool _isActive;
 
-        public bool IsActive
+        public OpponentProfile(RectTransform playArea)
         {
-            get => _isActive;
-            set
-            {
-                if (_isActive == value)
-                    return;
-
-                _isActive = value;
-
-                OnActiveChanged();
-            }
+            this.playArea = playArea;
         }
 
         private void Start()
         {
+            EventBus.Subscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+
             if (autoPlay)
                 StartCoroutine(AutoPlay());
-            IsActive = false;
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Unsubscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
         }
 
         private IEnumerator AutoPlay()
@@ -58,9 +77,22 @@ namespace Gameplay
             }
         }
 
-        public void Init(WsPlayerPublicStateDto player)
+        public void Init(WsPlayerPublicStateDto player, Sprite profileSprite)
         {
             _userID = player.userId;
+            profileImage.sprite = profileSprite;
+        }
+
+        public void OnTurnStart(TurnStartEventPayload payload)
+        {
+            if (payload.UserID != _userID)
+            {
+                glowImage.gameObject.SetActive(false);
+                return;
+            }
+
+            //TODO: Add current turn effect for opponent
+            glowImage.gameObject.SetActive(true);
         }
 
         public void PlayCard(string cardName)
@@ -118,11 +150,18 @@ namespace Gameplay
 
             return new Vector2(x, y);
         }
-
-        private void OnActiveChanged()
+        public void SetArrowActive(bool active)
         {
-            //TODO: Add active player effect
-            Debug.Log($"Player {_userID} is active. Remember to add effect");
+            selectArrow.gameObject.SetActive(active);
+        }
+        public void OnProfileClicked()
+        {
+            
+            if (selectArrow.gameObject.activeSelf)
+            {
+                OnProfileClickedEvent?.Invoke(_userID);
+                Debug.Log($"Profile clicked: {_userID}");
+            }
         }
     }
 }

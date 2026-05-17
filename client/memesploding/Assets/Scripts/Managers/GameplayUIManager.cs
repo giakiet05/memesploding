@@ -4,15 +4,18 @@ using Network.Websocket;
 using System;
 using System.Collections.Generic;
 using Events.GameEvents;
-using UI;
+using UI;  
+using UI.Gameplay;
+  
 using UnityEngine;
 using EventType = Events.EventType;
 
 namespace Managers
 {
-    public class UIManager : MonoBehaviour
+    public class GameplayUIManager : MonoBehaviour
     {
-        public static UIManager Instance;
+        public static GameplayUIManager Instance;
+        public static event Action<string> OnOpponentProfileSelected;   
 
         private void Awake()
         {
@@ -70,7 +73,7 @@ namespace Managers
         private void Start()
         {
             EventBus.Subscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
-
+            
         }
 
         private void OnDestroy()
@@ -90,41 +93,59 @@ namespace Managers
         private void OnCardPlayed(CardPlayedEventPayload obj)
         {
             //Call this function to send command to server and actually play the card
-            //GameManager.Instance.PlayCard();
-
+            
             // Handle UI and effect for card
             switch (obj.PlayedCard.Data.cardCode)
             {
-                case "DEFUSE":
+                case "Defuse":
+
+               // case "ExplodingKitten":
+
+                case "Shuffle":
+
+                case "Skip":
+
+                case "SeeTheFuture":
+               
+                case "Attack":               
+
+                case "Nope":
+                    GameManager.Instance.PlayCard(
+                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
                     break;
 
-                case "EXPLODING":
+                case "Favor":
+                    string targetUserId = OpenTargetUserSelector(GameManager.Instance.GetAlivePlayers());
+                    GameManager.Instance.PlayCard(
+                        targetUserId: targetUserId,
+                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
                     break;
-
-                case "SHUFFLE":
-                    break;
-
-                case "SKIP":
-                    break;
-
-                case "SEE_THE_FUTURE":
-                    break;
-
-                case "ATTACK":
-                    break;
-
-                case "FAVOR":
-                    break;
-
-                case "NOPE":
-                    break;
-
                 default:
                     Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
                     break;
             }
         }
+        public void HandleProfileClicked(string userID)
+        {
+            Debug.Log($"Profile clicked: {userID}");
+            OnOpponentProfileSelected?.Invoke(userID);
+        }
+        public string OpenTargetUserSelector(List<WsPlayerPublicStateDto> targetUsers)
+        {
+            //
+            //TODO: Open a UI to let player select target user, then return the selected user's ID
+            return null;
+        }
+        public void OpenBombReinsertWindow()
+        {
+            int drawPileCount = GameManager.Instance.GetDrawPileCount();
+            // TODO: Mở slider để chọn vị trí đặt bomb (từ 0 đến drawPileCount)
+            int selectedPosition = 0; // Lấy giá trị từ slider
 
+            //Sau khi chọn vị trí, gọi API để đặt bomb vào vị trí đã chọn
+            GameManager.Instance.ChooseBombInsertPosition(selectedPosition); 
+        }
+        
         //Draw Card
         public void DisplayDrawnCard()
         {
@@ -150,25 +171,6 @@ namespace Managers
             ResetUI();
         }
 
-        public void SetActivePlayer(string userID)
-        {
-            if (GameManager.Instance.Player.ID == userID)
-            {
-                //TODO: Handle player turn
-                return;
-            }
-
-            foreach (var opponent in _opponentsUI.Values)
-            {
-                if (opponent.IsActive)
-                {
-                    opponent.IsActive = false;
-                    break;
-                }
-            }
-            _opponentsUI[userID].IsActive = true;
-        }
-
         //Opponent UI
         public void InitOpponentUI(List<WsPlayerPublicStateDto> players)
         {
@@ -189,7 +191,9 @@ namespace Managers
                 var opponent = players[index];
 
                 var ui = Instantiate(opponentProfilePrefab, playingArea.transform);
-                ui.Init(opponent);
+                //TODO: pass in user profile
+                ui.Init(opponent, null);
+                ui.OnProfileClickedEvent += HandleProfileClicked;
 
                 rects.Add(ui.GetComponent<RectTransform>());
             }

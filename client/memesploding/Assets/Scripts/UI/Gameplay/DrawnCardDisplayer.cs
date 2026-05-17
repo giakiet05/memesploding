@@ -2,7 +2,7 @@
 using Managers;
 using UnityEngine;
 
-namespace UI
+namespace UI.Gameplay
 {
     public class DrawnCardDisplayer : MonoBehaviour
     { 
@@ -15,7 +15,7 @@ namespace UI
 
         private void OnAnimationFinished(PlayerDrawCard obj)
         {
-            UIManager.Instance.ResetUI();
+            GameplayUIManager.Instance.ResetUI();
         }
 
         private void OnEnable()

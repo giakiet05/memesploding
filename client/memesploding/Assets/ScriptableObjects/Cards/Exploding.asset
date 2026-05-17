@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Exploding
   m_EditorClassIdentifier: 
-  cardCode: EXPLODING
+  cardCode: Exploding
   description: "N\u1EBFu tr\xEAn tay kh\xF4ng c\xF3 l\xE1 g\u1EE1 bom th\xEC b\u1EA1n
     s\u1EBD b\u1ECB n\u1ED5 v\xE0 lo\u1EA1i kh\u1ECFi cu\u1ED9c ch\u01A1i"
   artworks:

@@ -3,7 +3,9 @@ using Managers;
 using Network.Websocket;
 using System;
 using System.Linq;
+using Events.GameEvents;
 using UnityEngine;
+using EventType = Events.EventType;
 
 namespace Gameplay
 {
@@ -54,7 +56,7 @@ namespace Gameplay
             {
                 case WsGameplayEventType.MatchStarted:
                     GameState.phase = "Playing";
-                    // TODO: Start local match flow (timer/UI/input unlock) from MatchStarted.
+                    //TODO: Start local match flow (timer/UI/input unlock) from MatchStarted.
                     break;
 
                 case WsGameplayEventType.TurnStarted:
@@ -106,7 +108,7 @@ namespace Gameplay
                     else
                     {
                         //Make opponent play a card
-                        UIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
+                        GameplayUIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
                     }
                     break;
 
@@ -295,13 +297,15 @@ namespace Gameplay
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
 
             //Set current active player
-            UIManager.Instance.SetActivePlayer(GameState.players[newTurnIndex].userId);
+            var curUserID = GameState.players[newTurnIndex].userId;
+
+            EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(curUserID));
         }
 
         private void HandleDrawnCard(string cardCode)
         {
             //Displaying the card just drawn
-            UIManager.Instance.DisplayDrawnCard();
+            GameplayUIManager.Instance.DisplayDrawnCard();
 
             //Handle add card to hand
             CardManager.Instance.AddCardToHand(cardCode);

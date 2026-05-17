@@ -6,6 +6,24 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Welcome.unity
+    guid: ca73baacd57c2ab4da6c776528bf3994
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 8afefde6edb791849b24f147f79741c2
+  - enabled: 1
+    path: Assets/Scenes/CreateRoom.unity
+    guid: e78bd4b975582644aa0b5ae687b2a2ae
+  - enabled: 1
+    path: Assets/Scenes/JoinRoom.unity
+    guid: 6d9f240bda199a242a3603c758256e61
+  - enabled: 1
+    path: Assets/Scenes/Profile.unity
+    guid: d93654bf5517ceb46b9fcbb2a49f6915
+  - enabled: 1
+    path: Assets/Scenes/MatchHistory.unity
+    guid: 4ab436a479a1168469404d9697290f5d
+  - enabled: 1
     path: Assets/Scenes/Gameplay.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   m_configObjects:

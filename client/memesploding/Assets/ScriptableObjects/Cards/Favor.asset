@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Favor
   m_EditorClassIdentifier: 
-  cardCode: FAVOR
+  cardCode: Favor
   description: "Bu\u1ED9c ng\u01B0\u1EDDi ch\u01A1i ph\u1EA3i \u0111\u01B0a cho b\u1EA1n
     m\u1ED9t l\xE1 b\xE0i tr\xEAn tay c\u1EE7a h\u1ECD. H\u1ECD \u0111\u01B0\u1EE3c
     ch\u1ECDn s\u1EBD cho l\xE1 n\xE0o"
