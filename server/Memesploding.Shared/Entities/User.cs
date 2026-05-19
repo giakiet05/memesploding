@@ -12,6 +12,7 @@ public class User
     public AuthProvider Provider { get; set; }
     public string? ProviderId { get; set; }
     public string? Email { get; set; }      // Dùng cho Google login, null nếu là Guest
+    public string? PasswordHash { get; set; }
 
     // Thông tin hiển thị trong Game (gộp từ Profile)
     public string Username { get; set; } = string.Empty;    // Tên hiển thị trong Game

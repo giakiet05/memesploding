@@ -4,7 +4,8 @@ public enum AuthProvider
 {
     Guest,
     Google,
-    Facebook
+    Facebook,
+    Email
 }
 
 public enum FriendshipStatus 

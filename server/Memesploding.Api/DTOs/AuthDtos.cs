@@ -15,6 +15,31 @@ public record LoginGoogleRequestDto(
     string IdToken
 );
 
+public record RegisterEmailRequestDto(
+    string Email,
+    string Password
+);
+
+public record LoginEmailRequestDto(
+    string Email,
+    string Password
+);
+
+public record ForgotPasswordSendOtpRequestDto(
+    string Email
+);
+
+public record ForgotPasswordVerifyOtpRequestDto(
+    string Email,
+    string Otp
+);
+
+public record ForgotPasswordResetRequestDto(
+    string Email,
+    string Otp,
+    string NewPassword
+);
+
 public record RefreshTokenRequestDto(
     string RefreshToken
 );

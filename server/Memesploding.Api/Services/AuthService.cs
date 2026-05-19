@@ -6,6 +6,7 @@ namespace Memesploding.Api.Services;
 
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
 using Memesploding.Api.Data;
@@ -13,12 +14,16 @@ using Memesploding.Api.DTOs;
 using Memesploding.Api.Exceptions;
 using Memesploding.Shared.Entities;
 using Memesploding.Shared.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
 public class AuthService(ApplicationDbContext db, ITokenService tokenService, ICacheStore cache, IConfiguration config)
     : IAuthService
 {
+    private const int MinimumPasswordLength = 6;
+    private static readonly PasswordHasher<User> PasswordHasher = new();
+
     public async Task<AuthResponseDto> RegisterGuestAsync(RegisterGuestRequestDto request)
     {
         var existingUser = await db.Users
@@ -105,7 +110,20 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
                 AvatarUrl = googleAvatar
             };
             db.Users.Add(user);
-            await db.SaveChangesAsync();
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+            {
+                db.Entry(user).State = EntityState.Detached;
+                throw AppException.BadRequest(ErrorCode.ValidationFailed, "Email is already registered with another sign-in method");
+            }
+            catch (DbUpdateException ex) when (IsUsernameUniqueViolation(ex))
+            {
+                db.Entry(user).State = EntityState.Detached;
+                throw AppException.BadRequest(ErrorCode.ValidationFailed, "Unable to create Google account. Please retry.");
+            }
         }
 
         var accessToken = tokenService.GenerateAccessToken(user, user.Username);
@@ -113,6 +131,129 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
         await cache.SetAsync($"rt:{refreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
 
         return new AuthResponseDto(MeDto.FromEntity(user), accessToken, refreshToken, IsNewUser: isNewUser);
+    }
+
+    public async Task<AuthResponseDto> RegisterEmailAsync(RegisterEmailRequestDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        ValidatePassword(request.Password);
+
+        if (await db.Users.AnyAsync(u => u.Email == email))
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Email is already registered");
+        }
+
+        User? user = null;
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            user = new User
+            {
+                Provider = AuthProvider.Email,
+                ProviderId = email,
+                Email = email,
+                Username = await GenerateUniqueUsernameAsync("User", email),
+                AvatarUrl = "default-avatar.png",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            user.PasswordHash = PasswordHasher.HashPassword(user, request.Password);
+
+            db.Users.Add(user);
+            try
+            {
+                await db.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+            {
+                db.Entry(user).State = EntityState.Detached;
+                throw AppException.BadRequest(ErrorCode.ValidationFailed, "Email is already registered");
+            }
+            catch (DbUpdateException ex) when (IsUsernameUniqueViolation(ex))
+            {
+                db.Entry(user).State = EntityState.Detached;
+                user = null;
+            }
+        }
+
+        if (user == null)
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Unable to create account. Please retry.");
+        }
+
+        return await CreateAuthResponseAsync(user, isNewUser: true);
+    }
+
+    public async Task<AuthResponseDto> LoginEmailAsync(LoginEmailRequestDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email && u.Provider == AuthProvider.Email);
+        if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
+        {
+            throw AppException.Unauthorized("Invalid email or password");
+        }
+
+        var result = PasswordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (result == PasswordVerificationResult.Failed)
+        {
+            throw AppException.Unauthorized("Invalid email or password");
+        }
+
+        if (result == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.PasswordHash = PasswordHasher.HashPassword(user, request.Password);
+            user.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        return await CreateAuthResponseAsync(user, isNewUser: false);
+    }
+
+    public async Task SendForgotPasswordOtpAsync(ForgotPasswordSendOtpRequestDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        var userExists = await db.Users.AnyAsync(u => u.Email == email && u.Provider == AuthProvider.Email);
+        if (!userExists)
+        {
+            return;
+        }
+
+        var otp = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        await cache.SetAsync(GetForgotPasswordOtpKey(email), otp, TimeSpan.FromMinutes(10));
+        // TODO: Send OTP to the user's email address through an email provider.
+    }
+
+    public async Task VerifyForgotPasswordOtpAsync(ForgotPasswordVerifyOtpRequestDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        var otp = await cache.GetAsync<string>(GetForgotPasswordOtpKey(email));
+        if (string.IsNullOrWhiteSpace(otp) || otp != request.Otp.Trim())
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Invalid or expired OTP");
+        }
+    }
+
+    public async Task ResetForgotPasswordAsync(ForgotPasswordResetRequestDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        ValidatePassword(request.NewPassword);
+
+        var otp = await cache.GetAsync<string>(GetForgotPasswordOtpKey(email));
+        if (string.IsNullOrWhiteSpace(otp) || otp != request.Otp.Trim())
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "Invalid or expired OTP");
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email && u.Provider == AuthProvider.Email);
+        if (user == null)
+        {
+            throw AppException.NotFound("User not found");
+        }
+
+        user.PasswordHash = PasswordHasher.HashPassword(user, request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        await cache.RemoveAsync(GetForgotPasswordOtpKey(email));
     }
 
     public async Task<AuthResponseDto> RefreshAsync(RefreshTokenRequestDto request)
@@ -150,6 +291,34 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
             await cache.SetAsync($"bl:{accessToken[^20..]}", "revoked", remainingTtl.Value);
         }
     }
+
+    private async Task<AuthResponseDto> CreateAuthResponseAsync(User user, bool isNewUser)
+    {
+        var accessToken = tokenService.GenerateAccessToken(user, user.Username);
+        var refreshToken = tokenService.GenerateRefreshToken();
+        await cache.SetAsync($"rt:{refreshToken}", user.Id.ToString(), TimeSpan.FromDays(30));
+        return new AuthResponseDto(MeDto.FromEntity(user), accessToken, refreshToken, isNewUser);
+    }
+
+    private static string NormalizeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@') || !email.Contains('.'))
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, "A valid email is required");
+        }
+
+        return email.Trim().ToLowerInvariant();
+    }
+
+    private static void ValidatePassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password) || password.Length < MinimumPasswordLength)
+        {
+            throw AppException.BadRequest(ErrorCode.ValidationFailed, $"Password must be at least {MinimumPasswordLength} characters");
+        }
+    }
+
+    private static string GetForgotPasswordOtpKey(string email) => $"auth:forgot-password:{email}";
 
     private async Task<string> GenerateUniqueUsernameAsync(string prefix, string seed)
     {
@@ -189,5 +358,12 @@ public class AuthService(ApplicationDbContext db, ITokenService tokenService, IC
         return ex.InnerException is PostgresException pg
                && pg.SqlState == PostgresErrorCodes.UniqueViolation
                && pg.ConstraintName == "IX_users_Username";
+    }
+
+    private static bool IsEmailUniqueViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException pg
+               && pg.SqlState == PostgresErrorCodes.UniqueViolation
+               && pg.ConstraintName == "IX_users_Email";
     }
 }

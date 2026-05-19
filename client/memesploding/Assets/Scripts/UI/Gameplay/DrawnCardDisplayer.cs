@@ -1,5 +1,5 @@
 ﻿using Gameplay;
-using Managers;
+using Managers.UIManager;
 using UnityEngine;
 
 namespace UI.Gameplay

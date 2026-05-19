@@ -1,4 +1,4 @@
-﻿using API;
+﻿using Network.API;
 using UnityEngine;
 
 public static class Config

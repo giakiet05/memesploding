@@ -3804,7 +3804,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 302610822}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89e6f142b52f1944a8a4d002cec52d2e, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -4154,7 +4154,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 338683799}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b43f3376715855f4b91d92cb58f0b41b, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -4607,7 +4607,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 356912128}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0bf115d11b4244d4ebb02a572a2959ee, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -8842,13 +8842,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab7788797b11e2c4cbbd752ba6e3d25f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  quickMatchBackdrop: {fileID: 946470710}
-  settingPopupBackdrop: {fileID: 338683803}
-  playNowBackdrop: {fileID: 356912132}
-  roomInvitationBackdrop: {fileID: 1062464055}
-  leaderboardPopup: {fileID: 1811331664}
-  friendsPannel: {fileID: 995586037}
-  notificationPannel: {fileID: 302610827}
+  quickMatchBackdrop: {fileID: 0}
+  settingPopupBackdrop: {fileID: 0}
+  playNowBackdrop: {fileID: 0}
+  roomInvitationBackdrop: {fileID: 0}
+  leaderboardPopup: {fileID: 0}
+  friendsPannel: {fileID: 0}
+  notificationPannel: {fileID: 0}
 --- !u!4 &750088161
 Transform:
   m_ObjectHideFlags: 0
@@ -11598,7 +11598,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 946470706}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7dd035fb9e005bf41925503dc5d4e1fa, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -12442,7 +12442,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 995586032}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 808e6720ae26ada49b80b005b1275df4, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -13110,7 +13110,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1062464051}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fb19faed5acf7394bbb3847ba28e3101, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18
@@ -21647,7 +21647,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1811331660}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 97d80dd99a918de41b6c4351b4125446, type: 3}
+  m_Script: {fileID: 11500000, guid: dfc364bffd187174d8f3e1f7cdb60405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   animationDuration: 0.18

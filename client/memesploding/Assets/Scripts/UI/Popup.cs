@@ -1,9 +1,9 @@
 using System.Collections;
 using UnityEngine;
 
-namespace UI.MainMenu
+namespace UI
 {
-    public class MainMenuPopup : MonoBehaviour
+    public class Popup : MonoBehaviour
     {
         [Header("Animation")]
         [SerializeField, Min(0f)] private float animationDuration = 0.18f;

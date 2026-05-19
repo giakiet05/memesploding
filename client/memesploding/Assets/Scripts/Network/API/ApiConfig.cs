@@ -1,7 +1,6 @@
 ﻿using System;
-using UnityEngine;
 
-namespace API
+namespace Network.API
 {
     [Serializable]
     public class ApiConfig

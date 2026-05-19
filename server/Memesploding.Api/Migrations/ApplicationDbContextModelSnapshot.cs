@@ -239,6 +239,10 @@ namespace Memesploding.Api.Migrations
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasMaxLength(20)

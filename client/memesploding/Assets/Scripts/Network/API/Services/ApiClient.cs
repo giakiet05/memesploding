@@ -85,13 +85,43 @@ namespace Network.API.Services
 
         private ApiResponse<T> HandleResponse<T>(UnityWebRequest request)
         {
+            var responseText = request.downloadHandler?.text;
             if (request.result == UnityWebRequest.Result.Success)
             {
-                return JsonConvert.DeserializeObject<ApiResponse<T>>(request.downloadHandler.text);
+                var response = JsonConvert.DeserializeObject<ApiResponse<T>>(responseText);
+                if (response != null)
+                    response.success = true;
+
+                return response;
             }
 
-            Debug.LogError($"[API Error] {request.error} | Response: {request.downloadHandler.text}");
-            return null;
+            var message = TryReadErrorMessage(responseText);
+            Debug.LogError($"[API Error] {request.responseCode} {request.error} | {request.url} | Response: {responseText}");
+            return new ApiResponse<T>
+            {
+                success = false,
+                message = string.IsNullOrWhiteSpace(message) ? request.error : message,
+                data = default
+            };
+        }
+
+        private string TryReadErrorMessage(string responseText)
+        {
+            if (string.IsNullOrWhiteSpace(responseText))
+                return null;
+
+            try
+            {
+                var response = JsonConvert.DeserializeObject<ApiResponse<object>>(responseText);
+                if (!string.IsNullOrWhiteSpace(response?.message))
+                    return response.message;
+            }
+            catch
+            {
+                return responseText;
+            }
+
+            return responseText;
         }
     }
 }

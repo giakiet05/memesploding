@@ -1,14 +1,13 @@
 ﻿using System;
-using Events;
-using Network.Websocket;
 using System.Collections.Generic;
+using Events;
 using Events.GameEvents;
+using Network.Websocket;
 using UI.Gameplay;
-  
 using UnityEngine;
 using EventType = Events.EventType;
 
-namespace Managers
+namespace Managers.UIManager
 {
     public class GameplayUIManager : MonoBehaviour
     {

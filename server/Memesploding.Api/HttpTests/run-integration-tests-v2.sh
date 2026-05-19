@@ -189,8 +189,8 @@ test_endpoint "Bob View Alice Profile" "GET" "/users/$ALICE_USER_ID" "$BOB_TOKEN
 # 2.5 Search users
 test_endpoint "Alice Search Users" "GET" "/users?SearchQuery=alice&Pagination.Page=1&Pagination.PageSize=10" "$ALICE_TOKEN" > /dev/null
 
-# 2.6 View leaderboard (public)
-test_endpoint "View Leaderboard" "GET" "/users/leaderboard?Page=1&PageSize=20" "" > /dev/null
+# 2.6 View leaderboard
+test_endpoint "View Leaderboard" "GET" "/users/leaderboard?Page=1&PageSize=20" "$ALICE_TOKEN" > /dev/null
 
 ### ============================================
 ### PHASE 3: FRIENDSHIPS

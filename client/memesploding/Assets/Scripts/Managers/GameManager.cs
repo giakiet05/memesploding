@@ -6,6 +6,7 @@ using Network.Websocket;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Managers.UIManager;
 using UnityEngine;
 using EventType = Events.EventType;
 

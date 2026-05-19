@@ -47,6 +47,68 @@ public class AuthController : ControllerBase
         return Ok(new ApiResponse<AuthResponseDto>("Login successful", responseData));
     }
 
+    [HttpPost("email/register")]
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RegisterEmail([FromBody] RegisterEmailRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest("email and password are required");
+        }
+
+        var responseData = await _authService.RegisterEmailAsync(request);
+        return Ok(new ApiResponse<AuthResponseDto>("Registration successful", responseData));
+    }
+
+    [HttpPost("email/login")]
+    public async Task<ActionResult<ApiResponse<AuthResponseDto>>> LoginEmail([FromBody] LoginEmailRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest("email and password are required");
+        }
+
+        var responseData = await _authService.LoginEmailAsync(request);
+        return Ok(new ApiResponse<AuthResponseDto>("Login successful", responseData));
+    }
+
+    [HttpPost("forgot-password/send-otp")]
+    public async Task<ActionResult<ApiResponse<object?>>> SendForgotPasswordOtp([FromBody] ForgotPasswordSendOtpRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest("email is required");
+        }
+
+        await _authService.SendForgotPasswordOtpAsync(request);
+        return Ok(new ApiResponse<object?>("OTP sent", null));
+    }
+
+    [HttpPost("forgot-password/verify-otp")]
+    public async Task<ActionResult<ApiResponse<object?>>> VerifyForgotPasswordOtp([FromBody] ForgotPasswordVerifyOtpRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Otp))
+        {
+            return BadRequest("email and otp are required");
+        }
+
+        await _authService.VerifyForgotPasswordOtpAsync(request);
+        return Ok(new ApiResponse<object?>("OTP verified", null));
+    }
+
+    [HttpPost("forgot-password/reset")]
+    public async Task<ActionResult<ApiResponse<object?>>> ResetForgotPassword([FromBody] ForgotPasswordResetRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Otp) ||
+            string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest("email, otp and new password are required");
+        }
+
+        await _authService.ResetForgotPasswordAsync(request);
+        return Ok(new ApiResponse<object?>("Password reset successful", null));
+    }
+
     [HttpPost("refresh")]
     public async Task<ActionResult<ApiResponse<AuthResponseDto>>> RefreshToken([FromBody] RefreshTokenRequestDto request)
     {
