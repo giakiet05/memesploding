@@ -1012,6 +1012,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2879458698810459056}
+  - component: {fileID: 8009552673728699384}
   m_Layer: 5
   m_Name: MatchCard
   m_TagString: Untagged
@@ -1050,6 +1051,33 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1200, y: 2}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &8009552673728699384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5334979011781057833}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06b2f0845210ef8418252a830ceed6b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  badgeBackground: {fileID: 0}
+  badgeText: {fileID: 0}
+  titleText: {fileID: 0}
+  dateText: {fileID: 0}
+  periodText: {fileID: 0}
+  xpText: {fileID: 0}
+  scoreText: {fileID: 0}
+  playersTotalText: {fileID: 0}
+  playerGridContent: {fileID: 0}
+  winBadgeColor: {r: 0.2, g: 0.65, b: 0.34, a: 1}
+  lossBadgeColor: {r: 0.8, g: 0.27, b: 0.27, a: 1}
+  neutralBadgeColor: {r: 0.25, g: 0.35, b: 0.52, a: 1}
+  positiveTextColor: {r: 0.18, g: 0.6, b: 0.3, a: 1}
+  negativeTextColor: {r: 0.8, g: 0.27, b: 0.27, a: 1}
+  neutralTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &5496212351284716939
 GameObject:
   m_ObjectHideFlags: 0

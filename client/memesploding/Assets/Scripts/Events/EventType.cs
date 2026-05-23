@@ -15,6 +15,7 @@ namespace Events
         WsGameplayEvent,
         WsStateSnapshot,
         WsError,
-        WsStatusChanged
+        WsStatusChanged,
+        SceneChanged
     }
 }

@@ -46,7 +46,38 @@ namespace UI
             if (avatarImage == null || string.IsNullOrWhiteSpace(avatarUrl))
                 return;
 
+            if (TryApplyDataUrlAvatar(avatarUrl))
+                return;
+
             _avatarLoadRoutine = StartCoroutine(LoadAvatarRoutine(avatarUrl));
+        }
+
+        private bool TryApplyDataUrlAvatar(string avatarUrl)
+        {
+            if (string.IsNullOrWhiteSpace(avatarUrl) || !avatarUrl.StartsWith("data:image", System.StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var comma = avatarUrl.IndexOf(',');
+            if (comma < 0 || comma >= avatarUrl.Length - 1)
+                return false;
+
+            try
+            {
+                var base64 = avatarUrl.Substring(comma + 1);
+                var bytes = System.Convert.FromBase64String(base64);
+
+                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!texture.LoadImage(bytes))
+                    return false;
+
+                avatarImage.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+                avatarImage.gameObject.SetActive(true);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private IEnumerator LoadAvatarRoutine(string avatarUrl)

@@ -1,5 +1,8 @@
+using Events;
+using Events.GameEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using EventType = Events.EventType;
 
 namespace Managers
 {
@@ -23,7 +26,9 @@ namespace Managers
                 return;
             }
 
+            var fromScene = SceneManager.GetActiveScene().name;
             SceneManager.LoadScene(sceneName);
+            EventBus.Publish(EventType.SceneChanged, new SceneChangedEventPayload(fromScene, sceneName));
         }
 
         public void LoadWelcome()
@@ -44,6 +49,11 @@ namespace Managers
         public void LoadJoinRoom()
         {
             LoadScene("JoinRoom");
+        }
+
+        public void LoadWaitRoom()
+        {
+            LoadScene("WaitRoom");
         }
 
         public void LoadProfile()

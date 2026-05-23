@@ -102,4 +102,16 @@ namespace Events
 
         public WebsocketConnectionStatus Status { get; }
     }
+
+    public class SceneChangedEventPayload : BaseEventPayload
+    {
+        public SceneChangedEventPayload(string fromScene, string toScene)
+        {
+            FromScene = fromScene;
+            ToScene = toScene;
+        }
+
+        public string FromScene { get; }
+        public string ToScene { get; }
+    }
 }
