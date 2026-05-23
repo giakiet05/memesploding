@@ -1,7 +1,8 @@
-﻿using Events;
+using Events;
 using Network.Websocket;
 using System;
 using System.Collections.Generic;
+using UI;
 
 namespace Managers
 {
@@ -21,6 +22,11 @@ namespace Managers
 
         private GameWebsocketClient WebsocketClient { get; set; }
 
+        private NetworkManager()
+        {
+            WebsocketClient = GameWebsocketClient.Instance;
+        }
+
         public async void ConnectWs(string wsUrl, string wsAccessToken, string roomCode)
         {
             try
@@ -29,7 +35,7 @@ namespace Managers
             }
             catch (Exception e)
             {
-                throw; // TODO handle exception
+                UniversalPopup.ShowError(string.IsNullOrWhiteSpace(e.Message) ? "Unable to connect to the game server." : e.Message);
             }
         }
 
@@ -56,6 +62,7 @@ namespace Managers
                 cardData
             );
         }
+
         public void SendDrawCardCommand()
         {
             WebsocketClient.SendCommandAsync(WsClientCommandType.DrawCard, null);

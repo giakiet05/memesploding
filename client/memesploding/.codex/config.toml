@@ -4,3 +4,24 @@ enabled = true
 startup_timeout_sec = 30
 tool_timeout_sec = 300
 url = "https://ai-game.dev/mcp"
+
+[mcp_servers.ai-game-developer.tools.scene-open]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.script-execute]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.assets-refresh]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.gameobject-destroy]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.scene-save]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.gameobject-component-add]
+approval_mode = "approve"
+
+[mcp_servers.ai-game-developer.tools.gameobject-component-modify]
+approval_mode = "approve"

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Events;
 using Events.GameEvents;
+using Managers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -57,7 +58,15 @@ namespace Network.Websocket
         private ClientWebSocket _socket;
         private CancellationTokenSource _receiveCts;
         private Task _receiveTask;
+        private CancellationTokenSource _reconnectCts;
+        private Task _reconnectTask;
         private EventQueueDispatcher _eventDispatcher;
+        private bool _disconnectRequested;
+        private bool _isReconnecting;
+        private int _reconnectAttempt;
+
+        private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromSeconds(10);
 
         public WebsocketConnectionStatus Status { get; private set; } = WebsocketConnectionStatus.Disconnected;
         public WebsocketSessionInfo Session { get; } = new WebsocketSessionInfo();
@@ -87,6 +96,9 @@ namespace Network.Websocket
             if (Status == WebsocketConnectionStatus.Connected || Status == WebsocketConnectionStatus.Connecting)
                 return;
 
+            _disconnectRequested = false;
+            CancelReconnectLoop();
+            CleanupSocket();
             SetStatus(WebsocketConnectionStatus.Connecting);
             Session.wsUrl = wsUrl;
             Session.wsAccessToken = wsAccessToken;
@@ -106,19 +118,31 @@ namespace Network.Websocket
                 _receiveCts = new CancellationTokenSource();
                 _receiveTask = Task.Run(() => ReceiveLoopAsync(_receiveCts.Token));
                 Session.connectedAtUtc = DateTime.UtcNow;
+                _reconnectAttempt = 0;
                 SetStatus(WebsocketConnectionStatus.Connected);
+
+                if (_isReconnecting && !string.IsNullOrWhiteSpace(Session.matchId))
+                {
+                    await SendReconnectMatchAsync(cancellationToken);
+                    await SendRequestStateSnapshotAsync(cancellationToken);
+                }
+
+                _isReconnecting = false;
             }
             catch (Exception ex)
             {
                 Session.lastError = ex.Message;
                 Session.isHealthy = false;
                 SetStatus(WebsocketConnectionStatus.Faulted);
+                ScheduleReconnect();
                 throw;
             }
         }
 
         public async Task DisconnectAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            _disconnectRequested = true;
+            CancelReconnectLoop();
             _receiveCts?.Cancel();
 
             if (_socket != null && (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived))
@@ -132,7 +156,25 @@ namespace Network.Websocket
             }
 
             Session.isHealthy = false;
+            CleanupSocket();
             SetStatus(WebsocketConnectionStatus.Disconnected);
+        }
+
+        public void ResetSession()
+        {
+            _disconnectRequested = false;
+            _isReconnecting = false;
+            _reconnectAttempt = 0;
+            Session.wsUrl = null;
+            Session.wsAccessToken = null;
+            Session.roomCode = null;
+            Session.matchId = null;
+            Session.stateVersion = 0;
+            Session.connectedAtUtc = null;
+            Session.lastMessageAtUtc = null;
+            Session.lastHealthCheckAtUtc = null;
+            Session.isHealthy = false;
+            Session.lastError = null;
         }
 
         private async Task SendCommandAsync(
@@ -292,6 +334,7 @@ namespace Network.Websocket
                     {
                         Session.isHealthy = false;
                         SetStatus(WebsocketConnectionStatus.Disconnected);
+                        ScheduleReconnect();
                         return;
                     }
 
@@ -320,6 +363,7 @@ namespace Network.Websocket
                 Session.lastError = ex.Message;
                 Session.isHealthy = false;
                 SetStatus(WebsocketConnectionStatus.Faulted);
+                ScheduleReconnect();
                 Debug.LogError($"[WS] Receive loop error: {ex.Message}");
             }
         }
@@ -480,6 +524,136 @@ namespace Network.Websocket
             OnStatusChanged?.Invoke(status);
             PublishToEventBus(() =>
                 EventBus.Publish(EventType.WsStatusChanged, new WsStatusChangedEventPayload(status)));
+        }
+
+        private void ScheduleReconnect()
+        {
+            if (_disconnectRequested || !CanReconnect())
+                return;
+
+            if (HasReconnectWindowExpired())
+            {
+                HandleReconnectWindowExpired();
+                return;
+            }
+
+            if (_reconnectTask != null && !_reconnectTask.IsCompleted)
+                return;
+
+            CancelReconnectLoop();
+            _reconnectCts = new CancellationTokenSource();
+            _reconnectTask = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+        }
+
+        private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
+        {
+            _isReconnecting = true;
+
+            while (!cancellationToken.IsCancellationRequested && !_disconnectRequested && CanReconnect())
+            {
+                if (HasReconnectWindowExpired())
+                {
+                    HandleReconnectWindowExpired();
+                    return;
+                }
+
+                _reconnectAttempt++;
+                var delay = GetReconnectDelay(_reconnectAttempt);
+
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                    await ConnectAsync(Session.wsUrl, Session.wsAccessToken, Session.roomCode, cancellationToken);
+
+                    if (Status == WebsocketConnectionStatus.Connected)
+                        return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Session.lastError = ex.Message;
+                    Session.isHealthy = false;
+                    SetStatus(WebsocketConnectionStatus.Faulted);
+
+                    if (HasReconnectWindowExpired())
+                    {
+                        HandleReconnectWindowExpired();
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void CancelReconnectLoop()
+        {
+            if (_reconnectCts != null)
+            {
+                _reconnectCts.Cancel();
+                _reconnectCts.Dispose();
+                _reconnectCts = null;
+            }
+
+            _reconnectTask = null;
+            _reconnectAttempt = 0;
+        }
+
+        private bool CanReconnect()
+        {
+            return !string.IsNullOrWhiteSpace(Session.wsUrl) &&
+                   !string.IsNullOrWhiteSpace(Session.wsAccessToken);
+        }
+
+        private bool HasReconnectWindowExpired()
+        {
+            return GameManager.Instance != null && GameManager.Instance.HasReconnectWindowExpired();
+        }
+
+        private void HandleReconnectWindowExpired()
+        {
+            _disconnectRequested = true;
+            Session.isHealthy = false;
+            CancelReconnectLoop();
+            CleanupSocket();
+            SetStatus(WebsocketConnectionStatus.Disconnected);
+            PublishToEventBus(() =>
+            {
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.HandleReconnectWindowExpired();
+                    return;
+                }
+
+                if (NavigationManager.Instance != null)
+                {
+                    NavigationManager.Instance.LoadWelcome();
+                    return;
+                }
+
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Welcome");
+            });
+        }
+
+        private void CleanupSocket()
+        {
+            _receiveCts?.Dispose();
+            _receiveCts = null;
+
+            if (_socket != null)
+            {
+                _socket.Dispose();
+                _socket = null;
+            }
+
+            _receiveTask = null;
+        }
+
+        private static TimeSpan GetReconnectDelay(int attempt)
+        {
+            var seconds = Math.Min(InitialReconnectDelay.TotalSeconds * Math.Pow(2, Math.Max(0, attempt - 1)), MaxReconnectDelay.TotalSeconds);
+            return TimeSpan.FromSeconds(seconds);
         }
 
         private void EnsureEventDispatcher()
