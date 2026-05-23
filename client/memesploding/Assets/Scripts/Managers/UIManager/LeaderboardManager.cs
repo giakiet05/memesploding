@@ -276,7 +276,7 @@ namespace Managers.UIManager
             if (popup != null)
                 return popup.transform;
 
-            var canvas = FindObjectOfType<Canvas>();
+            var canvas = FindFirstObjectByType<Canvas>();
             if (canvas != null)
             {
                 var t = canvas.transform.Find("Leaderboard Popup");

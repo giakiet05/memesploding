@@ -4,7 +4,6 @@ enabled = true
 startup_timeout_sec = 30
 tool_timeout_sec = 300
 url = "https://ai-game.dev/mcp"
-
 [mcp_servers.ai-game-developer.tools.scene-open]
 approval_mode = "approve"
 

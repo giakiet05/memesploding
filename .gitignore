@@ -1,58 +1,58 @@
-# IDEs & Tools
+# IDEs and editor state
 .obsidian/
 .idea/
 .vscode/
+.codex/
 .gemini/
 .claude/
+.vs/
 *.user
 *.userosscache
+*.userprefs
 *.sln.docuser
+*.DotSettings.user
+*.ntvs*
+*.njsproj
+*.swp
+*.sw?
+*~
 
-# .NET / C# (Bản chuẩn 2026)
+# Build outputs and local caches
 [Bb]in/
 [Oo]bj/
 out/
 .dotnet/
 .library-cache/
-.vs/
-UserSecrets/
-appsettings.Development.json
-appsettings.Local.json
-*.db
-*.db-journal
-
-# Linux/Mac/Windows rác
-.DS_Store
-Thumbs.db
-*.swp
-*~
-.nfs*
-
-# Secrets & Environments
-.env
-.env.*
-!.env.example    # Cho phép push file mẫu để người khác biết cần config gì
-secrets.json
-*.pem
-*.key
-
-
-# Google OAuth Client Secrets
-Secret/
-**/client_secret_*.json
-**/HttpTests/*.html
-
-
-.log
-.gitnexus
-output
-node_modules
 [Ll]ibrary/
 [Tt]emp/
 [Ll]ogs/
 UserSettings/
-.vs/
+output/
+dist/
+dist-ssr/
+node_modules/
+.gitnexus/
+logs/
 
-*.csproj
-*.sln
-*.slnx
+# Local config and secrets
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.db
+*.db-journal
+*.pem
+*.key
+
+# OS noise
+.DS_Store
+Thumbs.db
+.nfs*
+
+# Product-specific generated files
+Secret/
+**/client_secret_*.json
+**/HttpTests/*.html
+*.log

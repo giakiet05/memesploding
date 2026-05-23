@@ -88,6 +88,9 @@ namespace Managers.UIManager
         public void OpenLeaderboard()
         {
             ShowGroup(leaderboardPopup);
+            var controller = FindFirstObjectByType<LeaderboardPopupController>(FindObjectsInactive.Include);
+            if (controller != null)
+                controller.Open();
         }
 
         private void ShowGroup(params Popup[] popups)

@@ -1,5 +1,6 @@
 using Events;
 using Events.GameEvents;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using EventType = Events.EventType;
@@ -8,7 +9,14 @@ namespace Managers
 {
     public class NavigationManager : MonoBehaviour
     {
+        private const string LoadingSceneName = "Loading";
+        private static readonly HashSet<string> ScenesUsingLoading = new HashSet<string>
+        {
+            "Gameplay"
+        };
+
         public static NavigationManager Instance;
+        public static string PendingSceneName { get; private set; }
 
         private void Awake()
         {
@@ -20,6 +28,23 @@ namespace Managers
 
         public void LoadScene(string sceneName)
         {
+            LoadSceneInternal(sceneName, false);
+        }
+
+        public void LoadSceneWithLoading(string sceneName)
+        {
+            LoadSceneInternal(sceneName, true);
+        }
+
+        public static string ConsumePendingSceneName()
+        {
+            var pendingSceneName = PendingSceneName;
+            PendingSceneName = string.Empty;
+            return pendingSceneName;
+        }
+
+        private void LoadSceneInternal(string sceneName, bool forceLoading)
+        {
             if (string.IsNullOrWhiteSpace(sceneName))
             {
                 Debug.LogWarning("Scene name is empty", this);
@@ -27,6 +52,15 @@ namespace Managers
             }
 
             var fromScene = SceneManager.GetActiveScene().name;
+            if (ShouldUseLoadingScene(sceneName, forceLoading))
+            {
+                PendingSceneName = sceneName;
+                SceneManager.LoadScene(LoadingSceneName);
+                EventBus.Publish(EventType.SceneChanged, new SceneChangedEventPayload(fromScene, LoadingSceneName));
+                return;
+            }
+
+            PendingSceneName = string.Empty;
             SceneManager.LoadScene(sceneName);
             EventBus.Publish(EventType.SceneChanged, new SceneChangedEventPayload(fromScene, sceneName));
         }
@@ -68,12 +102,20 @@ namespace Managers
 
         public void LoadGameplay()
         {
-            LoadScene("Gameplay");
+            LoadSceneWithLoading("Gameplay");
         }
 
         public void QuitGame()
         {
             Application.Quit();
+        }
+
+        private static bool ShouldUseLoadingScene(string sceneName, bool forceLoading)
+        {
+            if (string.Equals(SceneManager.GetActiveScene().name, LoadingSceneName, System.StringComparison.Ordinal))
+                return false;
+
+            return forceLoading || ScenesUsingLoading.Contains(sceneName);
         }
     }
 }

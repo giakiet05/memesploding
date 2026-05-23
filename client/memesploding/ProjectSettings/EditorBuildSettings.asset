@@ -24,8 +24,14 @@ EditorBuildSettings:
     path: Assets/Scenes/MatchHistory.unity
     guid: 4ab436a479a1168469404d9697290f5d
   - enabled: 1
+    path: Assets/Scenes/Loading.unity
+    guid: 440bbb26208234f42b7a2c1d9f0ea0ff
+  - enabled: 1
     path: Assets/Scenes/Gameplay.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/WaitRoom.unity
+    guid: e5da2079fa5da5b40818d4d0581e0365
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

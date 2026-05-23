@@ -597,6 +597,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4099457462891759612}
   - component: {fileID: 7113873039192306691}
+  - component: {fileID: 3627839895632753784}
   m_Layer: 5
   m_Name: RankingCard
   m_TagString: Untagged
@@ -674,6 +675,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3627839895632753784
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5886349888191019427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50fe4c7f94258394e94bd4a962cfda2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rankingText: {fileID: 0}
+  usernameText: {fileID: 0}
+  scoreText: {fileID: 0}
+  levelText: {fileID: 0}
+  avatarImage: {fileID: 0}
 --- !u!1 &6038412305292250017
 GameObject:
   m_ObjectHideFlags: 0

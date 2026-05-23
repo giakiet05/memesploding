@@ -77,7 +77,7 @@ namespace Managers.UIManager
 
         private Transform GetUiRoot()
         {
-            var canvas = FindObjectOfType<Canvas>();
+            var canvas = FindFirstObjectByType<Canvas>();
             return canvas != null ? canvas.transform : transform.root;
         }
 
@@ -305,7 +305,7 @@ namespace Managers.UIManager
                 popupRoot.SetActive(false);
 
                 // Refresh ProfileUserInfoView if present
-                var view = FindObjectOfType<UI.ProfileUserInfoView>();
+                var view = FindFirstObjectByType<UI.ProfileUserInfoView>();
                 if (view != null)
                 {
                     view.enabled = false;
