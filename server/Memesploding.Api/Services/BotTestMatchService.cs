@@ -57,7 +57,7 @@ public class BotTestMatchService(
         );
 
         var connection = new RoomConnectionDto(
-            config["Realtime:GameWsUrl"] ?? "ws://localhost:5217/ws",
+            config["Realtime:GameWsUrl"] ?? "ws://localhost:5204/ws",
             tokenService.GenerateGameTicket(user.Id, roomCode, matchId)
         );
 

@@ -26,15 +26,33 @@ namespace Gameplay
         [Header("References")]
         [SerializeField] private RectTransform targetRect;
 
+        private Coroutine _playRoutine;
+        private bool _destroyOnFinish;
+        private Vector2 _originalAnchoredPosition;
+        private Quaternion _originalLocalRotation;
+        private Vector3 _originalLocalScale;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            CacheOriginalTransform();
+        }
+
         public override void Initialize(CardData data)
         {
             base.Initialize(data);
             // Add opponent-specific setup here if needed
         }
 
-        public void Play(Vector2 startPosition, Vector2 targetPosition)
+        public void Play(Vector2 startPosition, Vector2 targetPosition, bool destroyOnFinish = false)
         {
-            StartCoroutine(PlayRoutine(startPosition, targetPosition));
+            if (_playRoutine != null)
+                StopCoroutine(_playRoutine);
+
+            _destroyOnFinish = destroyOnFinish;
+            RestoreToDeckPosition();
+            gameObject.SetActive(true);
+            _playRoutine = StartCoroutine(PlayRoutine(startPosition, targetPosition));
         }
 
         private IEnumerator PlayRoutine(Vector2 startPosition, Vector2 targetPosition)
@@ -102,7 +120,16 @@ namespace Gameplay
             RectTransform.localScale = Vector3.zero;
             RectTransform.localRotation = Quaternion.Euler(0f, 0f, endRotation);
 
-            Destroy(gameObject);
+            _playRoutine = null;
+
+            if (_destroyOnFinish)
+            {
+                Destroy(gameObject);
+                yield break;
+            }
+
+            RestoreToDeckPosition();
+            gameObject.SetActive(false);
         }
 
         private Vector2 CubicBezier(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
@@ -125,6 +152,26 @@ namespace Gameplay
             RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, null, out Vector2 localPoint);
 
             return localPoint;
+        }
+
+        private void CacheOriginalTransform()
+        {
+            if (RectTransform == null)
+                return;
+
+            _originalAnchoredPosition = RectTransform.anchoredPosition;
+            _originalLocalRotation = RectTransform.localRotation;
+            _originalLocalScale = RectTransform.localScale;
+        }
+
+        private void RestoreToDeckPosition()
+        {
+            if (RectTransform == null)
+                return;
+
+            RectTransform.anchoredPosition = _originalAnchoredPosition;
+            RectTransform.localRotation = _originalLocalRotation;
+            RectTransform.localScale = _originalLocalScale;
         }
     }
 }

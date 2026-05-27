@@ -89,6 +89,7 @@ namespace Network.Websocket
                 case "ack": return WsServerEventType.Ack;
                 case "error": return WsServerEventType.Error;
                 case "gameplay_event": return WsServerEventType.GameplayEvent;
+                case "gameplayevent": return WsServerEventType.GameplayEvent;
                 case "state_snapshot": return WsServerEventType.StateSnapshot;
                 case "match_ended": return WsServerEventType.MatchEnded;
                 default: return WsServerEventType.Unknown;

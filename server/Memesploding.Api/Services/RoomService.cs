@@ -475,7 +475,7 @@ public class RoomService(
 
     private async Task<RoomConnectionDto> BuildRoomConnectionAsync(string roomCode, string roomStatus, Guid? requesterUserId)
     {
-        var wsUrl = config["Realtime:GameWsUrl"] ?? "ws://localhost:5217/ws";
+        var wsUrl = config["Realtime:GameWsUrl"] ?? "ws://localhost:5204/ws";
 
         if (requesterUserId == null || !string.Equals(roomStatus, "playing", StringComparison.OrdinalIgnoreCase))
             return new RoomConnectionDto(wsUrl, string.Empty);

@@ -36,6 +36,13 @@ namespace Gameplay
             GameState ??= new GameState();
             GameState.UpdateState(snapshot);
             Clock.ApplySnapshot(snapshot);
+            CardManager.Instance?.SyncHand(GameState.selfHand);
+
+            var currentUserId = TryGetUserIdAtIndex(GameState.players, GameState.turnIndex);
+            Debug.Log(
+                $"[TurnTrace] Snapshot stateVersion={GameState.stateVersion} turnIndex={GameState.turnIndex} " +
+                $"currentUserId={currentUserId ?? "null"} localUserId={GameManager.Instance?.Player?.ID ?? "null"} " +
+                $"players={GameState.players?.Count ?? 0}");
         }
 
         public void HandleGameplayEvent(WsGameplayEventPayload payload)
@@ -81,8 +88,6 @@ namespace Gameplay
                 case WsGameplayEventType.CardDrawn:
                     if (parsedPayload is not WsCardActionPayload cardDrawn)
                         return;
-                    //TODO: Update opponent card counter
-                    //TODO: Make opponent draw a card
                     GameState.drawPileCount = Math.Max(0, GameState.drawPileCount - 1);
                     ChangePlayerHandCount(cardDrawn.userId, +1);
 
@@ -92,13 +97,17 @@ namespace Gameplay
                         HandleDrawnCard(cardDrawn.cardCode);
                         GameState.selfHand.Add(cardDrawn.cardCode);
                     }
+                    else if (!IsSelf(cardDrawn.userId))
+                    {
+                        GameplayUIManager.Instance.DisplayOpponentDraw(cardDrawn.userId);
+                    }
                     break;
 
                 case WsGameplayEventType.CardPlayed:
                     if (parsedPayload is not WsCardActionPayload cardPlayed)
                         return;
 
-                    if (!string.IsNullOrWhiteSpace(cardPlayed.cardCode))
+                    if (string.IsNullOrWhiteSpace(cardPlayed.cardCode))
                     {
                         Debug.LogError("Card code is null or empty");
                         break;
@@ -108,7 +117,10 @@ namespace Gameplay
                     GameState.discardPile.Add(cardPlayed.cardCode);
 
                     if (IsSelf(cardPlayed.userId))
+                    {
                         RemoveOneCardFromSelfHand(cardPlayed.cardCode);
+                        CardManager.Instance?.RemoveCardFromHand(cardPlayed.cardCode);
+                    }
                     else
                     {
                         //Make opponent play a card
@@ -290,7 +302,8 @@ namespace Gameplay
                     break;
 
                 default:
-                    Debug.LogWarning($"[GameSession] Unsupported gameplay event '{payload.EventType}'");
+                    Debug.LogWarning(
+                        $"[GameSession] Unsupported gameplay event parsedType='{payload.EventType}' rawType='{payload.RawType}' stateVersion={payload.StateVersion} rawPayload={payload.RawPayload}");
                     break;
             }
         }
@@ -306,7 +319,13 @@ namespace Gameplay
             UpdateTurnClock(turnEndsAt, turnTimerSeconds, serverTimeUtc);
 
             //Set current active player
-            var curUserID = GameState.players[newTurnIndex].userId;
+            var curUserID = TryGetUserIdAtIndex(GameState.players, newTurnIndex);
+            Debug.Log(
+                $"[TurnTrace] Event turnIndex={newTurnIndex} currentUserId={curUserID ?? "null"} " +
+                $"localUserId={GameManager.Instance?.Player?.ID ?? "null"} players={GameState.players?.Count ?? 0}");
+
+            if (string.IsNullOrWhiteSpace(curUserID))
+                return;
 
             EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(curUserID));
         }
@@ -328,10 +347,18 @@ namespace Gameplay
         private void HandleDrawnCard(string cardCode)
         {
             //Displaying the card just drawn
-            GameplayUIManager.Instance.DisplayDrawnCard();
+            GameplayUIManager.Instance.DisplayDrawnCard(cardCode);
 
             //Handle add card to hand
             CardManager.Instance.AddCardToHand(cardCode);
+        }
+
+        private static string TryGetUserIdAtIndex(System.Collections.Generic.List<WsPlayerPublicStateDto> players, int index)
+        {
+            if (players == null || index < 0 || index >= players.Count)
+                return null;
+
+            return players[index]?.userId;
         }
 
         private bool IsSelf(string userId)

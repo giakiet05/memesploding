@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using Events;
 using Events.GameEvents;
+using Gameplay;
+using Network.API.Models;
 using Network.Websocket;
 using UI.Gameplay;
 using UnityEngine;
 using EventType = Events.EventType;
+using System.Linq;
 
 namespace Managers.UIManager
 {
@@ -20,6 +23,20 @@ namespace Managers.UIManager
                 Destroy(gameObject);
             else
                 Instance = this;
+
+            if (mainUserProfile == null)
+                Debug.LogError("[GameplayUIManager] MainUserProfile reference is missing.");
+
+            if (opponentProfilePrefab == null)
+                Debug.LogError("[GameplayUIManager] OpponentProfile prefab reference is missing.");
+
+            opponentPlayArea ??= playingArea != null ? playingArea.Find("BoardArea") as RectTransform : null;
+            if (opponentPlayArea == null)
+                Debug.LogError("[GameplayUIManager] OpponentPlayArea reference is missing.");
+
+            opponentDrawCard ??= playingArea != null ? playingArea.Find("OpponenDrawCard")?.GetComponent<OpponentDrawCard>() : null;
+            if (opponentDrawCard == null)
+                Debug.LogError("[GameplayUIManager] OpponentDrawCard reference is missing.");
         }
 
         [SerializeField] private Canvas canvas;
@@ -29,6 +46,9 @@ namespace Managers.UIManager
         [SerializeField] private CardDisplayer cardDisplayer;
         [SerializeField] private CardSelector cardSelector;
         [SerializeField] private DrawnCardDisplayer drawnCardDisplayer;
+        [SerializeField] private MainUserProfile mainUserProfile;
+        [SerializeField] private RectTransform opponentPlayArea;
+        [SerializeField] private OpponentDrawCard opponentDrawCard;
 
         [Header("Opponent Organization")]
         [SerializeField] private OpponentProfile opponentProfilePrefab;
@@ -42,30 +62,6 @@ namespace Managers.UIManager
         private Dictionary<string, OpponentProfile> _opponentsUI;
 
         //TODO: Add loading screen
-
-        // For testing only
-        //private void Start()
-        //{
-        //    var players = new List<WsPlayerPublicStateDto>();
-
-        //    // Fake current player
-        //    string myId = "P0";
-
-        //    // Inject into your GameManager for the test
-        //    //GameManager.Instance.Player = new Player { ID = myId };
-
-        //    // Create dummy players (including yourself)
-        //    for (int i = 0; i <= 3; i++)
-        //    {
-        //        players.Add(new WsPlayerPublicStateDto
-        //        {
-        //            userId = "P" + i,
-        //            // add other fields if your UI needs them
-        //        });
-        //    }
-
-        //    InitOpponentUI(players);
-        //}
 
         private void Start()
         {
@@ -89,6 +85,13 @@ namespace Managers.UIManager
         //TODO: Handle player used card effect
         private void OnCardPlayed(CardPlayedEventPayload obj)
         {
+            if (obj == null || obj.PlayedCard == null)
+                return;
+
+            var localUserId = GameManager.Instance?.Player?.ID;
+            if (!string.Equals(obj.PlayerID, localUserId, StringComparison.OrdinalIgnoreCase))
+                return;
+
             //Call this function to send command to server and actually play the card
             
             // Handle UI and effect for card
@@ -144,10 +147,28 @@ namespace Managers.UIManager
         }
         
         //Draw Card
-        public void DisplayDrawnCard()
+        public void DisplayDrawnCard(string cardCode)
         {
             uiArea.gameObject.SetActive(true);
             drawnCardDisplayer.gameObject.SetActive(true);
+            drawnCardDisplayer.PlayDrawCardAnimation(cardCode);
+        }
+
+        public void DisplayOpponentDraw(string userID)
+        {
+            if (opponentDrawCard == null || playingArea == null)
+                return;
+
+            if (_opponentsUI == null || !_opponentsUI.TryGetValue(userID, out var opponent) || opponent == null)
+                return;
+
+            var drawAnimation = Instantiate(opponentDrawCard, opponentDrawCard.transform.parent);
+            drawAnimation.gameObject.SetActive(false);
+
+            var startPosition = WorldToPlayingAreaPoint(opponentDrawCard.transform.position);
+            var targetPosition = WorldToPlayingAreaPoint(opponent.transform.position);
+
+            drawAnimation.Play(startPosition, targetPosition, destroyOnFinish: true);
         }
 
         //Card Displayer
@@ -174,11 +195,25 @@ namespace Managers.UIManager
             if (players == null || players.Count == 0) 
                 return;
 
+            if (opponentProfilePrefab == null)
+                return;
+
+            _opponentsUI ??= new Dictionary<string, OpponentProfile>();
+            ClearOpponentUI();
+
             string myId = GameManager.Instance.Player.ID;
             int myIndex = players.FindIndex(p => p.userId == myId);
             if (myIndex == -1) return;
 
             int count = players.Count;
+            int currentTurnIndex = ResolveCurrentTurnIndex(players);
+            var currentTurnUserId = currentTurnIndex >= 0 && currentTurnIndex < players.Count
+                ? players[currentTurnIndex].userId
+                : null;
+
+            Debug.Log(
+                $"[TurnTrace] UI init myIndex={myIndex} myUserId={myId} currentTurnIndex={currentTurnIndex} " +
+                $"currentTurnUserId={currentTurnUserId ?? "null"} mainUserRef={(mainUserProfile != null)} players={count}");
 
             var rects = new List<RectTransform>();
 
@@ -186,16 +221,29 @@ namespace Managers.UIManager
             {
                 int index = (myIndex + offset) % count;
                 var opponent = players[index];
+                var participant = ResolveParticipant(opponent.userId);
+                var isCurrentTurn = index == currentTurnIndex;
 
                 var ui = Instantiate(opponentProfilePrefab, playingArea.transform);
-                //TODO: pass in user profile
-                ui.Init(opponent, null);
+                ui.SetPlayArea(opponentPlayArea);
+                ui.Init(opponent, participant?.AvatarUrl, IsBotParticipant(participant));
+                ui.SetCurrentTurn(isCurrentTurn);
                 ui.OnProfileClickedEvent += HandleProfileClicked;
+                _opponentsUI[opponent.userId] = ui;
+
+                Debug.Log(
+                    $"[TurnTrace] UI opponent userId={opponent.userId} nickname={opponent.nickname} " +
+                    $"index={index} isCurrentTurn={isCurrentTurn}");
 
                 rects.Add(ui.GetComponent<RectTransform>());
             }
 
             LayoutOpponent(rects);
+            if (mainUserProfile != null)
+            {
+                mainUserProfile.SetCurrentTurn(myIndex == currentTurnIndex);
+                Debug.Log($"[TurnTrace] UI main userId={myId} isCurrentTurn={myIndex == currentTurnIndex}");
+            }
         }
 
         private void LayoutOpponent(List<RectTransform> items)
@@ -235,6 +283,9 @@ namespace Managers.UIManager
 
         public void PlayOpponentCard(string userID, string cardCode)
         {
+            if (_opponentsUI == null)
+                return;
+
             if (!_opponentsUI.TryGetValue(userID, out var opponent))
                 return;
 
@@ -242,6 +293,49 @@ namespace Managers.UIManager
                 return;
 
             opponent.PlayCard(cardCode);
+        }
+
+        private Vector2 WorldToPlayingAreaPoint(Vector3 worldPosition)
+        {
+            var screenPoint = RectTransformUtility.WorldToScreenPoint(null, worldPosition);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(playingArea, screenPoint, null, out var localPoint);
+            return localPoint;
+        }
+
+        private void ClearOpponentUI()
+        {
+            if (_opponentsUI == null || _opponentsUI.Count == 0)
+                return;
+
+            foreach (var item in _opponentsUI.Values)
+            {
+                if (item != null)
+                    Destroy(item.gameObject);
+            }
+
+            _opponentsUI.Clear();
+        }
+
+        private int ResolveCurrentTurnIndex(List<WsPlayerPublicStateDto> players)
+        {
+            var turnIndex = GameManager.Instance?.GetCurrentTurnIndex() ?? -1;
+            return turnIndex >= 0 && turnIndex < players.Count ? turnIndex : -1;
+        }
+
+        private RoomParticipantDto ResolveParticipant(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return null;
+
+            var participants = RoomManager.Instance?.CurrentRoom?.CurrentParticipants;
+            return participants?.FirstOrDefault(item =>
+                string.Equals(item.UserId, userId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsBotParticipant(RoomParticipantDto participant)
+        {
+            return participant != null &&
+                   string.Equals(participant.Role, "bot", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

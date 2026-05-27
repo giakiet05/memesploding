@@ -54,7 +54,7 @@ public class RuntimeTickWorker(
             foreach (var item in events)
             {
                 var payload = WsServerEvent<WsGameplayEventDto>.Create(
-                    "GameplayEvent",
+                    "gameplay_event",
                     new WsGameplayEventDto(item.EventType, item.Payload, item.StateVersion)
                 );
                 await hubContext.Clients.Group(GetRoomGroup(runtime.State.RoomCode)).SendAsync("ReceiveMessage", payload, cancellationToken);

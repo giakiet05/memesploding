@@ -64,11 +64,17 @@ namespace Events
             Data = data;
             EventType = data != null ? data.EventType : WsGameplayEventType.Unknown;
             ParsedPayload = data != null ? data.ParsedPayload : null;
+            RawType = data != null ? data.type : null;
+            RawPayload = data != null ? data.payload : null;
+            StateVersion = data != null ? data.stateVersion : 0;
         }
 
         public WsGameplayEventDto Data { get; }
         public WsGameplayEventType EventType { get; }
         public WsGameplayPayloadBase ParsedPayload { get; }
+        public string RawType { get; }
+        public string RawPayload { get; }
+        public long StateVersion { get; }
     }
 
     public class WsStateSnapshotEventPayload : BaseEventPayload

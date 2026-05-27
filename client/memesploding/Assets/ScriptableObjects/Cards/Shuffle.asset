@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
   m_Name: Shuffle
   m_EditorClassIdentifier: 
-  cardCode: Shufle
+  cardCode: Shuffle
   description: "X\xE1o tr\u1ED9n b\u1ED9 b\xE0i"
   artworks:
   - {fileID: -9152602170097570199, guid: 9e4f2000a8af88a4789cba9ebb97d952, type: 3}

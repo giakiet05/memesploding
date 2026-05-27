@@ -30,38 +30,44 @@ namespace Managers
         private void Start()
         {
             ValidateReferences();
-
-            InitStartingHand(30, "Defuse");
-        }
-
-        //For testing
-        private void InitStartingHand(int amount, string cardName)
-        {
-            for (int i = 0; i < amount; i++)
-            {
-                PlayableCard card = factory.Create<PlayableCard>(cardName, HandLayout.transform);
-                handLayout.AddCard(card);
-            }
         }
 
         public void AddCardToHand(string cardCode)
         {
             PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+            if (card == null)
+                return;
+
             handLayout.AddCard(card);
         }
 
         public void AddCardsToHand(List<string> cardCodes)
         {
+            if (cardCodes == null)
+                return;
+
             foreach (var cardCode in cardCodes)
             {
                 PlayableCard card = factory.Create<PlayableCard>(cardCode, HandLayout.transform);
+                if (card == null)
+                    continue;
+
                 handLayout.AddCard(card);
             }
         }
 
         public bool RemoveCardFromHand(string cardCode)
         {
-            return handLayout.RemoveCardById(cardCode);
+            return handLayout.RemoveFirstCardByCode(cardCode);
+        }
+
+        public void SyncHand(List<string> cardCodes)
+        {
+            if (handLayout == null)
+                return;
+
+            handLayout.ClearCards();
+            AddCardsToHand(cardCodes);
         }
 
         public PlayableCard CreatePlayableCard(string cardName, Transform parent)
@@ -72,6 +78,11 @@ namespace Managers
         public DisplayCard CreateDisplayCard(string cardName, Transform parent)
         {
             return factory.Create<DisplayCard>(cardName, parent);
+        }
+
+        public bool InitializePlayerDrawCard(PlayerDrawCard card, string cardCode)
+        {
+            return factory != null && factory.InitializeExisting(card, cardCode);
         }
 
         private void ValidateReferences()

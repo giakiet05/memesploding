@@ -60,7 +60,7 @@ services:
       Jwt__Audience: MemesplodingClient
       GameTicket__Issuer: MemesplodingApi
       GameTicket__Audience: MemesplodingGameServer
-      Realtime__GameWsUrl: ws://game:5204/ws
+      Realtime__GameWsUrl: ws://localhost:5204/ws
     ports:
       - "5217:5217"
     depends_on:

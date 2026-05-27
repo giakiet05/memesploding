@@ -248,14 +248,27 @@ namespace Managers
 
         public void DrawCard()
         {
-            if (_session?.GameState == null || !_session.GameState.IsPlayerTurn)
+            if (_session?.GameState == null)
+            {
+                Debug.LogWarning("[DrawTrace] Draw blocked: game state is not ready.");
                 return;
+            }
 
+            if (!_session.GameState.IsPlayerTurn)
+            {
+                Debug.LogWarning(
+                    $"[DrawTrace] Draw blocked: not local turn. turnIndex={_session.GameState.turnIndex} " +
+                    $"localUserId={Player?.ID ?? "null"}");
+                return;
+            }
+
+            Debug.Log($"[DrawTrace] Sending draw command. turnIndex={_session.GameState.turnIndex} localUserId={Player?.ID ?? "null"}");
             //UIManager.Instance.DrawCard();
             NetworkManager.Instance.SendDrawCardCommand();
             //TODO: Using loading screen
         }
         public int GetDrawPileCount() => _session?.GameState?.drawPileCount ?? 0;
+        public int GetCurrentTurnIndex() => _session?.GameState?.turnIndex ?? -1;
         public TimeSpan GetCurrentTurnTimeLeft() => _session?.Clock.CurrentTurnTimeLeft ?? TimeSpan.Zero;
         public TimeSpan GetOverallPlaytime() => _session?.Clock.OverallPlaytime ?? TimeSpan.Zero;
 

@@ -5145,14 +5145,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e883bac4f866b04d87e8951f26cfcee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  openPopupButton: {fileID: 0}
-  popupRoot: {fileID: 0}
-  confirmButton: {fileID: 0}
-  avatarButton: {fileID: 0}
-  avatarImage: {fileID: 0}
-  usernameInput: {fileID: 0}
-  emailInput: {fileID: 0}
-  bioInput: {fileID: 0}
+  openPopupButton: {fileID: 9220964320308298226}
+  popupRoot: {fileID: 1813067240}
+  confirmButton: {fileID: 2102179456}
+  avatarButton: {fileID: 759461211}
+  avatarImage: {fileID: 759461212}
+  usernameInput: {fileID: 672366294}
+  emailInput: {fileID: 250402796}
+  bioInput: {fileID: 1334433793}
 --- !u!4 &1753501811
 Transform:
   m_ObjectHideFlags: 0

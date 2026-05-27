@@ -28,13 +28,14 @@ namespace UI.Gameplay
 
         public void OnTurnStart(TurnStartEventPayload payload)
         {
-            if (payload.UserID != GameManager.Instance.Player.ID)
+            var localUserId = GameManager.Instance?.Player?.ID;
+            if (string.IsNullOrWhiteSpace(localUserId) || payload == null || payload.UserID != localUserId)
             {
-                glowImage.gameObject.SetActive(false);
+                SetTurnIndicator(false);
                 return;
             }
 
-            glowImage.gameObject.SetActive(true);
+            SetTurnIndicator(true);
         }
         
         public void UpdateCardCounter(int amount)
@@ -45,12 +46,19 @@ namespace UI.Gameplay
 
         public void UpdateProfileImage(Sprite image)
         {
-            profileImage.sprite = image;
+            if (profileImage != null && image != null)
+                profileImage.sprite = image;
         }
 
-        public void SetCurrentTurn()
+        public void SetCurrentTurn(bool isCurrentTurn)
         {
-            //TODO: Indicate this is the user turn
+            SetTurnIndicator(isCurrentTurn);
+        }
+
+        private void SetTurnIndicator(bool isActive)
+        {
+            if (glowImage != null)
+                glowImage.gameObject.SetActive(isActive);
         }
     }
 }

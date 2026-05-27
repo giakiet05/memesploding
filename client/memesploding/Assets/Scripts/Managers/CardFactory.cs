@@ -86,6 +86,25 @@ namespace Managers
             return card;
         }
 
+        public bool InitializeExisting(BaseCard card, string cardName)
+        {
+            if (card == null)
+            {
+                Debug.LogError("Cannot initialize a null card instance.");
+                return false;
+            }
+
+            var data = cardDatabase.Get(cardName);
+            if (data == null)
+            {
+                Debug.LogWarning($"Card data not found: {cardName}");
+                return false;
+            }
+
+            card.Initialize(data);
+            return true;
+        }
+
         private BaseCard GetPrefab<T>() where T : BaseCard
         {
             foreach (var kvp in _prefabMap)

@@ -251,6 +251,39 @@ namespace Gameplay
             return RemoveCardById(card.Id);
         }
 
+        public bool RemoveFirstCardByCode(string cardCode)
+        {
+            if (string.IsNullOrWhiteSpace(cardCode))
+                return false;
+
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                var card = _slots[i];
+                if (card?.Data == null)
+                    continue;
+
+                if (string.Equals(card.Data.cardCode, cardCode, System.StringComparison.OrdinalIgnoreCase))
+                    return RemoveCard(card);
+            }
+
+            return false;
+        }
+
+        public void ClearCards()
+        {
+            for (int i = _slots.Count - 1; i >= 0; i--)
+            {
+                if (_slots[i] != null)
+                    Destroy(_slots[i].gameObject);
+            }
+
+            _slots.Clear();
+            _targetOrder.Clear();
+            _cardById.Clear();
+            _previousSlot.Clear();
+            RefreshRenderOrder();
+        }
+
         public void UpdateVisual()
         {
             _targetOrder.Clear();

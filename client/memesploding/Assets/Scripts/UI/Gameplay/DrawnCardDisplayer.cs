@@ -2,14 +2,24 @@
 using Managers.UIManager;
 using UnityEngine;
 
+using Managers;
+
 namespace UI.Gameplay
 {
     public class DrawnCardDisplayer : MonoBehaviour
     { 
         [SerializeField] private PlayerDrawCard playerDrawCard;
 
-        private void Start()
+        private void Awake()
         {
+            playerDrawCard ??= GetComponentInChildren<PlayerDrawCard>(true);
+
+            if (playerDrawCard == null)
+            {
+                Debug.LogError("[DrawnCardDisplayer] PlayerDrawCard reference is missing.");
+                return;
+            }
+
             playerDrawCard.OnAnimationFinished += OnAnimationFinished;
         }
 
@@ -18,20 +28,40 @@ namespace UI.Gameplay
             GameplayUIManager.Instance.ResetUI();
         }
 
-        private void OnEnable()
+        private void OnDestroy()
         {
-            PlayDrawCardAnimation();
+            if (playerDrawCard != null)
+                playerDrawCard.OnAnimationFinished -= OnAnimationFinished;
         }
 
         private void OnDisable()
         {
-            playerDrawCard.gameObject.SetActive(false);
+            if (playerDrawCard != null)
+            {
+                playerDrawCard.Reset();
+                playerDrawCard.gameObject.SetActive(false);
+            }
         }
 
-        public void PlayDrawCardAnimation()
+        public void PlayDrawCardAnimation(string cardCode)
         {
-            //playerDrawCard.Reset();
+            if (playerDrawCard == null)
+            {
+                Debug.LogError("[DrawnCardDisplayer] Unable to play draw animation because PlayerDrawCard is missing.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(cardCode))
+            {
+                Debug.LogWarning("[DrawnCardDisplayer] Draw animation requested without a card code.");
+                return;
+            }
+
+            if (!CardManager.Instance.InitializePlayerDrawCard(playerDrawCard, cardCode))
+                return;
+
             playerDrawCard.gameObject.SetActive(true);
+            playerDrawCard.PlayAnimation();
         }
     }
 }

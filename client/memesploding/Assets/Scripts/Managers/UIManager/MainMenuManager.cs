@@ -1,13 +1,17 @@
+using System;
 using System.Collections.Generic;
+using Network.API.Models;
+using Network.API.Services;
 using UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace Managers.UIManager
 {
     public class MainMenuManager : MonoBehaviour
     {
         public static MainMenuManager Instance;
-
         [Header("Popups")]
         [SerializeField] private Popup quickMatchBackdrop;
         [SerializeField] private Popup settingPopupBackdrop;
@@ -19,14 +23,30 @@ namespace Managers.UIManager
         [SerializeField] private Popup friendsPannel;
         [SerializeField] private Popup notificationPannel;
 
+        [Header("Buttons")]
+        [SerializeField] private Button playTestButton;
+
         private readonly List<Popup[]> _popupHistory = new();
+        private bool _isStartingPlayTest;
 
         private void Awake()
         {
+            AutoBind();
+
             if (Instance != null && Instance != this)
                 Destroy(gameObject);
             else
                 Instance = this;
+        }
+
+        private void OnEnable()
+        {
+            playTestButton?.onClick.AddListener(HandlePlayTestClicked);
+        }
+
+        private void OnDisable()
+        {
+            playTestButton?.onClick.RemoveListener(HandlePlayTestClicked);
         }
 
         public void HideAllPopups()
@@ -93,6 +113,52 @@ namespace Managers.UIManager
                 controller.Open();
         }
 
+        private async void HandlePlayTestClicked()
+        {
+            if (_isStartingPlayTest)
+                return;
+
+            var gameManager = GameManager.EnsureInstance();
+            if (!gameManager.IsAuthenticated)
+            {
+                UniversalPopup.ShowError("Please log in before starting a bot test match.");
+                return;
+            }
+
+            _isStartingPlayTest = true;
+            if (playTestButton != null)
+                playTestButton.interactable = false;
+
+            try
+            {
+                var response = await TestMatchService.Instance.StartBotMatchAsync(gameManager.AccessToken);
+                if (response?.success != true || response.data == null)
+                {
+                    UniversalPopup.ShowError(string.IsNullOrWhiteSpace(response?.message)
+                        ? "Unable to start bot test match."
+                        : response.message);
+                    return;
+                }
+
+                RoomManager.EnsureInstance().SetCurrentRoom(BuildRoomDetail(response.data, gameManager.Player?.ID), "Bot Test Match");
+                UniversalPopup.ShowSuccess(string.IsNullOrWhiteSpace(response.message)
+                    ? "Bot test match started."
+                    : response.message);
+                LoadGameplay();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[MainMenu] Bot test match failed: {ex.Message}");
+                UniversalPopup.ShowError("Unable to start bot test match.");
+            }
+            finally
+            {
+                _isStartingPlayTest = false;
+                if (playTestButton != null)
+                    playTestButton.interactable = true;
+            }
+        }
+
         private void ShowGroup(params Popup[] popups)
         {
             if (popups == null || popups.Length == 0)
@@ -126,6 +192,102 @@ namespace Managers.UIManager
                 return;
 
             popup.Hide();
+        }
+
+        private void AutoBind()
+        {
+            playTestButton ??= FindByPath("Canvas/PlayTestButton")?.GetComponent<Button>();
+        }
+
+        private static RoomDetailDto BuildRoomDetail(BotTestMatchDto match, string localUserId)
+        {
+            var participants = new List<RoomParticipantDto>();
+            if (match?.Participants != null)
+            {
+                foreach (var participant in match.Participants)
+                {
+                    if (participant == null)
+                        continue;
+
+                    participants.Add(new RoomParticipantDto
+                    {
+                        UserId = participant.UserId,
+                        Nickname = participant.Nickname,
+                        AvatarUrl = participant.AvatarUrl,
+                        Role = participant.Role,
+                        IsReady = participant.IsReady
+                    });
+                }
+            }
+
+            return new RoomDetailDto
+            {
+                Code = match?.RoomCode ?? string.Empty,
+                HostId = localUserId ?? string.Empty,
+                Status = "playing",
+                IsPublic = false,
+                Settings = new RoomSettingsDto
+                {
+                    MaxPlayers = participants.Count
+                },
+                CardSets = new List<CardSetInfoDto>(),
+                CurrentParticipants = participants,
+                Connection = new RoomConnectionDto
+                {
+                    WsUrl = match?.Connection?.WsUrl ?? string.Empty,
+                    WsAccessToken = match?.Connection?.WsAccessToken ?? string.Empty
+                }
+            };
+        }
+
+        private static void LoadGameplay()
+        {
+            if (NavigationManager.Instance != null)
+            {
+                NavigationManager.Instance.LoadGameplay();
+                return;
+            }
+
+            SceneManager.LoadScene("Loading");
+        }
+
+        private static Transform FindByPath(string path)
+        {
+            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (var root in roots)
+            {
+                var result = FindByPath(root.transform, path);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
+        private static Transform FindByPath(Transform current, string path)
+        {
+            if (current == null)
+                return null;
+
+            var currentPath = current.name;
+            var parent = current.parent;
+            while (parent != null)
+            {
+                currentPath = $"{parent.name}/{currentPath}";
+                parent = parent.parent;
+            }
+
+            if (string.Equals(currentPath, path, StringComparison.Ordinal))
+                return current;
+
+            foreach (Transform child in current)
+            {
+                var result = FindByPath(child, path);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
         }
     }
 }

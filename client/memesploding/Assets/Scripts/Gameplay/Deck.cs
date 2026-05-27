@@ -13,6 +13,14 @@ namespace Gameplay
     {
         [SerializeField] private GlowImage glowImage;
 
+        private void Awake()
+        {
+            glowImage ??= transform.Find("GlowImage")?.GetComponent<GlowImage>();
+
+            if (glowImage == null)
+                Debug.LogError("[Deck] GlowImage reference is missing.");
+        }
+
         private void Start()
         {
             EventBus.Subscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
@@ -25,16 +33,25 @@ namespace Gameplay
 
         public void OnTurnStart(TurnStartEventPayload payload)
         {
-            if (payload.UserID != GameManager.Instance.Player.ID)
-                return;
+            var localUserId = GameManager.Instance?.Player?.ID;
+            var isLocalTurn = payload != null &&
+                              !string.IsNullOrWhiteSpace(localUserId) &&
+                              payload.UserID == localUserId;
 
-            glowImage.gameObject.SetActive(true);
+            SetGlowActive(isLocalTurn);
         }
 
         public void OnDeckClicked()
         {
+            Debug.Log("[DrawTrace] Deck clicked.");
             GameManager.Instance.DrawCard();
-            glowImage.gameObject.SetActive(false);
+            SetGlowActive(false);
+        }
+
+        private void SetGlowActive(bool isActive)
+        {
+            if (glowImage != null)
+                glowImage.gameObject.SetActive(isActive);
         }
     }
 }

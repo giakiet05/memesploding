@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &6542499590658120216
 RectTransform:
   m_ObjectHideFlags: 0
@@ -187,7 +187,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4709987705654647542
 RectTransform:
   m_ObjectHideFlags: 0
@@ -708,7 +708,7 @@ MonoBehaviour:
   selectArrow: {fileID: 7886613633168118050}
   cardCounterText: {fileID: 7983245395690080412}
   profileImage: {fileID: 4766078203587048263}
+  nicknameText: {fileID: 0}
   jumpHeight: 0
   duration: 0
   glowImage: {fileID: 2196812774976537106}
-  autoPlay: 0

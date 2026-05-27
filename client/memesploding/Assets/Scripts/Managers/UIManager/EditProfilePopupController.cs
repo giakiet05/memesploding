@@ -22,7 +22,7 @@ namespace Managers.UIManager
         private const string LevelKey = "memesploding.level";
         private const string ScoreKey = "memesploding.score";
 
-        [Header("Scene References (optional; auto-bound if empty)")]
+        [Header("Scene References")]
         [SerializeField] private Button openPopupButton;
         [SerializeField] private GameObject popupRoot;
 
@@ -39,8 +39,6 @@ namespace Managers.UIManager
 
         private void OnEnable()
         {
-            AutoBind();
-
             if (openPopupButton != null)
             {
                 openPopupButton.onClick.RemoveListener(Open);
@@ -61,6 +59,9 @@ namespace Managers.UIManager
 
             if (popupRoot != null)
                 popupRoot.SetActive(false);
+
+            if (emailInput != null)
+                emailInput.readOnly = true;
         }
 
         private void OnDisable()
@@ -75,83 +76,23 @@ namespace Managers.UIManager
                 avatarButton.onClick.RemoveListener(ChooseAvatar);
         }
 
-        private Transform GetUiRoot()
+        private bool HasRequiredSceneReferences()
         {
-            var canvas = FindFirstObjectByType<Canvas>();
-            return canvas != null ? canvas.transform : transform.root;
-        }
-
-        private void AutoBind()
-        {
-            var root = GetUiRoot();
-
-            // Open button: existing profile scene button labeled "edit profile".
-            if (openPopupButton == null)
-            {
-                var t = transform.Find("JoinRoom Background/ContentPanel/EnterCode Box")
-                        ?? root.Find("Profile/JoinRoom Background/ContentPanel/EnterCode Box");
-
-                if (t != null)
-                    openPopupButton = t.GetComponent<Button>();
-            }
-
-            if (popupRoot == null)
-            {
-                var popup = root.Find("EditProfilePopup");
-                popupRoot = popup != null ? popup.gameObject : null;
-            }
-
-            if (popupRoot == null)
-                return;
-
-            var background = popupRoot.transform.Find("BackgroundPanel");
-            var content = background != null ? background.Find("ContentPanel") : null;
-
-            if (usernameInput == null)
-                usernameInput = FindInput(content, "Username Textbox");
-
-            if (emailInput == null)
-                emailInput = FindInput(content, "Email Textbox");
-
-            if (bioInput == null)
-                bioInput = FindInput(content, "Bio TextBox");
-
-            if (confirmButton == null)
-            {
-                var t = content != null ? content.Find("Confirm Button") : null;
-                confirmButton = t != null ? t.GetComponent<Button>() : null;
-            }
-
-            if (avatarButton == null)
-            {
-                var t = background != null ? background.Find("Avatar") : null;
-                avatarButton = t != null ? t.GetComponent<Button>() : null;
-            }
-
-            if (avatarImage == null && avatarButton != null)
-                avatarImage = avatarButton.GetComponent<Image>();
-
-            if (emailInput != null)
-                emailInput.readOnly = true;
-        }
-
-        private static TMP_InputField FindInput(Transform contentPanel, string containerName)
-        {
-            var container = contentPanel != null ? contentPanel.Find(containerName) : null;
-            if (container == null)
-                return null;
-
-            var input = container.Find("InputField (TMP)");
-            return input != null ? input.GetComponent<TMP_InputField>() : null;
+            return openPopupButton != null &&
+                   popupRoot != null &&
+                   confirmButton != null &&
+                   avatarButton != null &&
+                   avatarImage != null &&
+                   usernameInput != null &&
+                   emailInput != null &&
+                   bioInput != null;
         }
 
         private async void Open()
         {
-            AutoBind();
-
-            if (popupRoot == null)
+            if (!HasRequiredSceneReferences())
             {
-                UniversalPopup.ShowError("Edit popup is missing in the scene.");
+                UniversalPopup.ShowError("Edit profile popup references are missing in the scene.");
                 return;
             }
 
