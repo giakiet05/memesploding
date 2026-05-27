@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<StartMatchConsumer>();
         services.AddHostedService<RuntimeTickWorker>();
+        services.AddHostedService<BotRuntimeWorker>();
         services.AddHostedService<ReconnectTimeoutWorker>();
 
         services.Configure<HubOptions>(options =>

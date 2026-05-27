@@ -40,6 +40,17 @@ public class Program
         // Đăng ký Event Bus
         builder.Services.AddSingleton<IEventBus, RedisEventBus>();
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .SetIsOriginAllowed(_ => true)
+                      .AllowCredentials();
+            });
+        });
+
         // Thêm DI cho Service rẽ nhánh
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
@@ -50,6 +61,7 @@ public class Program
         builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IMatchService, MatchService>();
         builder.Services.AddScoped<IMatchmakingService, MatchmakingService>();
+        builder.Services.AddScoped<IBotTestMatchService, BotTestMatchService>();
         builder.Services.AddScoped<IPresenceService, PresenceService>();
         builder.Services.AddScoped<IInvitationService, InvitationService>();
 
@@ -140,6 +152,8 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        app.UseCors();
 
         // Gắn Lưới Bắt Lỗi Xịn Xò Ngay Cửa Khẩu (Middleware Chặn Mọi Exception)
         app.UseMiddleware<ExceptionHandlingMiddleware>();

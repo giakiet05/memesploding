@@ -581,7 +581,68 @@ Tự động tìm phòng công khai phù hợp.
 
 ---
 
-## 6) Notifications
+## 6) Test matches
+
+### POST `/test-matches/bot`
+
+Tạo ngay một trận test gồm user hiện tại và 3 bot backend. Endpoint này bỏ qua lobby/room ready flow, không lưu match history, không cộng stats/leaderboard. Client dùng `connection.wsUrl` và `connection.wsAccessToken` để connect Game Server WS như trận thường.
+
+Bot chạy hoàn toàn trong Game Server, không cần client giả và không cần WebSocket connection riêng.
+
+**Request body:** none
+
+**Response 200**
+
+```json
+{
+  "message": "Bot test match started successfully",
+  "data": {
+    "matchId": "guid",
+    "roomCode": "TABC12",
+    "connection": {
+      "wsUrl": "wss://game.memesploding.com/ws",
+      "wsAccessToken": "jwt"
+    },
+    "participants": [
+      {
+        "userId": "guid",
+        "nickname": "Player",
+        "avatarUrl": "",
+        "role": "player",
+        "isReady": true
+      },
+      {
+        "userId": "guid",
+        "nickname": "Bot 1",
+        "avatarUrl": "",
+        "role": "bot",
+        "isReady": true
+      },
+      {
+        "userId": "guid",
+        "nickname": "Bot 2",
+        "avatarUrl": "",
+        "role": "bot",
+        "isReady": true
+      },
+      {
+        "userId": "guid",
+        "nickname": "Bot 3",
+        "avatarUrl": "",
+        "role": "bot",
+        "isReady": true
+      }
+    ]
+  }
+}
+```
+
+**Các lỗi có thể gặp:**
+- `UNAUTHORIZED`, `NOT_FOUND`
+
+---
+
+## 7) Notifications
 
 ### GET `/me/notifications`
 
@@ -716,7 +777,7 @@ Xoá tất cả thông báo.
 
 ---
 
-## 7) Match history
+## 8) Match history
 
 ### GET `/me/match-history`
 
@@ -769,7 +830,7 @@ Xem lịch sử đấu của bản thân.
 
 ---
 
-## 8) Card sets
+## 9) Card sets
 
 ### GET `/card-sets`
 

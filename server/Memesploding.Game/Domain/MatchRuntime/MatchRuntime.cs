@@ -493,7 +493,9 @@ public class MatchRuntime
 
     private void ApplyAttack(Guid userId, string cardCode, string payload)
     {
-        var targetUserId = ResolveTargetUser(userId, payload);
+        var targetUserId = cardCode == "Attack"
+            ? GetNextAliveTurnUserId()
+            : ResolveTargetUser(userId, payload);
         if (!targetUserId.HasValue)
         {
             return;
@@ -505,10 +507,27 @@ public class MatchRuntime
             return;
         }
 
+        var actorIndex = State.Players.FindIndex(player => player.UserId == userId);
+        var actorPending = actorIndex >= 0
+            ? Math.Max(1, State.Players[actorIndex].PendingDrawCount)
+            : 1;
+        if (actorIndex >= 0)
+        {
+            State.Players[actorIndex] = State.Players[actorIndex] with { PendingDrawCount = 1 };
+        }
+
         var currentPending = Math.Max(1, State.Players[targetIndex].PendingDrawCount);
         var added = cardCode == "PersonalAttack" ? 3 : 2;
-        State.Players[targetIndex] = State.Players[targetIndex] with { PendingDrawCount = currentPending + added };
+        var attackLoad = actorPending + added;
+        var nextPending = currentPending <= 1 ? attackLoad : currentPending + attackLoad;
+        State.Players[targetIndex] = State.Players[targetIndex] with { PendingDrawCount = nextPending };
         IncrementVersion("AttackApplied", $"{{\"from\":\"{userId}\",\"to\":\"{targetUserId.Value}\",\"added\":{added}}}");
+    }
+
+    private Guid? GetNextAliveTurnUserId()
+    {
+        var nextIndex = GetNextAliveTurnIndex();
+        return nextIndex < 0 ? null : State.Players[nextIndex].UserId;
     }
 
     private void ApplySkip(Guid userId, bool superSkip)

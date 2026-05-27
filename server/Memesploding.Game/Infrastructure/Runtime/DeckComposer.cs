@@ -16,7 +16,7 @@ public class DeckComposer : IDeckComposer
     public void InitializeHandsAndDeck(MatchRuntimeState state, IReadOnlyCollection<Guid> cardSetIds)
     {
         var selectedSetIds = cardSetIds.Count == 0 ? [OriginalSetId] : cardSetIds.ToList();
-        var pool = BuildCardPool(selectedSetIds);
+        var pool = BuildCardPool(selectedSetIds, state.Players.Count);
 
         // Deal 7 cards and 1 defuse to each player.
         foreach (var idx in Enumerable.Range(0, state.Players.Count))
@@ -43,31 +43,23 @@ public class DeckComposer : IDeckComposer
         }
 
         // Add remaining defuses in draw pile.
-        pool.Add(CardCode.Defuse.ToString());
-        pool.Add(CardCode.Defuse.ToString());
+        for (var i = 0; i < GetExtraDefuseCount(state.Players.Count); i++)
+        {
+            pool.Add(CardCode.Defuse.ToString());
+        }
 
         Shuffle(pool);
         state.DrawPile = pool;
         state.DiscardPile = [];
     }
 
-    private static List<string> BuildCardPool(IReadOnlyCollection<Guid> setIds)
+    private static List<string> BuildCardPool(IReadOnlyCollection<Guid> setIds, int playerCount)
     {
         var cards = new List<string>();
 
         if (setIds.Contains(OriginalSetId))
         {
-            Add(cards, CardCode.Attack, 4);
-            Add(cards, CardCode.Skip, 4);
-            Add(cards, CardCode.Favor, 4);
-            Add(cards, CardCode.Shuffle, 4);
-            Add(cards, CardCode.SeeTheFuture, 5);
-            Add(cards, CardCode.Nope, 5);
-            Add(cards, CardCode.Cat1, 4);
-            Add(cards, CardCode.Cat2, 4);
-            Add(cards, CardCode.Cat3, 4);
-            Add(cards, CardCode.Cat4, 4);
-            Add(cards, CardCode.Cat5, 4);
+            AddOriginalSet(cards, GetOriginalSetExtraCopies(playerCount));
         }
 
         if (setIds.Contains(ImplodingSetId))
@@ -103,18 +95,35 @@ public class DeckComposer : IDeckComposer
 
         if (cards.Count == 0)
         {
-            Add(cards, CardCode.Attack, 4);
-            Add(cards, CardCode.Skip, 4);
-            Add(cards, CardCode.Shuffle, 4);
-            Add(cards, CardCode.Nope, 5);
-            Add(cards, CardCode.Cat1, 4);
-            Add(cards, CardCode.Cat2, 4);
-            Add(cards, CardCode.Cat3, 4);
-            Add(cards, CardCode.Cat4, 4);
-            Add(cards, CardCode.Cat5, 4);
+            AddOriginalSet(cards, GetOriginalSetExtraCopies(playerCount));
         }
 
         return cards;
+    }
+
+    private static int GetOriginalSetExtraCopies(int playerCount)
+    {
+        return Math.Clamp(playerCount - 2, 0, 4);
+    }
+
+    private static int GetExtraDefuseCount(int playerCount)
+    {
+        return playerCount >= 5 ? 3 : 2;
+    }
+
+    private static void AddOriginalSet(List<string> cards, int extraCopies)
+    {
+        Add(cards, CardCode.Attack, 4 + extraCopies);
+        Add(cards, CardCode.Skip, 4 + extraCopies);
+        Add(cards, CardCode.Favor, 4 + extraCopies);
+        Add(cards, CardCode.Shuffle, 4 + extraCopies);
+        Add(cards, CardCode.SeeTheFuture, 5 + extraCopies);
+        Add(cards, CardCode.Nope, 5 + extraCopies);
+        Add(cards, CardCode.Cat1, 4 + extraCopies);
+        Add(cards, CardCode.Cat2, 4 + extraCopies);
+        Add(cards, CardCode.Cat3, 4 + extraCopies);
+        Add(cards, CardCode.Cat4, 4 + extraCopies);
+        Add(cards, CardCode.Cat5, 4 + extraCopies);
     }
 
     private static void Add(List<string> cards, CardCode code, int count)
