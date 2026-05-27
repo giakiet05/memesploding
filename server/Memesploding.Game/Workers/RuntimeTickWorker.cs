@@ -74,32 +74,35 @@ public class RuntimeTickWorker(
 
             runtime.State.MatchEndedPublished = true;
             var participantResults = BuildParticipantResults(runtime.State);
-            await eventBus.PublishAsync(
-                GameIntegrationChannels.MatchEnded,
-                new MatchEndedIntegrationEvent(
-                    runtime.State.MatchId,
-                    runtime.State.RoomCode,
-                    runtime.State.WinnerUserId,
-                    DateTime.UtcNow,
-                    runtime.State.StartedAt,
-                    runtime.State.TurnCounter,
-                    runtime.State.DiscardPile.Count,
-                    participantResults
-                )
-            );
+            if (!runtime.State.IsTestMatch)
+            {
+                await eventBus.PublishAsync(
+                    GameIntegrationChannels.MatchEnded,
+                    new MatchEndedIntegrationEvent(
+                        runtime.State.MatchId,
+                        runtime.State.RoomCode,
+                        runtime.State.WinnerUserId,
+                        DateTime.UtcNow,
+                        runtime.State.StartedAt,
+                        runtime.State.TurnCounter,
+                        runtime.State.DiscardPile.Count,
+                        participantResults
+                    )
+                );
 
-            await eventBus.PublishAsync(
-                GameIntegrationChannels.RoomUpdated,
-                new RoomUpdatedIntegrationEvent(
-                    Type: "match_ended",
-                    RoomCode: runtime.State.RoomCode,
-                    Status: "waiting",
-                    IsPublic: true,
-                    CurrentPlayers: runtime.State.Players.Count,
-                    MaxPlayers: runtime.State.Players.Count,
-                    PlayerIds: runtime.State.Players.Select(p => p.UserId).ToList()
-                )
-            );
+                await eventBus.PublishAsync(
+                    GameIntegrationChannels.RoomUpdated,
+                    new RoomUpdatedIntegrationEvent(
+                        Type: "match_ended",
+                        RoomCode: runtime.State.RoomCode,
+                        Status: "waiting",
+                        IsPublic: true,
+                        CurrentPlayers: runtime.State.Players.Count,
+                        MaxPlayers: runtime.State.Players.Count,
+                        PlayerIds: runtime.State.Players.Select(p => p.UserId).ToList()
+                    )
+                );
+            }
 
             var payload = WsServerEvent<WsStateSnapshotDto>.Create(
                 "match_ended",

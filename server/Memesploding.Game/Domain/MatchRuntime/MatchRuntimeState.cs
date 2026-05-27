@@ -6,6 +6,7 @@ public class MatchRuntimeState
 {
     public Guid MatchId { get; set; }
     public string RoomCode { get; set; } = string.Empty;
+    public bool IsTestMatch { get; set; }
     public MatchPhase Phase { get; set; } = MatchPhase.WaitingStart;
     public long StateVersion { get; set; } = 0;
     public int TurnTimerSeconds { get; set; } = 15;

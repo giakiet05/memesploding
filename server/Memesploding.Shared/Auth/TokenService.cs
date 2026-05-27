@@ -46,14 +46,19 @@ public class TokenService : ITokenService
         return tokenHandler.WriteToken(token);
     }
 
-    public string GenerateGameTicket(Guid userId, string roomCode)
+    public string GenerateGameTicket(Guid userId, string roomCode, Guid? matchId = null)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim("room_code", roomCode.ToUpperInvariant()),
             new Claim("scope", "game_ws")
         };
+
+        if (matchId.HasValue)
+        {
+            claims.Add(new Claim("match_id", matchId.Value.ToString()));
+        }
 
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature);
         var expirationSeconds = int.Parse(_config["GameTicket:ExpirationSeconds"] ?? "120");

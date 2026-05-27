@@ -13,7 +13,8 @@ public record StartMatchRequestedEvent(
     Guid StartedByUserId,
     List<Guid> CardSetIds,
     List<IntegrationPlayerInfo> Players,
-    DateTime RequestedAt
+    DateTime RequestedAt,
+    bool IsTestMatch = false
 );
 
 public record MatchStartedIntegrationEvent(

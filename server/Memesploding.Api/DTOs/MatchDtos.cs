@@ -53,3 +53,10 @@ public record MatchSettingsDto(
     List<Guid> CardSetIds,
     int MaxPlayers
 );
+
+public record BotTestMatchDto(
+    Guid MatchId,
+    string RoomCode,
+    RoomConnectionDto Connection,
+    List<RoomParticipantDto> Participants
+);

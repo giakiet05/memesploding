@@ -24,6 +24,28 @@ Một ván đấu trải qua 4 giai đoạn chính, liên quan đến 2 kênh We
   - Lắng nghe các event `RoomMemberJoined`, `RoomMemberLeft`, `RoomReadyStatusChanged` để update giao diện phòng chờ theo thời gian thực.
 - **Điều kiện bắt đầu**: Khi phòng có >= 2 người và tất cả (trừ host) đã `isReady: true`, Chủ phòng (Host) có quyền gọi lệnh `StartRoomMatch`.
 
+### 2.1. Bot Test Mode
+
+Client có thể bỏ qua lobby để vào nhanh một trận test với bot bằng REST API:
+
+```http
+POST /api/v1/test-matches/bot
+Authorization: Bearer <access_token>
+```
+
+Server sẽ tạo ngay một trận gồm:
+- Người dùng hiện tại.
+- `Bot 1`, `Bot 2`, `Bot 3`.
+
+Response trả về `matchId`, `roomCode`, `connection.wsUrl`, `connection.wsAccessToken`, và danh sách `participants`. Client dùng `connection.wsUrl` + `connection.wsAccessToken` để connect `GameHub` giống trận thường.
+
+Lưu ý:
+- Bot chạy hoàn toàn trong **Game Server**, không có client/WebSocket riêng.
+- Bot tự gửi command backend vào match runtime.
+- Trận bot test không đi qua room ready flow.
+- Trận bot test không lưu match history, không cộng stats/leaderboard.
+- Mode này phục vụ dev/test gameplay.
+
 ---
 
 ## 3. Giai đoạn 2: Handover (Chuyển giao Server)
@@ -65,6 +87,42 @@ Một ván đấu trải qua 4 giai đoạn chính, liên quan đến 2 kênh We
    - Dựa vào mảng `selfHand` để vẽ các lá bài bạn đang cầm.
    - Vẽ xấp bài rút (`drawPileCount`) và xấp bài bỏ (`discardPile`).
    - Dựa vào `turnIndex` và `players[turnIndex].userId` để làm nổi bật (highlight) người đang giữ lượt.
+
+### 4.1.1. Deck setup hiện tại (Original Set)
+
+Hiện tại Game Server chỉ dùng **bộ gốc (Original Set)** cho gameplay chính. Code có một số lá expansion nhưng chưa xem là scope gameplay chính.
+
+**Luật chia bài**
+- Mỗi người chơi bắt đầu với `7` lá random từ pool bộ gốc.
+- Mỗi người chơi được thêm chắc chắn `1 Defuse` vào tay sau khi chia 7 lá.
+- Số `ExplodingKitten` trong draw pile = `playerCount - 1`.
+- Số `Defuse` thêm vào draw pile:
+  - `1-4` người chơi: `2` lá.
+  - `5-6` người chơi: `3` lá.
+
+**Scale số lá bộ gốc theo số người chơi**
+
+`extraCopies = clamp(playerCount - 2, 0, 4)`.
+
+| Số người | Attack | Skip | Favor | Shuffle | SeeTheFuture | Nope | Mỗi loại Cat1-5 | Pool trước chia bài |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 4 | 4 | 4 | 4 | 5 | 5 | 4 | 46 |
+| 3 | 5 | 5 | 5 | 5 | 6 | 6 | 5 | 57 |
+| 4 | 6 | 6 | 6 | 6 | 7 | 7 | 6 | 68 |
+| 5 | 7 | 7 | 7 | 7 | 8 | 8 | 7 | 79 |
+| 6 | 8 | 8 | 8 | 8 | 9 | 9 | 8 | 90 |
+
+**Draw pile sau setup**
+
+Sau khi chia bài, thêm bomb và extra Defuse:
+
+| Số người | ExplodingKitten | Extra Defuse trong draw pile | Draw pile count ban đầu |
+| --- | ---: | ---: | ---: |
+| 2 | 1 | 2 | 35 |
+| 3 | 2 | 2 | 40 |
+| 4 | 3 | 2 | 45 |
+| 5 | 4 | 3 | 51 |
+| 6 | 5 | 3 | 56 |
 
 ### 4.2. Vòng lặp Lượt đi (Turn Cycle)
 1. Xác định đến lượt của ai bằng cách so sánh `userId` của bạn với `players[turnIndex].userId` trong `StateSnapshot`.

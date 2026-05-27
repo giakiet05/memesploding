@@ -2,7 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import "./App.css";
 
-const WS_URL = "http://localhost:5204/ws";
+const API_BASE_URL = "http://localhost:5217/api/v1";
+const DEFAULT_WS_URL = "http://localhost:5204/ws";
+
+function toSignalRUrl(url) {
+  if (url.startsWith("ws://")) return "http://" + url.slice("ws://".length);
+  if (url.startsWith("wss://")) return "https://" + url.slice("wss://".length);
+  return url;
+}
 
 const CARD_COLORS = {
   ExplodingKitten: "#7f1d1d",
@@ -67,7 +74,8 @@ function decodeToken(t) {
 
 export default function App() {
   const [token, setToken] = useState("");
-  const [conn, setConn] = useState(null);
+  const [apiToken, setApiToken] = useState("");
+  const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL);
   const [status, setStatus] = useState("Disconnected");
   const [gameState, setGameState] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -94,19 +102,26 @@ export default function App() {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  const connect = async () => {
-    if (!token) return alert("Nhập token đi!");
+  const normalizeEvent = (eventName) =>
+    (eventName || "").replace(/_/g, "").toLowerCase();
+
+  const connect = async (overrideToken = token, overrideWsUrl = wsUrl) => {
+    if (!overrideToken) return alert("Nhập token đi!");
     if (connRef.current) {
       try {
         await connRef.current.stop();
-      } catch {}
+      } catch (err) {
+        addLog("Lỗi khi ngắt kết nối cũ: " + err);
+      }
     }
 
-    const uid = decodeToken(token);
+    const uid = decodeToken(overrideToken);
     setMyUserId(uid);
 
+    const signalRUrl = toSignalRUrl(overrideWsUrl);
+
     const c = new signalR.HubConnectionBuilder()
-      .withUrl(`${WS_URL}?access_token=${token}`, {
+      .withUrl(`${signalRUrl}?access_token=${overrideToken}`, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
       })
@@ -114,33 +129,35 @@ export default function App() {
       .build();
 
     c.on("ReceiveMessage", (msg) => {
-      if (msg.event === "state_snapshot") {
+      const eventName = normalizeEvent(msg.event);
+      if (eventName === "statesnapshot") {
         setGameState(msg.data);
-        addLog(`📊 Snapshot v${msg.data.stateVersion}`);
-      } else if (msg.event === "gameplay_event") {
-        const { type } = msg.data;
-        if (type === "unknown_command") return;
+        addLog(`Snapshot v${msg.data.stateVersion}`);
+      } else if (eventName === "gameplayevent") {
+        const type = normalizeEvent(msg.data.type);
+        if (type === "unknowncommand") return;
         const p =
           typeof msg.data.payload === "string"
             ? JSON.parse(msg.data.payload || "{}")
             : msg.data.payload;
         const pStr = JSON.stringify(p);
-        addLog(`🎮 [${type}] ${pStr}`);
-        if (type === "action_rejected") {
+        addLog(`[${msg.data.type}] ${pStr}`);
+        if (type === "actionrejected") {
           const reason = p?.reason;
-          if (reason === "not_turn") alert("❌ Chưa tới lượt mày!");
-          else if (reason === "cat_card_must_be_combo")
-            alert("❌ Lá Cat phải đánh Combo 2/3/5 lá!");
-          else alert("❌ Lỗi: " + reason);
+          if (reason === "NOT_TURN" || reason === "not_turn")
+            alert("Chưa tới lượt mày!");
+          else if (reason === "CAT_CARD_MUST_BE_COMBO" || reason === "cat_card_must_be_combo")
+            alert("Lá Cat phải đánh Combo 2/3/5 lá!");
+          else alert("Lỗi: " + reason);
         }
 
-        if (type === "future_peeked") {
+        if (type === "futurepeeked") {
           if (p.userId === myUsId) {
             setFuturePeek(p);
           }
         }
 
-        if (type === "cat_combo_two_resolved" || type === "favor_resolved") {
+        if (type === "catcombotworesolved" || type === "favorresolved") {
           // Notify requester what they got
           if (p.to === myUsId) {
             const card = p.cardCode || "một lá bài";
@@ -163,11 +180,13 @@ export default function App() {
           Event: "requeststatesnapshot",
           Data: {},
         }).catch(() => {});
-      } else if (msg.event === "error") {
-        addLog(`🔴 Error: ${msg.data.message}`);
-      } else if (msg.event === "connected") {
+      } else if (eventName === "error") {
+        addLog(`Error: ${msg.data.message}`);
+      } else if (eventName === "connected") {
         setStatus("Connected");
-        addLog("✅ Kết nối thành công!");
+        addLog("Kết nối thành công!");
+      } else if (eventName === "ack") {
+        addLog(`Ack v${msg.data.stateVersion}`);
       }
     });
 
@@ -176,9 +195,42 @@ export default function App() {
     try {
       await c.start();
       connRef.current = c;
-      setConn(c);
     } catch (err) {
-      addLog("🔴 Lỗi kết nối: " + err);
+      addLog("Lỗi kết nối: " + err);
+    }
+  };
+
+  const startBotTest = async () => {
+    if (!apiToken) return alert("Dán API accessToken trước!");
+
+    try {
+      addLog("Đang tạo bot test match...");
+      const res = await fetch(`${API_BASE_URL}/test-matches/bot`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+        },
+      });
+
+      const rawBody = await res.text();
+      const body = rawBody ? JSON.parse(rawBody) : null;
+      if (!res.ok) {
+        throw new Error(body?.message || rawBody || `HTTP ${res.status}`);
+      }
+
+      if (!body?.data?.connection?.wsAccessToken) {
+        throw new Error("Response thiếu data.connection.wsAccessToken");
+      }
+
+      const wsAccessToken = body.data.connection.wsAccessToken;
+      const gameWsUrl = body.data.connection.wsUrl || DEFAULT_WS_URL;
+      setToken(wsAccessToken);
+      setWsUrl(gameWsUrl);
+      addLog(`Bot test match ${body.data.roomCode} đã tạo.`);
+      await connect(wsAccessToken, gameWsUrl);
+    } catch (err) {
+      addLog("Lỗi tạo bot test match: " + err.message);
+      alert("Không tạo được bot test match: " + err.message);
     }
   };
 
@@ -187,7 +239,7 @@ export default function App() {
     if (!c || c.state !== signalR.HubConnectionState.Connected)
       return alert("Chưa kết nối!");
     c.invoke("SendCommand", { Event: event, Data: data }).catch((err) =>
-      addLog("🔴 Lỗi: " + err),
+      addLog("Lỗi: " + err),
     );
   };
 
@@ -234,7 +286,7 @@ export default function App() {
     const isFavor = codes.length === 1 && codes[0] === "Favor";
     const is5diff = codes.length === 5 && uniq.length === 5;
 
-    let payload = {};
+    let payload;
     if (isFavor) {
       payload = { cardCode: "Favor", targetUserId: comboPayload.targetUserId };
     } else if (is5diff) {
@@ -275,7 +327,6 @@ export default function App() {
     gs?.players?.filter(
       (p) => p.lifeState !== "Eliminated" && p.userId !== myUsId,
     ) || [];
-  const selectedCodes = selectedCards.map((c) => c.split("-")[0]);
   const showNope =
     gs?.reactionWindowEndsAt && new Date(gs.reactionWindowEndsAt) > new Date();
   const lastDiscard = gs?.discardPile?.length
@@ -288,9 +339,20 @@ export default function App() {
         <div className="header-title">💥 Memesploding Arena</div>
         <div className="connect-bar">
           <input
+            value={apiToken}
+            onChange={(e) => setApiToken(e.target.value)}
+            placeholder="API accessToken để Start Bot Test..."
+          />
+          <button onClick={startBotTest}>Start Bot Test</button>
+          <input
+            value={wsUrl}
+            onChange={(e) => setWsUrl(e.target.value)}
+            placeholder="Game WS URL..."
+          />
+          <input
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="Dán JWT token vào đây..."
+            placeholder="Game wsAccessToken..."
           />
           <button onClick={connect}>
             {status === "Connected" ? "Reconnect" : "Connect"}
