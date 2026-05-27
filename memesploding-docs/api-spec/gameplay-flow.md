@@ -24,6 +24,28 @@ Một ván đấu trải qua 4 giai đoạn chính, liên quan đến 2 kênh We
   - Lắng nghe các event `RoomMemberJoined`, `RoomMemberLeft`, `RoomReadyStatusChanged` để update giao diện phòng chờ theo thời gian thực.
 - **Điều kiện bắt đầu**: Khi phòng có >= 2 người và tất cả (trừ host) đã `isReady: true`, Chủ phòng (Host) có quyền gọi lệnh `StartRoomMatch`.
 
+### 2.1. Bot Test Mode
+
+Client có thể bỏ qua lobby để vào nhanh một trận test với bot bằng REST API:
+
+```http
+POST /api/v1/test-matches/bot
+Authorization: Bearer <access_token>
+```
+
+Server sẽ tạo ngay một trận gồm:
+- Người dùng hiện tại.
+- `Bot 1`, `Bot 2`, `Bot 3`.
+
+Response trả về `matchId`, `roomCode`, `connection.wsUrl`, `connection.wsAccessToken`, và danh sách `participants`. Client dùng `connection.wsUrl` + `connection.wsAccessToken` để connect `GameHub` giống trận thường.
+
+Lưu ý:
+- Bot chạy hoàn toàn trong **Game Server**, không có client/WebSocket riêng.
+- Bot tự gửi command backend vào match runtime.
+- Trận bot test không đi qua room ready flow.
+- Trận bot test không lưu match history, không cộng stats/leaderboard.
+- Mode này phục vụ dev/test gameplay.
+
 ---
 
 ## 3. Giai đoạn 2: Handover (Chuyển giao Server)
