@@ -263,7 +263,29 @@ namespace Gameplay
                     GameState.pendingReactionUserId = reactionOpen.userId;
                     GameState.pendingReactionAction = reactionOpen.cardCode;
                     GameState.pendingNopeCount = 0;
+                    GameState.lastNopeUserId = null;
+                    GameState.lastNopedAction = null;
                     // TODO: Server should include reactionWindowEndsAt in payload for accurate local timer.
+                    break;
+
+                case WsGameplayEventType.NopePlayed:
+                    if (parsedPayload is not WsNopeActionPayload nopePlayed)
+                        return;
+
+                    GameState.pendingNopeCount = Math.Max(0, nopePlayed.nopeCount);
+                    GameState.lastNopeUserId = nopePlayed.userId;
+                    ChangePlayerHandCount(nopePlayed.userId, -1);
+
+                    if (IsSelf(nopePlayed.userId))
+                    {
+                        RemoveOneCardFromSelfHand("Nope");
+                        CardManager.Instance?.RemoveCardFromHand("Nope");
+                    }
+                    else
+                    {
+                        GameplayUIManager.Instance.PlayOpponentCard(nopePlayed.userId, "Nope");
+                    }
+
                     break;
 
                 case WsGameplayEventType.ReactionWindowClosed:
@@ -271,6 +293,17 @@ namespace Gameplay
                         return;
 
                     GameState.pendingNopeCount = Math.Max(0, reactionClosed.nopeCount);
+                    GameState.pendingReactionUserId = null;
+                    GameState.pendingReactionAction = null;
+                    GameState.reactionWindowEndsAt = null;
+                    break;
+
+                case WsGameplayEventType.ActionNoped:
+                    if (parsedPayload is not WsNopeActionPayload actionNoped)
+                        return;
+
+                    GameState.pendingNopeCount = Math.Max(0, actionNoped.nopeCount);
+                    GameState.lastNopedAction = actionNoped.cardCode;
                     GameState.pendingReactionUserId = null;
                     GameState.pendingReactionAction = null;
                     GameState.reactionWindowEndsAt = null;

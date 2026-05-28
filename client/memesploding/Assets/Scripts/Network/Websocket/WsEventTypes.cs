@@ -25,7 +25,9 @@ namespace Network.Websocket
         CardPlayed,
         UnknownCommand,
         ReactionWindowOpened,
+        NopePlayed,
         ReactionWindowClosed,
+        ActionNoped,
         AttackApplied,
         DrawPileEmpty,
         StreakingHoldsBomb,
@@ -115,7 +117,9 @@ namespace Network.Websocket
                 case "shuffleapplied": return WsGameplayEventType.ShuffleApplied;
                 case "unknowncommand": return WsGameplayEventType.UnknownCommand;
                 case "reactionwindowopened": return WsGameplayEventType.ReactionWindowOpened;
+                case "nopeplayed": return WsGameplayEventType.NopePlayed;
                 case "reactionwindowclosed": return WsGameplayEventType.ReactionWindowClosed;
+                case "actionnoped": return WsGameplayEventType.ActionNoped;
                 case "attackapplied": return WsGameplayEventType.AttackApplied;
                 case "drawpileempty": return WsGameplayEventType.DrawPileEmpty;
                 case "streakingholdsbomb": return WsGameplayEventType.StreakingHoldsBomb;

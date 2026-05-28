@@ -55,6 +55,14 @@ namespace Network.Websocket
     }
 
     [Serializable]
+    public class WsNopeActionPayload : WsGameplayPayloadBase
+    {
+        public string userId;
+        public string cardCode;
+        public int nopeCount;
+    }
+
+    [Serializable]
     public class WsAttackAppliedPayload : WsGameplayPayloadBase
     {
         [JsonProperty("from")]
@@ -230,6 +238,10 @@ namespace Network.Websocket
                 case WsGameplayEventType.CardDrawn:
                 case WsGameplayEventType.CardEffectUnhandled:
                     return Deserialize<WsCardActionPayload>(payload);
+
+                case WsGameplayEventType.NopePlayed:
+                case WsGameplayEventType.ActionNoped:
+                    return Deserialize<WsNopeActionPayload>(payload);
 
                 case WsGameplayEventType.ReactionWindowClosed:
                     return Deserialize<WsReactionWindowClosedPayload>(payload);

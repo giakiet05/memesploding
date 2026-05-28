@@ -46,6 +46,8 @@ namespace Gameplay
         public string pendingReactionAction;
         public DateTime? reactionWindowEndsAt;
         public int pendingNopeCount;
+        public string lastNopeUserId;
+        public string lastNopedAction;
         public string pendingFavorRequesterId;
         public string pendingFavorTargetId;
         public DateTime? favorWindowEndsAt;
