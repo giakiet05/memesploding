@@ -236,8 +236,9 @@ namespace Managers
             string requestedCardCode = null,
             string discardCardCode = null)
         {
+            var cardCode = cardCodes != null && cardCodes.Count > 0 ? cardCodes[0] : null;
             NetworkManager.Instance.SendPlayCardCommand(
-                cardCode: Player.ID,
+                cardCode: cardCode,
                 targetUserId: targetUserId,
                 comboSize: comboSize,
                 cardCodes: cardCodes,
@@ -272,9 +273,54 @@ namespace Managers
         public TimeSpan GetCurrentTurnTimeLeft() => _session?.Clock.CurrentTurnTimeLeft ?? TimeSpan.Zero;
         public TimeSpan GetOverallPlaytime() => _session?.Clock.OverallPlaytime ?? TimeSpan.Zero;
 
+        public bool CanPlayLocalCard(string cardCode)
+        {
+            if (_session?.GameState == null || string.IsNullOrWhiteSpace(cardCode))
+                return false;
+
+            if (string.Equals(cardCode, "Nope", StringComparison.OrdinalIgnoreCase))
+                return !string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction);
+
+            if (string.Equals(cardCode, "Defuse", StringComparison.OrdinalIgnoreCase))
+            {
+                return !string.IsNullOrWhiteSpace(Player?.ID) &&
+                       string.Equals(_session.GameState.pendingDefuseUserId, Player.ID, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return _session.GameState.IsPlayerTurn;
+        }
+
+        public TimeSpan? GetReactionWindowTimeLeft()
+        {
+            if (_session?.GameState?.reactionWindowEndsAt == null)
+                return null;
+
+            var endsAtUtc = NormalizeUtc(_session.GameState.reactionWindowEndsAt.Value);
+            if (!endsAtUtc.HasValue)
+                return null;
+
+            var remaining = endsAtUtc.Value - GetServerNowUtc();
+            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+
         public void ChooseBombInsertPosition(int position)
         {
             NetworkManager.Instance.SendChooseBombInsertPositionCommand(position);
+        }
+
+        public void Nope()
+        {
+            NetworkManager.Instance.SendNopeCommand();
+        }
+
+        public void UseDefuse()
+        {
+            NetworkManager.Instance.SendUseDefuseCommand();
+        }
+
+        public void ChooseFavorCard(string cardCode)
+        {
+            NetworkManager.Instance.SendChooseFavorCardCommand(cardCode);
         }
 
         public List<WsPlayerPublicStateDto> GetAlivePlayers()

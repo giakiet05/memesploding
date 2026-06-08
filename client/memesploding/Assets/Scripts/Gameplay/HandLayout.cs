@@ -352,7 +352,7 @@ namespace Gameplay
             if (selectedCards.Count == 0)
                 yield break;
 
-            if (!IsValidPlaySelection(selectedCards))
+            if (!IsValidPlaySelection(selectedCards) || !CanDispatchPlaySelection(selectedCards))
             {
                 _isPlayingSelectedCards = true;
                 yield return ShakeAndClearSelection(selectedCards);
@@ -387,6 +387,34 @@ namespace Gameplay
                 return true;
 
             Debug.LogWarning("Selected cards are not a valid combo. Play one card, 2 matching cards, 3 matching cards, or 5 different cards.", this);
+            return false;
+        }
+
+        private bool CanDispatchPlaySelection(List<PlayableCard> selectedCards)
+        {
+            if (selectedCards == null || selectedCards.Count == 0)
+                return false;
+
+            if (selectedCards.Count == 1)
+            {
+                var cardCode = GetCardCode(selectedCards[0]);
+                if (GameManager.Instance != null && GameManager.Instance.CanPlayLocalCard(cardCode))
+                    return true;
+
+                Debug.LogWarning($"Card '{cardCode}' cannot be played right now.", this);
+                return false;
+            }
+
+            if (selectedCards.Count == 2)
+            {
+                if (GameManager.Instance != null && GameManager.Instance.CanPlayLocalCard(GetCardCode(selectedCards[0])))
+                    return true;
+
+                Debug.LogWarning("Combo cannot be played right now.", this);
+                return false;
+            }
+
+            Debug.LogWarning("Combo 3 and combo 5 need card-selection UI before they can be sent safely.", this);
             return false;
         }
 
@@ -528,13 +556,29 @@ namespace Gameplay
                 yield return playAnimation;
             }
 
+            List<string> cardCodes = new();
+
             foreach (PlayableCard card in cards)
             {
                 if (card == null)
                     continue;
 
-                CardPlayedEventPayload payload = new CardPlayedEventPayload(card, GameManager.Instance.Player.ID);
+                cardCodes.Add(GetCardCode(card));
+                CardPlayedEventPayload payload = new CardPlayedEventPayload(
+                    card,
+                    GameManager.Instance.Player.ID,
+                    shouldDispatchCommand: false);
                 EventBus.Publish(EventType.CardPlayedEvent, payload);
+            }
+
+            if (cards.Count == 2)
+            {
+                var commandPayload = new CardPlayedEventPayload(
+                    cards[cards.Count - 1],
+                    GameManager.Instance.Player.ID,
+                    cardCodes,
+                    cards.Count);
+                EventBus.Publish(EventType.CardPlayedEvent, commandPayload);
             }
 
             if (effectPauseDuration > 0f)

@@ -75,7 +75,22 @@ namespace Managers
 
         public void SendChooseBombInsertPositionCommand(int position)
         {
-            WebsocketClient.SendCommandAsync(WsClientCommandType.ChooseBombInsertPosition, position);
+            WebsocketClient.SendChooseBombInsertPositionAsync(position);
+        }
+
+        public void SendNopeCommand()
+        {
+            WebsocketClient.SendNopeAsync();
+        }
+
+        public void SendUseDefuseCommand()
+        {
+            WebsocketClient.SendUseDefuseAsync();
+        }
+
+        public void SendChooseFavorCardCommand(string cardCode)
+        {
+            WebsocketClient.SendChooseFavorCardAsync(cardCode);
         }
     }
 }

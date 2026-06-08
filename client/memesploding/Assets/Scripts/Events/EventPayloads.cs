@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Gameplay.Card;
 using Network.Websocket;
 
@@ -7,14 +8,25 @@ namespace Events
 
     public class CardPlayedEventPayload : BaseEventPayload
     {
-        public CardPlayedEventPayload(BaseCard card, string playerID)
+        public CardPlayedEventPayload(
+            BaseCard card,
+            string playerID,
+            List<string> cardCodes = null,
+            int comboSize = 0,
+            bool shouldDispatchCommand = true)
         {
             PlayedCard = card;
             PlayerID = playerID;
+            CardCodes = cardCodes != null ? new List<string>(cardCodes) : null;
+            ComboSize = comboSize;
+            ShouldDispatchCommand = shouldDispatchCommand;
         }
 
         public BaseCard PlayedCard { get; }
         public string PlayerID { get; }
+        public List<string> CardCodes { get; }
+        public int ComboSize { get; }
+        public bool ShouldDispatchCommand { get; }
     }
 
     public class TurnStartEventPayload : BaseEventPayload

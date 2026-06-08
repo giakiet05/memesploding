@@ -85,6 +85,13 @@ namespace Gameplay
                     //TODO: Display that a player turn is still continue
                     break;
 
+                case WsGameplayEventType.TurnTimeoutAutoDraw:
+                    if (parsedPayload is not WsUserPayload timeoutAutoDraw)
+                        return;
+
+                    Debug.Log($"[GameSession] Turn timed out. Server auto-drew for userId={timeoutAutoDraw.userId}");
+                    break;
+
                 case WsGameplayEventType.CardDrawn:
                     if (parsedPayload is not WsCardActionPayload cardDrawn)
                         return;
@@ -221,7 +228,8 @@ namespace Gameplay
                         return;
 
                     // TODO: Store peek.cards in dedicated UI state instead of GameState when UI model is introduced.
-                    //TODO: Display card
+                    if (IsSelf(peek.userId) && peek.cards != null)
+                        GameplayUIManager.Instance.DisplayCards(peek.cards.ToList());
                     break;
 
                 case WsGameplayEventType.FavorWindowOpened:
@@ -231,6 +239,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = favorWindow.requesterId;
                     GameState.pendingFavorTargetId = favorWindow.targetId;
                     // TODO: Server should provide favorWindowEndsAt in payload for accurate local timer.
+                    GameplayUIManager.Instance.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId);
                     break;
 
                 case WsGameplayEventType.FavorResolved:
@@ -241,6 +250,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = null;
                     GameState.pendingFavorTargetId = null;
                     GameState.favorWindowEndsAt = null;
+                    GameplayUIManager.Instance.HideFavorWindow();
                     break;
 
                 case WsGameplayEventType.CatComboTwoResolved:
@@ -254,6 +264,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = null;
                     GameState.pendingFavorTargetId = null;
                     GameState.favorWindowEndsAt = null;
+                    GameplayUIManager.Instance.HideFavorWindow();
                     break;
 
                 case WsGameplayEventType.ReactionWindowOpened:
@@ -266,6 +277,7 @@ namespace Gameplay
                     GameState.lastNopeUserId = null;
                     GameState.lastNopedAction = null;
                     // TODO: Server should include reactionWindowEndsAt in payload for accurate local timer.
+                    GameplayUIManager.Instance.ShowReactionWindow(reactionOpen.userId, reactionOpen.cardCode, GameState.pendingNopeCount);
                     break;
 
                 case WsGameplayEventType.NopePlayed:
@@ -286,6 +298,10 @@ namespace Gameplay
                         GameplayUIManager.Instance.PlayOpponentCard(nopePlayed.userId, "Nope");
                     }
 
+                    GameplayUIManager.Instance.ShowReactionWindow(
+                        GameState.pendingReactionUserId,
+                        GameState.pendingReactionAction,
+                        GameState.pendingNopeCount);
                     break;
 
                 case WsGameplayEventType.ReactionWindowClosed:
@@ -296,6 +312,7 @@ namespace Gameplay
                     GameState.pendingReactionUserId = null;
                     GameState.pendingReactionAction = null;
                     GameState.reactionWindowEndsAt = null;
+                    GameplayUIManager.Instance.HideReactionWindow();
                     break;
 
                 case WsGameplayEventType.ActionNoped:
@@ -307,6 +324,17 @@ namespace Gameplay
                     GameState.pendingReactionUserId = null;
                     GameState.pendingReactionAction = null;
                     GameState.reactionWindowEndsAt = null;
+                    GameplayUIManager.Instance.ShowActionNoped(actionNoped.cardCode, actionNoped.nopeCount);
+                    break;
+
+                case WsGameplayEventType.ActionRejected:
+                    if (parsedPayload is not WsActionRejectedPayload rejected)
+                        return;
+
+                    GameplayUIManager.Instance.ClearTargetSelection();
+                    Debug.LogWarning(
+                        $"[GameSession] Action rejected reason={rejected.reason ?? "unknown"} userId={rejected.userId ?? "null"} " +
+                        $"cardCode={rejected.cardCode ?? "null"} required={rejected.required}");
                     break;
 
                 case WsGameplayEventType.CatComboThreeResolved:

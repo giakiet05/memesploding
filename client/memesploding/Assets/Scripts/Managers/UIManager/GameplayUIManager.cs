@@ -46,6 +46,7 @@ namespace Managers.UIManager
         [SerializeField] private CardDisplayer cardDisplayer;
         [SerializeField] private CardSelector cardSelector;
         [SerializeField] private DrawnCardDisplayer drawnCardDisplayer;
+        [SerializeField] private ReactionWindowView reactionWindowView;
         [SerializeField] private MainUserProfile mainUserProfile;
         [SerializeField] private RectTransform opponentPlayArea;
         [SerializeField] private OpponentDrawCard opponentDrawCard;
@@ -60,6 +61,8 @@ namespace Managers.UIManager
         [SerializeField] private float startAngle = -90f;
 
         private Dictionary<string, OpponentProfile> _opponentsUI;
+        private HashSet<string> _selectableTargetIds;
+        private Action<string> _onTargetSelected;
 
         //TODO: Add loading screen
 
@@ -72,10 +75,12 @@ namespace Managers.UIManager
         private void OnDestroy()
         {
             EventBus.Unsubscribe<CardPlayedEventPayload>(EventType.CardPlayedEvent, OnCardPlayed);
+            ClearTargetSelection();
         }
 
         public void ResetUI()
         {
+            reactionWindowView?.Hide();
             uiArea.gameObject.SetActive(false);
             cardDisplayer.gameObject.SetActive(false);
             cardSelector.gameObject.SetActive(false);
@@ -92,49 +97,119 @@ namespace Managers.UIManager
             if (!string.Equals(obj.PlayerID, localUserId, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            //Call this function to send command to server and actually play the card
-            
-            // Handle UI and effect for card
+            if (!obj.ShouldDispatchCommand)
+                return;
+
+            if (obj.ComboSize > 1)
+            {
+                HandleComboPlayed(obj);
+                return;
+            }
+
             switch (obj.PlayedCard.Data.cardCode)
             {
-                case "Defuse":
-
-               // case "ExplodingKitten":
-
                 case "Shuffle":
-
                 case "Skip":
-
                 case "SeeTheFuture":
-               
-                case "Attack":               
+                    GameManager.Instance.PlayCard(
+                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
+                    break;
 
                 case "Nope":
+                    GameManager.Instance.Nope();
+                    break;
+
+                case "Defuse":
+                    GameManager.Instance.UseDefuse();
+                    break;
+
+                case "TargetedAttack":
+                case "PersonalAttack":
+                case "Favor":
+                    OpenTargetUserSelector(
+                        GameManager.Instance.GetAlivePlayers(),
+                        targetUserId => GameManager.Instance.PlayCard(
+                            targetUserId: targetUserId,
+                            cardCodes: new List<string> { obj.PlayedCard.Data.cardCode }));
+                    break;
+
+                case "Attack":
                     GameManager.Instance.PlayCard(
                         cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
                     break;
 
-                case "Favor":
-                    string targetUserId = OpenTargetUserSelector(GameManager.Instance.GetAlivePlayers());
-                    GameManager.Instance.PlayCard(
-                        targetUserId: targetUserId,
-                        cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
-                    break;
                 default:
                     Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
                     break;
             }
         }
+
+        private void HandleComboPlayed(CardPlayedEventPayload payload)
+        {
+            var cardCodes = payload.CardCodes ?? new List<string>();
+
+            if (payload.ComboSize == 2)
+            {
+                OpenTargetUserSelector(
+                    GameManager.Instance.GetAlivePlayers(),
+                    targetUserId => GameManager.Instance.PlayCard(
+                        targetUserId: targetUserId,
+                        comboSize: payload.ComboSize,
+                        cardCodes: cardCodes));
+                return;
+            }
+
+            Debug.LogWarning($"Combo size {payload.ComboSize} is not wired to card-selection UI yet.");
+        }
         public void HandleProfileClicked(string userID)
         {
             Debug.Log($"Profile clicked: {userID}");
             OnOpponentProfileSelected?.Invoke(userID);
+            if (_selectableTargetIds == null || !_selectableTargetIds.Contains(userID))
+                return;
+
+            var callback = _onTargetSelected;
+            ClearTargetSelection();
+            callback?.Invoke(userID);
         }
-        public string OpenTargetUserSelector(List<WsPlayerPublicStateDto> targetUsers)
+
+        public void OpenTargetUserSelector(List<WsPlayerPublicStateDto> targetUsers, Action<string> onSelected)
         {
-            //
-            //TODO: Open a UI to let player select target user, then return the selected user's ID
-            return null;
+            ClearTargetSelection();
+
+            var targets = targetUsers?
+                .Where(user => user != null && !string.IsNullOrWhiteSpace(user.userId))
+                .Select(user => user.userId)
+                .Where(userId => _opponentsUI != null && _opponentsUI.ContainsKey(userId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (targets == null || targets.Count == 0)
+            {
+                Debug.LogWarning("[GameplayUIManager] No valid target users available.");
+                return;
+            }
+
+            _selectableTargetIds = targets;
+            _onTargetSelected = onSelected;
+
+            foreach (var item in _opponentsUI)
+            {
+                item.Value?.SetArrowActive(_selectableTargetIds.Contains(item.Key));
+            }
+        }
+
+        public void ClearTargetSelection()
+        {
+            if (_opponentsUI != null)
+            {
+                foreach (var opponent in _opponentsUI.Values)
+                {
+                    opponent?.SetArrowActive(false);
+                }
+            }
+
+            _selectableTargetIds = null;
+            _onTargetSelected = null;
         }
         public void OpenBombReinsertWindow()
         {
@@ -189,6 +264,41 @@ namespace Managers.UIManager
             ResetUI();
         }
 
+        public void ShowReactionWindow(string userId, string cardCode, int nopeCount)
+        {
+            EnsureReactionWindowView();
+            if (uiArea != null)
+                uiArea.gameObject.SetActive(true);
+
+            var canNope = GameManager.Instance != null && GameManager.Instance.CanPlayLocalCard("Nope");
+            var timeLeft = GameManager.Instance?.GetReactionWindowTimeLeft() ?? TimeSpan.FromSeconds(5);
+            reactionWindowView?.Show(userId, cardCode, nopeCount, timeLeft, canNope);
+        }
+
+        public void HideReactionWindow()
+        {
+            reactionWindowView?.Hide();
+        }
+
+        public void ShowActionNoped(string cardCode, int nopeCount)
+        {
+            EnsureReactionWindowView();
+            if (uiArea != null)
+                uiArea.gameObject.SetActive(true);
+
+            reactionWindowView?.ShowNoped(cardCode, nopeCount);
+        }
+
+        public void ShowFavorWindow(string requesterId, string targetId)
+        {
+            Debug.Log($"[GameplayUIManager] Favor window requesterId={requesterId ?? "null"} targetId={targetId ?? "null"}");
+        }
+
+        public void HideFavorWindow()
+        {
+            Debug.Log("[GameplayUIManager] Favor window closed.");
+        }
+
         //Opponent UI
         public void InitOpponentUI(List<WsPlayerPublicStateDto> players)
         {
@@ -228,6 +338,7 @@ namespace Managers.UIManager
                 ui.SetPlayArea(opponentPlayArea);
                 ui.Init(opponent, participant?.AvatarUrl, IsBotParticipant(participant));
                 ui.SetCurrentTurn(isCurrentTurn);
+                ui.SetArrowActive(false);
                 ui.OnProfileClickedEvent += HandleProfileClicked;
                 _opponentsUI[opponent.userId] = ui;
 
@@ -310,10 +421,14 @@ namespace Managers.UIManager
             foreach (var item in _opponentsUI.Values)
             {
                 if (item != null)
+                {
+                    item.OnProfileClickedEvent -= HandleProfileClicked;
                     Destroy(item.gameObject);
+                }
             }
 
             _opponentsUI.Clear();
+            ClearTargetSelection();
         }
 
         private int ResolveCurrentTurnIndex(List<WsPlayerPublicStateDto> players)
@@ -336,6 +451,16 @@ namespace Managers.UIManager
         {
             return participant != null &&
                    string.Equals(participant.Role, "bot", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void EnsureReactionWindowView()
+        {
+            if (reactionWindowView != null)
+                return;
+
+            reactionWindowView = uiArea != null
+                ? uiArea.GetComponentInChildren<ReactionWindowView>(true)
+                : FindFirstObjectByType<ReactionWindowView>(FindObjectsInactive.Include);
         }
     }
 }
