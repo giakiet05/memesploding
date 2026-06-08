@@ -5,7 +5,7 @@ public class GameplayTimingOptions
     public const string SectionName = "GameplayTiming";
 
     public int DefaultTurnSeconds { get; set; } = 15;
-    public int NopeWindowSeconds { get; set; } = 3;
+    public int NopeWindowSeconds { get; set; } = 5;
     public int DefuseDecisionSeconds { get; set; } = 5;
     public int BombReinsertSeconds { get; set; } = 10;
     public int ReconnectGraceSeconds { get; set; } = 120;

@@ -10,7 +10,7 @@ public class MatchRuntimeState
     public MatchPhase Phase { get; set; } = MatchPhase.WaitingStart;
     public long StateVersion { get; set; } = 0;
     public int TurnTimerSeconds { get; set; } = 15;
-    public int NopeWindowSeconds { get; set; } = 3;
+    public int NopeWindowSeconds { get; set; } = 5;
     public int DefuseDecisionSeconds { get; set; } = 5;
     public int BombReinsertSeconds { get; set; } = 10;
     public int EffectResolutionDelayMs { get; set; } = 400;

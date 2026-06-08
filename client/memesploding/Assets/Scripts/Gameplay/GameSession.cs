@@ -273,10 +273,11 @@ namespace Gameplay
 
                     GameState.pendingReactionUserId = reactionOpen.userId;
                     GameState.pendingReactionAction = reactionOpen.cardCode;
-                    GameState.pendingNopeCount = 0;
+                    GameState.pendingNopeCount = Math.Max(0, reactionOpen.nopeCount);
                     GameState.lastNopeUserId = null;
                     GameState.lastNopedAction = null;
-                    // TODO: Server should include reactionWindowEndsAt in payload for accurate local timer.
+                    if (reactionOpen.reactionWindowEndsAt.HasValue)
+                        GameState.reactionWindowEndsAt = reactionOpen.reactionWindowEndsAt;
                     GameplayUIManager.Instance.ShowReactionWindow(reactionOpen.userId, reactionOpen.cardCode, GameState.pendingNopeCount);
                     break;
 
@@ -286,6 +287,8 @@ namespace Gameplay
 
                     GameState.pendingNopeCount = Math.Max(0, nopePlayed.nopeCount);
                     GameState.lastNopeUserId = nopePlayed.userId;
+                    if (nopePlayed.reactionWindowEndsAt.HasValue)
+                        GameState.reactionWindowEndsAt = nopePlayed.reactionWindowEndsAt;
                     ChangePlayerHandCount(nopePlayed.userId, -1);
 
                     if (IsSelf(nopePlayed.userId))

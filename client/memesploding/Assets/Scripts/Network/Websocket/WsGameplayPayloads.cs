@@ -45,6 +45,8 @@ namespace Network.Websocket
     {
         public string userId;
         public string cardCode;
+        public DateTime? reactionWindowEndsAt;
+        public int nopeCount;
     }
 
     [Serializable]
@@ -60,6 +62,7 @@ namespace Network.Websocket
         public string userId;
         public string cardCode;
         public int nopeCount;
+        public DateTime? reactionWindowEndsAt;
     }
 
     [Serializable]

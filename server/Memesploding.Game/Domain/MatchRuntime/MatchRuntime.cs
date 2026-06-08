@@ -314,9 +314,11 @@ public class MatchRuntime
         }
 
         State.PendingNopeCount++;
+        State.ReactionResolveAt = null;
+        State.ReactionWindowEndsAt = DateTime.UtcNow.AddSeconds(State.NopeWindowSeconds);
         IncrementVersion(
             "nope_played",
-            $"{{\"userId\":\"{userId}\",\"cardCode\":\"{State.PendingReactionAction}\",\"nopeCount\":{State.PendingNopeCount}}}"
+            $"{{\"userId\":\"{userId}\",\"cardCode\":\"{State.PendingReactionAction}\",\"nopeCount\":{State.PendingNopeCount},\"reactionWindowEndsAt\":\"{State.ReactionWindowEndsAt.Value:O}\"}}"
         );
     }
 
@@ -353,6 +355,7 @@ public class MatchRuntime
                 break;
             case "Shuffle":
                 Shuffle(State.DrawPile);
+                IncrementVersion("ShuffleApplied", "{}");
                 break;
             case "SeeTheFuture":
             case "AlterTheFuture":
@@ -428,7 +431,7 @@ public class MatchRuntime
         State.PendingNopeCount = 0;
         State.ReactionResolveAt = null;
         State.ReactionWindowEndsAt = DateTime.UtcNow.AddSeconds(State.NopeWindowSeconds);
-        IncrementVersion("ReactionWindowOpened", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{actionCardCode}\"}}");
+        IncrementVersion("ReactionWindowOpened", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{actionCardCode}\",\"reactionWindowEndsAt\":\"{State.ReactionWindowEndsAt.Value:O}\",\"nopeCount\":0}}");
     }
 
     private void ResolvePendingReactionAction()
@@ -541,6 +544,7 @@ public class MatchRuntime
         var pending = Math.Max(1, State.Players[playerIndex].PendingDrawCount);
         pending = superSkip ? 0 : pending - 1;
         State.Players[playerIndex] = State.Players[playerIndex] with { PendingDrawCount = pending };
+        IncrementVersion("SkipApplied", $"{{\"userId\":\"{userId}\"}}");
 
         if (pending <= 0)
         {
