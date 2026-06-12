@@ -202,7 +202,7 @@ namespace Managers.UIManager
                     targetUserId =>
                     {
                         EnsureInteractionModal();
-                        _interactionModal.ShowOptions(
+                        _interactionModal.ShowCardOptions(
                             "COMBO 3",
                             "Chọn tên lá bài muốn lấy từ đối thủ.",
                             OriginalCardCodes,
@@ -331,10 +331,14 @@ namespace Managers.UIManager
         //Draw Card
         public void DisplayDrawnCard(string cardCode)
         {
-            uiArea.gameObject.SetActive(true);
+            if (drawnCardDisplayer.transform.parent != playingArea)
+                drawnCardDisplayer.transform.SetParent(playingArea, false);
             drawnCardDisplayer.gameObject.SetActive(true);
             var deckWorldPosition = opponentDrawCard != null ? opponentDrawCard.transform.position : playingArea.position;
-            drawnCardDisplayer.PlayDrawCardAnimation(cardCode, deckWorldPosition);
+            var handWorldPosition = CardManager.Instance?.HandLayout != null
+                ? CardManager.Instance.HandLayout.transform.position
+                : playingArea.position;
+            drawnCardDisplayer.PlayDrawCardAnimation(cardCode, deckWorldPosition, handWorldPosition);
         }
 
         public void DisplayOpponentDraw(string userID)
@@ -468,21 +472,13 @@ namespace Managers.UIManager
                 return;
 
             CardManager.Instance?.HandLayout?.ClearCardSelection();
-            SetFavorButtonMode(false);
-            var handCards = GameManager.Instance.GetGameState()?.selfHand?
-                .Where(card => !string.IsNullOrWhiteSpace(card))
-                .Distinct()
-                .ToList();
-            if (handCards == null || handCards.Count == 0)
-                return;
-
-            EnsureInteractionModal();
-            _interactionModal.ShowCardOptions(
+            HideInteractionModal();
+            SetFavorButtonMode(true);
+            ShowActionToast(
                 "FAVOR",
                 $"Chọn một lá trong tay để đưa cho {ResolvePlayerName(requesterId)}.",
-                handCards,
-                GameManager.Instance.GetGameState()?.favorWindowEndsAt,
-                cardCode => GameManager.Instance.ChooseFavorCard(cardCode));
+                "Bấm GỬI sau khi chọn bài",
+                "CHỌN BÀI");
         }
 
         public void HideFavorWindow()
@@ -622,6 +618,35 @@ namespace Managers.UIManager
             var rect = card.RectTransform;
             rect.localScale = Vector3.zero;
             StartCoroutine(AnimateLocalCard(rect));
+        }
+
+        public void AnimateFavorTransfer(string cardCode, string targetUserId)
+        {
+            if (CardManager.Instance == null || playingArea == null ||
+                _opponentsUI == null || !_opponentsUI.TryGetValue(targetUserId, out var target) || target == null)
+                return;
+
+            var card = CardManager.Instance.CreatePlayableCard(cardCode, playingArea);
+            if (card == null)
+                return;
+
+            var start = WorldToPlayingAreaPoint(CardManager.Instance.HandLayout.transform.position);
+            var end = WorldToPlayingAreaPoint(target.transform.position);
+            StartCoroutine(AnimateTransferCard(card.RectTransform, start, end));
+        }
+
+        private System.Collections.IEnumerator AnimateTransferCard(RectTransform rect, Vector2 start, Vector2 end)
+        {
+            rect.anchoredPosition = start;
+            rect.localScale = Vector3.one;
+            for (var elapsed = 0f; elapsed < 0.55f; elapsed += Time.unscaledDeltaTime)
+            {
+                var t = Mathf.SmoothStep(0f, 1f, elapsed / 0.55f);
+                rect.anchoredPosition = Vector2.Lerp(start, end, t) + Vector2.up * Mathf.Sin(t * Mathf.PI) * 90f;
+                rect.localScale = Vector3.Lerp(Vector3.one, new Vector3(0.65f, 0.65f, 1f), t);
+                yield return null;
+            }
+            Destroy(rect.gameObject);
         }
 
         private System.Collections.IEnumerator AnimateLocalCard(RectTransform rect)

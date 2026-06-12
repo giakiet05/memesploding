@@ -43,7 +43,7 @@ namespace Gameplay
             _originalScale = transform.localScale;
         }
 
-        public void PlayAnimation(Vector2 startPosition)
+        public void PlayAnimation(Vector2 startPosition, Vector2 handPosition)
         {
             StopAllCoroutines();
             SetFaceUp();
@@ -51,7 +51,7 @@ namespace Gameplay
             RectTransform.localScale = new Vector3(0.72f, 0.72f, 1f);
             if (_animator != null)
                 _animator.enabled = false;
-            StartCoroutine(PlayFastFaceUpAnimation());
+            StartCoroutine(PlayFastFaceUpAnimation(handPosition));
         }
 
         public void OnCardClicked()
@@ -89,7 +89,7 @@ namespace Gameplay
             RectTransform.localScale = scale;
         }
 
-        private IEnumerator PlayFastFaceUpAnimation()
+        private IEnumerator PlayFastFaceUpAnimation(Vector2 handPosition)
         {
             moveDuration = Mathf.Max(moveDuration, 0.5f);
             faceUpHoldDuration = Mathf.Max(faceUpHoldDuration, 0.3f);
@@ -113,6 +113,17 @@ namespace Gameplay
 
             if (faceUpHoldDuration > 0f)
                 yield return new WaitForSecondsRealtime(faceUpHoldDuration);
+
+            elapsed = 0f;
+            var centerPosition = RectTransform.anchoredPosition;
+            while (elapsed < moveDuration)
+            {
+                var t = Mathf.SmoothStep(0f, 1f, elapsed / moveDuration);
+                RectTransform.anchoredPosition = Vector2.Lerp(centerPosition, handPosition, t);
+                RectTransform.localScale = Vector3.Lerp(Vector3.one, new Vector3(0.55f, 0.55f, 1f), t);
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
 
             OnAnimationFinished?.Invoke(this);
         }

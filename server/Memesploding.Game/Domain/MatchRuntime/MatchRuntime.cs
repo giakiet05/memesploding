@@ -706,7 +706,13 @@ public class MatchRuntime
             "ImplodingKitten" => false,
             _ => true
         };
-        IncrementVersion("CardDrawn", JsonSerializer.Serialize(new { userId, cardCode = card, addedToHand }));
+        IncrementVersion("CardDrawn", JsonSerializer.Serialize(new
+        {
+            userId,
+            cardCode = card,
+            addedToHand,
+            drawPileCount = State.DrawPile.Count
+        }));
 
         if (card == "ExplodingKitten")
         {
@@ -1150,7 +1156,6 @@ public class MatchRuntime
             return;
         }
 
-        State.DiscardPile.Add("Defuse");
         State.DefuseWindowEndsAt = null;
         State.PendingDefuseUserId = null;
         State.PendingBombOwnerUserId = userId;

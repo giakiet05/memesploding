@@ -52,6 +52,7 @@ namespace Network.Websocket
         public string[] targetUserIds;
         public string effectScope;
         public bool? addedToHand;
+        public int drawPileCount = -1;
     }
 
     [Serializable]

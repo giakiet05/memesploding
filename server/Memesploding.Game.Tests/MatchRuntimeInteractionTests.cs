@@ -81,7 +81,7 @@ public class MatchRuntimeInteractionTests
         await runtime.TickAsync();
 
         Assert.Empty(runtime.State.Players[0].Hand!);
-        Assert.Contains("Defuse", runtime.State.DiscardPile);
+        Assert.Equal(["Defuse"], runtime.State.DiscardPile);
         Assert.Equal("DefuseUsed", runtime.State.EventLog[^1].EventType);
     }
 
@@ -208,6 +208,20 @@ public class MatchRuntimeInteractionTests
         Assert.Null(runtime.State.TurnAdvanceAt);
         Assert.Null(runtime.State.TurnEndsAt);
         Assert.Equal("DrawPileEmpty", runtime.State.EventLog[^1].EventType);
+    }
+
+    [Fact]
+    public async Task CardDrawn_ReportsAuthoritativeRemainingDrawPileCount()
+    {
+        var (runtime, actor, _) = CreateRuntime([], [], ["Attack", "Skip"]);
+
+        await runtime.EnqueueAsync(new RuntimeCommand("DrawCard", actor, "{}"));
+        await runtime.TickAsync();
+
+        var cardDrawn = runtime.State.EventLog.First(x => x.EventType == "CardDrawn");
+        using var payload = JsonDocument.Parse(cardDrawn.Payload);
+        Assert.Equal(1, payload.RootElement.GetProperty("drawPileCount").GetInt32());
+        Assert.Single(runtime.State.DrawPile);
     }
 
     [Fact]

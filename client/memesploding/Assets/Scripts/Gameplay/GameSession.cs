@@ -141,7 +141,9 @@ namespace Gameplay
                     EventBus.Publish(EventType.TurnEnd, new TurnEndEventPayload(cardDrawn.userId));
                     var addedToHand = cardDrawn.addedToHand ??
                                       cardDrawn.cardCode is not ("ExplodingKitten" or "ImplodingKitten");
-                    GameState.drawPileCount = Math.Max(0, GameState.drawPileCount - 1);
+                    GameState.drawPileCount = cardDrawn.drawPileCount >= 0
+                        ? cardDrawn.drawPileCount
+                        : Math.Max(0, GameState.drawPileCount - 1);
                     if (addedToHand)
                         ChangePlayerHandCount(cardDrawn.userId, +1);
 
@@ -370,6 +372,8 @@ namespace Gameplay
                     if (parsedPayload is not WsTransferPayload favorResolved)
                         return;
 
+                    if (IsSelf(favorResolved.fromUserId))
+                        GameplayUIManager.Instance?.AnimateFavorTransfer(favorResolved.cardCode, favorResolved.toUserId);
                     ApplyCardTransfer(favorResolved.fromUserId, favorResolved.toUserId, favorResolved.cardCode);
                     GameState.pendingFavorRequesterId = null;
                     GameState.pendingFavorTargetId = null;

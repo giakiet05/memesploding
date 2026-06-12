@@ -533,13 +533,13 @@ namespace UI.Gameplay
 
         private void SetNopeVisible(bool visible)
         {
-            if (nopeButton != null)
+            if (nopeButton != null && nopeButton.gameObject.activeSelf != visible)
                 nopeButton.gameObject.SetActive(visible);
         }
 
         private void SetPlayCardVisible(bool visible)
         {
-            if (playCardButton != null)
+            if (playCardButton != null && playCardButton.gameObject.activeSelf != visible)
                 playCardButton.gameObject.SetActive(visible);
         }
 

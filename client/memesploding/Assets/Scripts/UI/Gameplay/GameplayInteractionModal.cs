@@ -55,30 +55,6 @@ namespace UI.Gameplay
             gameObject.SetActive(true);
         }
 
-        public void ShowOptions(
-            string title,
-            string message,
-            IEnumerable<string> options,
-            DateTime? endsAtUtc,
-            Action<string> onSelected,
-            Action onCancel = null)
-        {
-            Prepare(title, message, endsAtUtc);
-            ConfigureTextOptions();
-            _onCancel = onCancel;
-            foreach (var option in options)
-            {
-                var value = option;
-                var button = CreateButton(_options, value);
-                button.onClick.AddListener(() =>
-                {
-                    onSelected?.Invoke(value);
-                    Hide();
-                });
-            }
-            gameObject.SetActive(true);
-        }
-
         public void ShowCardOptions(
             string title,
             string message,
@@ -103,13 +79,13 @@ namespace UI.Gameplay
                 var layout = card.gameObject.GetComponent<LayoutElement>() ?? card.gameObject.AddComponent<LayoutElement>();
                 layout.preferredWidth = _optionLayout.cellSize.x;
                 layout.preferredHeight = _optionLayout.cellSize.y;
-                var button = card.gameObject.GetComponent<Button>() ?? card.gameObject.AddComponent<Button>();
-                button.targetGraphic = card.GetComponent<Graphic>() ?? card.GetComponentInChildren<Graphic>(true);
-                button.onClick.AddListener(() =>
+                var clickHandler = card.gameObject.GetComponent<CardOptionClickHandler>() ??
+                                   card.gameObject.AddComponent<CardOptionClickHandler>();
+                clickHandler.OnClicked = () =>
                 {
                     onSelected?.Invoke(value);
                     Hide();
-                });
+                };
             }
 
             gameObject.SetActive(true);
