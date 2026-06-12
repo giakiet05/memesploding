@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using Memesploding.Game.Domain.StateMachine;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Memesploding.Game.Domain.MatchRuntime;
 
@@ -45,18 +46,29 @@ public class MatchRuntime
             }
         }
 
+        if (State.Phase == MatchPhase.Playing &&
+            State.TurnAdvanceAt.HasValue &&
+            State.TurnAdvanceAt.Value <= DateTime.UtcNow)
+        {
+            AdvanceTurnNow();
+        }
+
         if (State.Phase == MatchPhase.Playing && State.TurnEndsAt.HasValue && State.TurnEndsAt.Value <= DateTime.UtcNow)
         {
             var currentTurnUserId = GetCurrentTurnUserId();
             if (currentTurnUserId.HasValue && State.PendingReactionAction == null && !State.PendingDefuseUserId.HasValue && State.PendingBombCardCode == null)
             {
-                DrawCardForPlayer(currentTurnUserId.Value, fromBottom: false);
-                IncrementVersion("TurnTimeoutAutoDraw", $"{{\"userId\":\"{currentTurnUserId.Value}\"}}");
-                ConsumePendingDraw(currentTurnUserId.Value);
-                if (!IsBombResolutionPendingFor(currentTurnUserId.Value))
+                if (DrawCardForPlayer(currentTurnUserId.Value, fromBottom: false))
                 {
-                    CompleteCurrentTurnAfterDrawResolution(currentTurnUserId.Value);
+                    IncrementVersion("TurnTimeoutAutoDraw", $"{{\"userId\":\"{currentTurnUserId.Value}\"}}");
+                    ConsumePendingDraw(currentTurnUserId.Value);
+                    if (!IsBombResolutionPendingFor(currentTurnUserId.Value))
+                    {
+                        CompleteCurrentTurnAfterDrawResolution(currentTurnUserId.Value);
+                    }
                 }
+                else
+                    State.TurnEndsAt = null;
             }
         }
 
@@ -167,6 +179,9 @@ public class MatchRuntime
             case "playcard":
                 HandlePlayCardCommand(command.UserId, command.Payload);
                 break;
+            case "begininteraction":
+                HandleBeginInteraction(command.UserId);
+                break;
             case "reconnectmatch":
                 MarkReconnect(command.UserId);
                 break;
@@ -202,6 +217,12 @@ public class MatchRuntime
             return;
         }
 
+        if (State.TurnAdvanceAt.HasValue)
+        {
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"TURN_TRANSITION_PENDING\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
         if (State.PendingReactionAction != null || State.ReactionResolveAt.HasValue)
         {
             IncrementVersion("ActionRejected", $"{{\"reason\":\"REACTION_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
@@ -214,13 +235,23 @@ public class MatchRuntime
             return;
         }
 
+        if (State.PendingFavorTargetId.HasValue)
+        {
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"FAVOR_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
         if (GetCurrentTurnUserId() != userId)
         {
             IncrementVersion("ActionRejected", $"{{\"reason\":\"NOT_TURN\",\"userId\":\"{userId}\"}}");
             return;
         }
 
-        DrawCardForPlayer(userId, fromBottom);
+        if (!DrawCardForPlayer(userId, fromBottom))
+        {
+            State.TurnEndsAt = null;
+            return;
+        }
         ConsumePendingDraw(userId);
         if (!IsBombResolutionPendingFor(userId))
         {
@@ -248,6 +279,12 @@ public class MatchRuntime
             return;
         }
 
+        if (State.TurnAdvanceAt.HasValue)
+        {
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"TURN_TRANSITION_PENDING\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
         // Nope can be played regardless of turn if window is open
         if (cardCode == "Nope")
         {
@@ -267,6 +304,12 @@ public class MatchRuntime
             return;
         }
 
+        if (State.PendingFavorTargetId.HasValue)
+        {
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"FAVOR_IN_PROGRESS\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
         if (GetCurrentTurnUserId() != userId)
         {
             IncrementVersion("ActionRejected", $"{{\"reason\":\"NOT_TURN\",\"userId\":\"{userId}\"}}");
@@ -280,10 +323,20 @@ public class MatchRuntime
         // Universal Combo Support
         if (TryGetComboSize(payload, out var comboSize) && comboSize >= 2)
         {
+            if (!ValidateComboInteraction(userId, comboSize, payload))
+            {
+                return;
+            }
+
             if (TryApplyUniversalCombo(userId, playerIndex, hand, cardCode, comboSize, payload))
             {
                 return;
             }
+            return;
+        }
+
+        if (!ValidateCardInteraction(userId, cardCode, payload))
+        {
             return;
         }
 
@@ -295,6 +348,8 @@ public class MatchRuntime
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
         State.DiscardPile.Add(cardCode);
         IncrementVersion("CardPlayed", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\"}}");
+        if (!RequiresReactionWindow(cardCode))
+            RefreshCurrentTurn(userId);
 
         ApplyCardEffect(userId, cardCode, payload);
     }
@@ -318,7 +373,7 @@ public class MatchRuntime
         State.ReactionWindowEndsAt = DateTime.UtcNow.AddSeconds(State.NopeWindowSeconds);
         IncrementVersion(
             "nope_played",
-            $"{{\"userId\":\"{userId}\",\"cardCode\":\"{State.PendingReactionAction}\",\"nopeCount\":{State.PendingNopeCount},\"reactionWindowEndsAt\":\"{State.ReactionWindowEndsAt.Value:O}\"}}"
+            CreateReactionPayload(userId, State.PendingReactionAction, State.PendingNopeCount, State.ReactionWindowEndsAt.Value)
         );
     }
 
@@ -347,11 +402,11 @@ public class MatchRuntime
             case "TargetedAttack":
             case "PersonalAttack":
                 ApplyAttack(userId, cardCode, payload);
-                AdvanceTurn();
+                ScheduleTurnAdvance();
                 break;
             case "Reverse":
                 State.TurnDirection *= -1;
-                AdvanceTurn();
+                ScheduleTurnAdvance();
                 break;
             case "Shuffle":
                 Shuffle(State.DrawPile);
@@ -430,8 +485,12 @@ public class MatchRuntime
         State.PendingReactionPayload = payload;
         State.PendingNopeCount = 0;
         State.ReactionResolveAt = null;
+        State.TurnEndsAt = null;
         State.ReactionWindowEndsAt = DateTime.UtcNow.AddSeconds(State.NopeWindowSeconds);
-        IncrementVersion("ReactionWindowOpened", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{actionCardCode}\",\"reactionWindowEndsAt\":\"{State.ReactionWindowEndsAt.Value:O}\",\"nopeCount\":0}}");
+        (State.PendingReactionTargetUserIds, State.PendingReactionEffectScope) =
+            ResolveReactionTargets(userId, actionCardCode, payload);
+        State.PendingReactionPayload = AddResolvedReactionTarget(payload);
+        IncrementVersion("ReactionWindowOpened", CreateReactionPayload(userId, actionCardCode, 0, State.ReactionWindowEndsAt.Value));
     }
 
     private void ResolvePendingReactionAction()
@@ -444,8 +503,11 @@ public class MatchRuntime
         State.PendingReactionAction = null;
         State.PendingReactionUserId = null;
         State.PendingReactionPayload = null;
+        State.ReactionWindowEndsAt = null;
         State.ReactionResolveAt = null;
         State.PendingNopeCount = 0;
+        State.PendingReactionTargetUserIds = [];
+        State.PendingReactionEffectScope = "none";
 
         if (actionCardCode == null || !actorUserId.HasValue)
         {
@@ -458,10 +520,17 @@ public class MatchRuntime
                 "action_noped",
                 $"{{\"userId\":\"{actorUserId.Value}\",\"cardCode\":\"{actionCardCode}\",\"nopeCount\":{nopeCount}}}"
             );
+            if (GetCurrentTurnUserId() == actorUserId.Value && IsAlivePlayer(actorUserId.Value))
+            {
+                var player = State.Players.First(x => x.UserId == actorUserId.Value);
+                State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
+                IncrementVersion("TurnContinues", CreateTurnContinuesPayload(actorUserId.Value, Math.Max(1, player.PendingDrawCount)));
+            }
             return;
         }
 
         ResolveCardEffect(actorUserId.Value, actionCardCode, actionPayload);
+        RefreshCurrentTurn(actorUserId.Value);
     }
 
     private static bool RequiresReactionWindow(string cardCode)
@@ -549,7 +618,7 @@ public class MatchRuntime
         if (pending <= 0)
         {
             State.Players[playerIndex] = State.Players[playerIndex] with { PendingDrawCount = 1 };
-            AdvanceTurn();
+            ScheduleTurnAdvance();
             return;
         }
 
@@ -592,7 +661,7 @@ public class MatchRuntime
         if (pending <= 0)
         {
             State.Players[playerIndex] = State.Players[playerIndex] with { PendingDrawCount = 1 };
-            AdvanceTurn();
+            ScheduleTurnAdvance();
             return;
         }
 
@@ -611,12 +680,12 @@ public class MatchRuntime
         return State.Players.Any(player => player.UserId == userId && player.LifeState == PlayerLifeState.Alive);
     }
 
-    private void DrawCardForPlayer(Guid userId, bool fromBottom)
+    private bool DrawCardForPlayer(Guid userId, bool fromBottom)
     {
         if (State.DrawPile.Count == 0)
         {
             IncrementVersion("DrawPileEmpty", "{}");
-            return;
+            return false;
         }
 
         var card = fromBottom ? DrawFromBottomInternal() : DrawFromTopInternal();
@@ -624,11 +693,17 @@ public class MatchRuntime
         var playerIndex = State.Players.FindIndex(p => p.UserId == userId);
         if (playerIndex < 0)
         {
-            return;
+            return false;
         }
 
         var hand = State.Players[playerIndex].Hand ?? [];
-        IncrementVersion("CardDrawn", $"{{\"userId\":\"{userId}\",\"cardCode\":\"{card}\"}}");
+        var addedToHand = card switch
+        {
+            "ExplodingKitten" => HasCardInHand(userId, "StreakingKitten") || !HasCardInHand(userId, "Defuse"),
+            "ImplodingKitten" => false,
+            _ => true
+        };
+        IncrementVersion("CardDrawn", JsonSerializer.Serialize(new { userId, cardCode = card, addedToHand }));
 
         if (card == "ExplodingKitten")
         {
@@ -644,14 +719,18 @@ public class MatchRuntime
                     hand.Add(card);
                     State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
                     EliminatePlayer(userId, "missing_defuse");
-                    return;
+                    return true;
                 }
 
                 State.PendingDefuseUserId = userId;
                 State.DefuseWindowEndsAt = DateTime.UtcNow.AddSeconds(State.DefuseDecisionSeconds);
                 State.PendingBombOwnerUserId = userId;
                 State.PendingBombCardCode = "ExplodingKitten";
-                IncrementVersion("ExplosionTriggered", $"{{\"userId\":\"{userId}\"}}");
+                IncrementVersion("ExplosionTriggered", JsonSerializer.Serialize(new
+                {
+                    userId,
+                    defuseWindowEndsAt = State.DefuseWindowEndsAt
+                }));
             }
         }
         else if (card == "ImplodingKitten")
@@ -675,6 +754,7 @@ public class MatchRuntime
         }
 
         State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
+        return true;
     }
 
     private string DrawFromTopInternal()
@@ -692,8 +772,20 @@ public class MatchRuntime
         return card;
     }
 
-    private void AdvanceTurn()
+    private void ScheduleTurnAdvance()
     {
+        if (State.Phase != MatchPhase.Playing || State.TurnAdvanceAt.HasValue)
+        {
+            return;
+        }
+
+        State.TurnEndsAt = null;
+        State.TurnAdvanceAt = DateTime.UtcNow.AddMilliseconds(State.TurnTransitionDelayMs);
+    }
+
+    private void AdvanceTurnNow()
+    {
+        State.TurnAdvanceAt = null;
         if (State.Players.Count == 0)
         {
             return;
@@ -884,6 +976,163 @@ public class MatchRuntime
         return GetRandomAliveTarget(actorUserId);
     }
 
+    private bool TryResolveExplicitTarget(Guid actorUserId, string payload, out Guid targetUserId)
+    {
+        targetUserId = Guid.Empty;
+        if (!TryGetGuidProperty(payload, "targetUserId", out var requestedTarget) ||
+            requestedTarget == actorUserId ||
+            !IsAlivePlayer(requestedTarget))
+        {
+            return false;
+        }
+
+        targetUserId = requestedTarget;
+        return true;
+    }
+
+    private bool ValidateCardInteraction(Guid userId, string cardCode, string payload)
+    {
+        if (IsCatCard(cardCode) || cardCode is "Defuse" or "ExplodingKitten" or "ImplodingKitten")
+        {
+            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            {
+                reason = "INVALID_CARD_PLAY",
+                userId,
+                cardCode
+            }));
+            return false;
+        }
+
+        if (cardCode is not ("Favor" or "TargetedAttack" or "IllTakeThat" or "Mark" or
+            "CurseOfTheCatButt" or "BarkingKitten"))
+        {
+            return true;
+        }
+
+        if (TryResolveExplicitTarget(userId, payload, out _))
+        {
+            return true;
+        }
+
+        IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+        {
+            reason = "INVALID_TARGET",
+            userId,
+            cardCode
+        }));
+        return false;
+    }
+
+    private bool ValidateComboInteraction(Guid userId, int comboSize, string payload)
+    {
+        if (comboSize is 2 or 3 && !TryResolveExplicitTarget(userId, payload, out _))
+        {
+            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            {
+                reason = "INVALID_TARGET",
+                userId,
+                comboSize
+            }));
+            return false;
+        }
+
+        if (comboSize == 3 && !TryGetStringProperty(payload, "requestedCardCode", out _))
+        {
+            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            {
+                reason = "MISSING_REQUESTED_CARD",
+                userId
+            }));
+            return false;
+        }
+
+        if (comboSize == 5 &&
+            (!TryGetStringProperty(payload, "discardCardCode", out var discardCardCode) ||
+             !State.DiscardPile.Contains(discardCardCode)))
+        {
+            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            {
+                reason = "INVALID_DISCARD_CARD",
+                userId
+            }));
+            return false;
+        }
+
+        return true;
+    }
+
+    private (List<Guid> TargetUserIds, string EffectScope) ResolveReactionTargets(
+        Guid actorUserId,
+        string cardCode,
+        string payload)
+    {
+        if (cardCode is "Skip" or "SuperSkip" or "SeeTheFuture" or "AlterTheFuture" or
+            "AlterTheFutureNow" or "AlterTheFuture5" or "DrawFromBottom" or "Reverse" or "TowerMask")
+        {
+            return ([actorUserId], "self");
+        }
+
+        if (cardCode is "Shuffle" or "SwapTopAndBottom" or "CatomicBomb" or "Bury")
+        {
+            return ([], "draw_pile");
+        }
+
+        if (cardCode is "GarbageCollection")
+        {
+            return (
+                State.Players
+                    .Where(player => player.LifeState == PlayerLifeState.Alive)
+                    .Select(player => player.UserId)
+                    .ToList(),
+                "all_players"
+            );
+        }
+
+        if (cardCode is "Combo5")
+        {
+            return ([], "discard_pile");
+        }
+
+        Guid? target = cardCode == "Attack"
+            ? GetNextAliveTurnUserId()
+            : ResolveTargetUser(actorUserId, payload);
+
+        return target.HasValue ? ([target.Value], "target_players") : ([], "none");
+    }
+
+    private string AddResolvedReactionTarget(string payload)
+    {
+        if (State.PendingReactionTargetUserIds.Count != 1 ||
+            State.PendingReactionEffectScope != "target_players")
+        {
+            return payload;
+        }
+
+        try
+        {
+            var root = JsonNode.Parse(payload) as JsonObject ?? new JsonObject();
+            root["targetUserId"] = State.PendingReactionTargetUserIds[0];
+            return root.ToJsonString();
+        }
+        catch
+        {
+            return JsonSerializer.Serialize(new { targetUserId = State.PendingReactionTargetUserIds[0] });
+        }
+    }
+
+    private string CreateReactionPayload(Guid userId, string cardCode, int nopeCount, DateTime reactionWindowEndsAt)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            userId,
+            cardCode,
+            reactionWindowEndsAt,
+            nopeCount,
+            targetUserIds = State.PendingReactionTargetUserIds,
+            effectScope = State.PendingReactionEffectScope
+        });
+    }
+
     private void HandleUseDefuse(Guid userId)
     {
         if (State.PendingDefuseUserId != userId || State.PendingBombCardCode == null)
@@ -902,7 +1151,11 @@ public class MatchRuntime
         State.PendingDefuseUserId = null;
         State.PendingBombOwnerUserId = userId;
         State.BombReinsertWindowEndsAt = DateTime.UtcNow.AddSeconds(State.BombReinsertSeconds);
-        IncrementVersion("DefuseUsed", $"{{\"userId\":\"{userId}\"}}");
+        IncrementVersion("DefuseUsed", JsonSerializer.Serialize(new
+        {
+            userId,
+            bombReinsertWindowEndsAt = State.BombReinsertWindowEndsAt
+        }));
     }
 
     private void HandleChooseBombInsertPosition(Guid userId, string payload)
@@ -925,7 +1178,12 @@ public class MatchRuntime
             return;
         }
 
-        pos = Math.Clamp(pos, 0, State.DrawPile.Count);
+        if (pos < 0 || pos > State.DrawPile.Count)
+        {
+            IncrementVersion("ActionRejected", $"{{\"reason\":\"INVALID_INSERT_POSITION\",\"userId\":\"{userId}\"}}");
+            return;
+        }
+
         State.DrawPile.Insert(pos, State.PendingBombCardCode);
         IncrementVersion("BombReinserted", $"{{\"userId\":\"{userId}\",\"position\":{pos}}}");
         State.PendingBombCardCode = null;
@@ -989,7 +1247,7 @@ public class MatchRuntime
 
         if (State.Phase == MatchPhase.Playing && GetCurrentTurnUserId() == userId)
         {
-            AdvanceTurn();
+            ScheduleTurnAdvance();
         }
     }
 
@@ -1079,6 +1337,8 @@ public class MatchRuntime
     {
         if (comboSize is not (2 or 3 or 5)) return false;
 
+        var updatedHand = new List<string>(hand);
+        var consumedCards = new List<string>(comboSize);
         if (comboSize == 5)
         {
             List<string> cardCodes;
@@ -1110,17 +1370,17 @@ public class MatchRuntime
 
             foreach (var code in cardCodes)
             {
-                if (!hand.Remove(code))
+                if (!updatedHand.Remove(code))
                 {
                     IncrementVersion("ActionRejected", $"{{\"reason\":\"CARD_NOT_OWNED\",\"userId\":\"{userId}\",\"cardCode\":\"{code}\"}}");
                     return false;
                 }
-                State.DiscardPile.Add(code);
+                consumedCards.Add(code);
             }
         }
         else // Combo 2 or 3
         {
-            var count = hand.Count(c => c == cardCode);
+            var count = updatedHand.Count(c => c == cardCode);
             if (count < comboSize)
             {
                 IncrementVersion("ActionRejected", $"{{\"reason\":\"INSUFFICIENT_COMBO_CARDS\",\"userId\":\"{userId}\",\"cardCode\":\"{cardCode}\",\"required\":{comboSize}}}");
@@ -1129,17 +1389,58 @@ public class MatchRuntime
 
             for (var i = 0; i < comboSize; i++)
             {
-                hand.Remove(cardCode);
-                State.DiscardPile.Add(cardCode);
+                updatedHand.Remove(cardCode);
+                consumedCards.Add(cardCode);
             }
         }
 
-        State.Players[playerIndex] = State.Players[playerIndex] with { Hand = hand };
+        State.DiscardPile.AddRange(consumedCards);
+        State.Players[playerIndex] = State.Players[playerIndex] with { Hand = updatedHand };
         var comboCode = $"Combo{comboSize}";
-        IncrementVersion("ComboPlayed", $"{{\"userId\":\"{userId}\",\"comboSize\":{comboSize},\"cardCode\":\"{cardCode}\",\"comboCode\":\"{comboCode}\"}}");
-
+        IncrementVersion("ComboPlayed", JsonSerializer.Serialize(new
+        {
+            userId,
+            comboSize,
+            cardCode,
+            comboCode,
+            cardCodes = consumedCards
+        }));
         ApplyCardEffect(userId, comboCode, payload);
         return true;
+    }
+
+    private void HandleBeginInteraction(Guid userId)
+    {
+        if (State.Phase != MatchPhase.Playing ||
+            GetCurrentTurnUserId() != userId ||
+            !IsAlivePlayer(userId) ||
+            State.TurnAdvanceAt.HasValue ||
+            State.PendingReactionAction != null ||
+            State.PendingDefuseUserId.HasValue ||
+            State.PendingBombCardCode != null ||
+            State.PendingFavorTargetId.HasValue ||
+            State.InteractionResetTurnCounter == State.TurnCounter)
+        {
+            return;
+        }
+
+        State.InteractionResetTurnCounter = State.TurnCounter;
+        RefreshCurrentTurn(userId);
+    }
+
+    private void RefreshCurrentTurn(Guid userId)
+    {
+        if (State.Phase != MatchPhase.Playing ||
+            State.TurnAdvanceAt.HasValue ||
+            GetCurrentTurnUserId() != userId ||
+            !IsAlivePlayer(userId))
+        {
+            return;
+        }
+
+        var player = State.Players.First(x => x.UserId == userId);
+        State.TurnEndsAt = DateTime.UtcNow.AddSeconds(State.TurnTimerSeconds);
+        IncrementVersion("TurnContinues", CreateTurnContinuesPayload(userId, Math.Max(1, player.PendingDrawCount)));
     }
 
     private static bool IsCatCard(string cardCode)
@@ -1261,8 +1562,13 @@ public class MatchRuntime
         // Open favor window: Bob must pick a card to give
         State.PendingFavorRequesterId = userId;
         State.PendingFavorTargetId = target.Value;
-        State.FavorWindowEndsAt = DateTime.UtcNow.AddSeconds(15);
-        IncrementVersion("FavorWindowOpened", $"{{\"requesterId\":\"{userId}\",\"targetId\":\"{target.Value}\"}}");
+        State.FavorWindowEndsAt = DateTime.UtcNow.AddSeconds(State.FavorDecisionSeconds);
+        IncrementVersion("FavorWindowOpened", JsonSerializer.Serialize(new
+        {
+            requesterId = userId,
+            targetId = target.Value,
+            favorWindowEndsAt = State.FavorWindowEndsAt
+        }));
     }
 
     private void HandleChooseFavorCard(Guid userId, string payload)
@@ -1273,8 +1579,18 @@ public class MatchRuntime
             return;
         }
 
-        TryGetStringProperty(payload, "cardCode", out var cardCode);
-        ExecuteFavorTransfer(State.PendingFavorRequesterId!.Value, userId, string.IsNullOrWhiteSpace(cardCode) ? null : cardCode);
+        if (!TryGetStringProperty(payload, "cardCode", out var cardCode) ||
+            !HasCardInHand(userId, cardCode))
+        {
+            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            {
+                reason = "INVALID_FAVOR_CARD",
+                userId
+            }));
+            return;
+        }
+
+        ExecuteFavorTransfer(State.PendingFavorRequesterId!.Value, userId, cardCode);
     }
 
     private void ExecuteFavorTransfer(Guid requesterId, Guid targetId, string? requestedCardCode)
@@ -1307,6 +1623,7 @@ public class MatchRuntime
         sourceHand.Add(card);
         State.Players[sourceIndex] = State.Players[sourceIndex] with { Hand = sourceHand };
         IncrementVersion("FavorResolved", $"{{\"from\":\"{targetId}\",\"to\":\"{requesterId}\",\"cardCode\":\"{card}\"}}");
+        RefreshCurrentTurn(requesterId);
     }
 
     private void ApplyBury(Guid userId)

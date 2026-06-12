@@ -92,5 +92,10 @@ namespace Managers
         {
             WebsocketClient.SendChooseFavorCardAsync(cardCode);
         }
+
+        public void SendBeginInteractionCommand()
+        {
+            WebsocketClient.SendCommandAsync(WsClientCommandType.BeginInteraction, null);
+        }
     }
 }

@@ -14,6 +14,8 @@ namespace Network.Websocket
     public class WsUserPayload : WsGameplayPayloadBase
     {
         public string userId;
+        public DateTime? defuseWindowEndsAt;
+        public DateTime? bombReinsertWindowEndsAt;
     }
 
     [Serializable]
@@ -47,6 +49,9 @@ namespace Network.Websocket
         public string cardCode;
         public DateTime? reactionWindowEndsAt;
         public int nopeCount;
+        public string[] targetUserIds;
+        public string effectScope;
+        public bool? addedToHand;
     }
 
     [Serializable]
@@ -63,6 +68,8 @@ namespace Network.Websocket
         public string cardCode;
         public int nopeCount;
         public DateTime? reactionWindowEndsAt;
+        public string[] targetUserIds;
+        public string effectScope;
     }
 
     [Serializable]
@@ -122,6 +129,7 @@ namespace Network.Websocket
         public int comboSize;
         public string cardCode;
         public string comboCode;
+        public string[] cardCodes;
     }
 
     [Serializable]
@@ -169,6 +177,7 @@ namespace Network.Websocket
     {
         public string requesterId;
         public string targetId;
+        public DateTime? favorWindowEndsAt;
     }
 
     [Serializable]

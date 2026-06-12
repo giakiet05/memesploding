@@ -17,6 +17,7 @@ public class BotRuntimeWorker(
     private readonly ConcurrentDictionary<string, byte> _nopeWindowParticipants = new();
     private readonly ConcurrentDictionary<string, int> _turnPlayCounts = new();
     private readonly ConcurrentDictionary<string, int> _turnPlayLimits = new();
+    private readonly ConcurrentDictionary<string, PendingBotAction> _pendingActions = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -51,19 +52,42 @@ public class BotRuntimeWorker(
 
         foreach (var bot in state.Players.Where(IsAliveBot))
         {
-            if (!TryBuildCommand(runtime, bot, out var command))
+            var botKey = $"{state.MatchId}:{bot.UserId}";
+            if (!_pendingActions.TryGetValue(botKey, out var pendingAction) ||
+                pendingAction.StateVersion != state.StateVersion)
+            {
+                if (!TryBuildCommand(runtime, bot, out var command))
+                {
+                    _pendingActions.TryRemove(botKey, out _);
+                    continue;
+                }
+
+                pendingAction = new PendingBotAction(
+                    command,
+                    state.StateVersion,
+                    DateTime.UtcNow.AddMilliseconds(state.BotActionDelayMs)
+                );
+                _pendingActions[botKey] = pendingAction;
+                continue;
+            }
+
+            if (pendingAction.ReadyAtUtc > DateTime.UtcNow)
             {
                 continue;
             }
 
-            var key = $"{state.MatchId}:{bot.UserId}";
-            if (_handledVersions.TryGetValue(key, out var version) && version == state.StateVersion)
+            if (_handledVersions.TryGetValue(botKey, out var version) && version == state.StateVersion)
             {
                 continue;
             }
 
-            _handledVersions[key] = state.StateVersion;
-            await runtimeManager.EnqueueCommandAsync(state.MatchId, command, cancellationToken);
+            _handledVersions[botKey] = state.StateVersion;
+            _pendingActions.TryRemove(botKey, out _);
+            if (pendingAction.Command.Name.Equals("PlayCard", StringComparison.OrdinalIgnoreCase))
+            {
+                _turnPlayCounts.AddOrUpdate(GetTurnKey(state, bot.UserId), 1, (_, count) => count + 1);
+            }
+            await runtimeManager.EnqueueCommandAsync(state.MatchId, pendingAction.Command, cancellationToken);
             return;
         }
     }
@@ -117,6 +141,7 @@ public class BotRuntimeWorker(
 
         if (state.PendingReactionAction != null ||
             state.ReactionResolveAt.HasValue ||
+            state.TurnAdvanceAt.HasValue ||
             state.PendingDefuseUserId.HasValue ||
             state.PendingBombCardCode != null ||
             state.PendingFavorTargetId.HasValue)
@@ -125,6 +150,11 @@ public class BotRuntimeWorker(
         }
 
         if (runtime.GetCurrentTurnUserId() != bot.UserId)
+        {
+            return false;
+        }
+
+        if (state.DrawPile.Count == 0)
         {
             return false;
         }
@@ -141,7 +171,6 @@ public class BotRuntimeWorker(
         var playableCard = PickPlayableCard(bot);
         if (playableCard != null)
         {
-            _turnPlayCounts[turnKey] = playCount + 1;
             command = new RuntimeCommand("PlayCard", bot.UserId, BuildPlayCardPayload(state, bot.UserId, playableCard));
             return true;
         }
@@ -167,8 +196,8 @@ public class BotRuntimeWorker(
         {
             var target = state.Players
                 .Where(player => player.UserId != botUserId &&
-                                 player.Role.Equals("bot", StringComparison.OrdinalIgnoreCase) &&
                                  player.LifeState == PlayerLifeState.Alive)
+                .OrderBy(player => player.Role.Equals("bot", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
                 .Select(player => (Guid?)player.UserId)
                 .FirstOrDefault();
 
@@ -241,4 +270,6 @@ public class BotRuntimeWorker(
     {
         return $"{state.MatchId}:{state.TurnCounter}:{userId}";
     }
+
+    private sealed record PendingBotAction(RuntimeCommand Command, long StateVersion, DateTime ReadyAtUtc);
 }

@@ -46,6 +46,8 @@ namespace Gameplay
         public string pendingReactionAction;
         public DateTime? reactionWindowEndsAt;
         public int pendingNopeCount;
+        public string[] pendingReactionTargetUserIds;
+        public string pendingReactionEffectScope;
         public string lastNopeUserId;
         public string lastNopedAction;
         public string pendingFavorRequesterId;
@@ -90,6 +92,8 @@ namespace Gameplay
             reactionWindowEndsAt = state.reactionWindowEndsAt;
 
             pendingNopeCount = state.pendingNopeCount;
+            pendingReactionTargetUserIds = state.pendingReactionTargetUserIds;
+            pendingReactionEffectScope = state.pendingReactionEffectScope;
 
             pendingFavorRequesterId = state.pendingFavorRequesterId;
             pendingFavorTargetId = state.pendingFavorTargetId;

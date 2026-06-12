@@ -13,12 +13,17 @@ public class MatchRuntimeState
     public int NopeWindowSeconds { get; set; } = 5;
     public int DefuseDecisionSeconds { get; set; } = 5;
     public int BombReinsertSeconds { get; set; } = 10;
+    public int FavorDecisionSeconds { get; set; } = 10;
     public int EffectResolutionDelayMs { get; set; } = 400;
+    public int TurnTransitionDelayMs { get; set; } = 2000;
+    public int BotActionDelayMs { get; set; } = 2000;
     public int ReconnectGraceSeconds { get; set; } = 120;
     public int TurnDirection { get; set; } = 1;
     public int TurnIndex { get; set; } = 0;
     public int TurnCounter { get; set; } = 0;
+    public int InteractionResetTurnCounter { get; set; } = -1;
     public DateTime? TurnEndsAt { get; set; }
+    public DateTime? TurnAdvanceAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? StartedAt { get; set; }
     public List<string> DrawPile { get; set; } = [];
@@ -30,6 +35,8 @@ public class MatchRuntimeState
     public int PendingNopeCount { get; set; }
     public DateTime? ReactionWindowEndsAt { get; set; }
     public DateTime? ReactionResolveAt { get; set; }
+    public List<Guid> PendingReactionTargetUserIds { get; set; } = [];
+    public string PendingReactionEffectScope { get; set; } = "none";
     public Guid? PendingDefuseUserId { get; set; }
     public DateTime? DefuseWindowEndsAt { get; set; }
     public DateTime? BombReinsertWindowEndsAt { get; set; }

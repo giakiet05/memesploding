@@ -39,6 +39,7 @@ namespace Managers
 
         private bool _hasShownDisconnectPopup;
         private bool _isReturningToWelcome;
+        private bool _isLocalDrawPending;
 
         public static GameManager EnsureInstance()
         {
@@ -249,6 +250,12 @@ namespace Managers
 
         public void DrawCard()
         {
+            if (_isLocalDrawPending)
+            {
+                Debug.LogWarning("[DrawTrace] Draw blocked: a draw command is already pending.");
+                return;
+            }
+
             if (_session?.GameState == null)
             {
                 Debug.LogWarning("[DrawTrace] Draw blocked: game state is not ready.");
@@ -263,10 +270,76 @@ namespace Managers
                 return;
             }
 
+            if (_session.GameState.drawPileCount <= 0)
+            {
+                Debug.LogWarning("[DrawTrace] Draw blocked: draw pile is empty.");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction) ||
+                !string.IsNullOrWhiteSpace(_session.GameState.pendingBombCardCode) ||
+                !string.IsNullOrWhiteSpace(_session.GameState.pendingDefuseUserId) ||
+                !string.IsNullOrWhiteSpace(_session.GameState.pendingFavorTargetId))
+            {
+                Debug.LogWarning("[DrawTrace] Draw blocked: another card effect is still resolving.");
+                return;
+            }
+
             Debug.Log($"[DrawTrace] Sending draw command. turnIndex={_session.GameState.turnIndex} localUserId={Player?.ID ?? "null"}");
+            _isLocalDrawPending = true;
+            EventBus.Publish(EventType.TurnEnd, new TurnEndEventPayload(Player?.ID));
             //UIManager.Instance.DrawCard();
             NetworkManager.Instance.SendDrawCardCommand();
             //TODO: Using loading screen
+        }
+
+        public void NotifyLocalDrawResolved()
+        {
+            _isLocalDrawPending = false;
+        }
+
+        public bool CanDrawLocalCard()
+        {
+            return _session?.GameState != null &&
+                   !_isLocalDrawPending &&
+                   _session.GameState.IsPlayerTurn &&
+                   IsLocalPlayerAlive() &&
+                   _session.GameState.drawPileCount > 0 &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingBombCardCode) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingDefuseUserId) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingFavorTargetId) &&
+                   !(GameplayUIManager.Instance?.IsChoosingTarget ?? false);
+        }
+
+        public bool IsLocalPlayerAlive()
+        {
+            return _session?.GameState?.players?.Any(player =>
+                string.Equals(player.userId, Player?.ID, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(player.lifeState, "Alive", StringComparison.OrdinalIgnoreCase)) == true;
+        }
+
+        public bool CanSelectLocalCard(string cardCode)
+        {
+            if (!IsLocalPlayerAlive() || _session?.GameState == null)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction))
+                return string.Equals(cardCode, "Nope", StringComparison.OrdinalIgnoreCase);
+
+            if (IsLocalFavorTarget())
+                return true;
+
+            return !(GameplayUIManager.Instance?.IsChoosingTarget ?? false) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingBombCardCode) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingDefuseUserId) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingFavorTargetId);
+        }
+
+        public void BeginInteraction()
+        {
+            if (_session?.GameState?.IsPlayerTurn == true)
+                NetworkManager.Instance.SendBeginInteractionCommand();
         }
         public int GetDrawPileCount() => _session?.GameState?.drawPileCount ?? 0;
         public int GetCurrentTurnIndex() => _session?.GameState?.turnIndex ?? -1;
@@ -279,7 +352,12 @@ namespace Managers
                 return false;
 
             if (string.Equals(cardCode, "Nope", StringComparison.OrdinalIgnoreCase))
-                return !string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction);
+            {
+                return !string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction) &&
+                       _session.GameState.selfHand != null &&
+                       _session.GameState.selfHand.Any(card =>
+                           string.Equals(card, "Nope", StringComparison.OrdinalIgnoreCase));
+            }
 
             if (string.Equals(cardCode, "Defuse", StringComparison.OrdinalIgnoreCase))
             {
@@ -287,7 +365,33 @@ namespace Managers
                        string.Equals(_session.GameState.pendingDefuseUserId, Player.ID, StringComparison.OrdinalIgnoreCase);
             }
 
-            return _session.GameState.IsPlayerTurn;
+            if (cardCode is "Cat1" or "Cat2" or "Cat3" or "Cat4" or "Cat5" or
+                "ExplodingKitten" or "ImplodingKitten")
+            {
+                return false;
+            }
+
+            return _session.GameState.IsPlayerTurn &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingBombCardCode) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingDefuseUserId) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingFavorTargetId);
+        }
+
+        public bool IsLocalFavorTarget()
+        {
+            return !string.IsNullOrWhiteSpace(Player?.ID) &&
+                   string.Equals(_session?.GameState?.pendingFavorTargetId, Player.ID, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public bool CanPlayLocalCombo()
+        {
+            return _session?.GameState != null &&
+                   _session.GameState.IsPlayerTurn &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingReactionAction) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingBombCardCode) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingDefuseUserId) &&
+                   string.IsNullOrWhiteSpace(_session.GameState.pendingFavorTargetId);
         }
 
         public TimeSpan? GetReactionWindowTimeLeft()
@@ -301,6 +405,16 @@ namespace Managers
 
             var remaining = endsAtUtc.Value - GetServerNowUtc();
             return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+
+        public DateTime? GetReactionWindowEndsAtUtc()
+        {
+            return _session?.GameState?.reactionWindowEndsAt;
+        }
+
+        public GameState GetGameState()
+        {
+            return _session?.GameState;
         }
 
         public void ChooseBombInsertPosition(int position)

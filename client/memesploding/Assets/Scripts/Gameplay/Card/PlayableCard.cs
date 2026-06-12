@@ -32,6 +32,9 @@ namespace Gameplay.Card
         {
             if (!Draggable)
                 return;
+            if (GameManager.Instance != null &&
+                !GameManager.Instance.CanSelectLocalCard(Data != null ? Data.cardCode : null))
+                return;
 
             ToggleSelectedForPlay();
         }

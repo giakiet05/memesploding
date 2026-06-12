@@ -26,8 +26,11 @@ public class MatchRuntimeManager(
             NopeWindowSeconds = _timing.NopeWindowSeconds,
             DefuseDecisionSeconds = _timing.DefuseDecisionSeconds,
             BombReinsertSeconds = _timing.BombReinsertSeconds,
+            FavorDecisionSeconds = _timing.FavorDecisionSeconds,
             ReconnectGraceSeconds = _timing.ReconnectGraceSeconds,
             EffectResolutionDelayMs = _timing.EffectResolutionDelayMs,
+            TurnTransitionDelayMs = _timing.TurnTransitionDelayMs,
+            BotActionDelayMs = _timing.BotActionDelayMs,
             Players = @event.Players
                 .Select(p => new MatchRuntimePlayerState(
                     p.UserId,

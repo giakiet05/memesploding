@@ -64,6 +64,8 @@ namespace Network.Websocket
         public string pendingReactionAction;
         public DateTime? reactionWindowEndsAt;
         public int pendingNopeCount;
+        public string[] pendingReactionTargetUserIds;
+        public string pendingReactionEffectScope;
         public string pendingFavorRequesterId;
         public string pendingFavorTargetId;
         public DateTime? favorWindowEndsAt;

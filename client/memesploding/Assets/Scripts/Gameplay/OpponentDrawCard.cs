@@ -63,7 +63,7 @@ namespace Gameplay
             Quaternion currentRotation = Quaternion.Euler(0f, 0f, startRotation);
             RectTransform.localRotation = currentRotation;
 
-            float effectiveDuration = duration / Mathf.Max(speed, 0.01f);
+            float effectiveDuration = Mathf.Max(0.8f, duration / Mathf.Max(speed, 0.01f));
             float time = 0f;
 
             Vector2 direction = (targetPosition - startPosition).normalized;
