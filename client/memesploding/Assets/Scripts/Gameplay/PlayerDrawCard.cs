@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections;
 using Gameplay.Card;
 using ScriptableObjects;
 using UnityEngine;
@@ -8,10 +9,16 @@ namespace Gameplay
 {
     public class PlayerDrawCard : BaseCard
     {
-        private Animator _animator;
+        [SerializeField, Min(0.05f)] private float moveDuration = 0.5f;
+        [SerializeField, Min(0f)] private float faceUpHoldDuration = 0.3f;
+        [SerializeField] private Image frontImage;
 
+        private Animator _animator;
+        private GameObject _front;
+        private GameObject _back;
         private Vector2 _originalPosition;
         private Quaternion _originalRotation;
+        private Vector3 _originalScale;
 
         public Action<PlayerDrawCard> OnAnimationFinished;
 
@@ -19,36 +26,37 @@ namespace Gameplay
         {
             base.Awake();
             _animator = GetComponent<Animator>();
+            _front = transform.Find("Front")?.gameObject;
+            _back = transform.Find("Back")?.gameObject;
+            frontImage ??= _front != null ? _front.GetComponent<Image>() : null;
         }
 
         public override void Initialize(CardData cardData)
         {
             base.Initialize(cardData);
 
-            if (cardData.artworks != null)
-                cardImage.sprite = cardData.Artwork;
+            if (cardData.artworks != null && frontImage != null)
+                frontImage.sprite = cardData.Artwork;
 
             _originalPosition = transform.position;
             _originalRotation = transform.rotation;
+            _originalScale = transform.localScale;
         }
 
-        public void PlayAnimation()
+        public void PlayAnimation(Vector2 startPosition)
         {
-            _animator.Play("DrawCard");
+            StopAllCoroutines();
+            SetFaceUp();
+            RectTransform.anchoredPosition = startPosition;
+            RectTransform.localScale = new Vector3(0.72f, 0.72f, 1f);
+            if (_animator != null)
+                _animator.enabled = false;
+            StartCoroutine(PlayFastFaceUpAnimation());
         }
 
         public void OnCardClicked()
         {
-            var isFlip = _animator.GetBool("isFlip");
-            var isCollect = _animator.GetBool("isCollect");
-
-            if (!isFlip) {
-                _animator.SetBool("isFlip", true);
-                return;
-            }
-            else if (!isCollect) {
-                _animator.SetBool("isCollect", true);
-            }
+            // Draw animation is automatic; clicks no longer control flip or collect.
         }
 
         public void AnimationFinished()
@@ -58,11 +66,17 @@ namespace Gameplay
 
         public void Reset()
         {
+            StopAllCoroutines();
             transform.position = _originalPosition;
             transform.rotation = _originalRotation;
+            transform.localScale = _originalScale;
+            SetFaceUp();
 
-            _animator.Rebind();
-            _animator.Update(0f);
+            if (_animator != null)
+            {
+                _animator.enabled = false;
+                _animator.Rebind();
+            }
         }
 
         public void SetPosition(Vector2 pos)
@@ -73,6 +87,46 @@ namespace Gameplay
         public void SetScale(Vector3 scale)
         {
             RectTransform.localScale = scale;
+        }
+
+        private IEnumerator PlayFastFaceUpAnimation()
+        {
+            moveDuration = Mathf.Max(moveDuration, 0.5f);
+            faceUpHoldDuration = Mathf.Max(faceUpHoldDuration, 0.3f);
+            var startPosition = RectTransform.anchoredPosition;
+            var startRotation = RectTransform.localRotation;
+            var elapsed = 0f;
+
+            while (elapsed < moveDuration)
+            {
+                var t = Mathf.SmoothStep(0f, 1f, elapsed / moveDuration);
+                RectTransform.anchoredPosition = Vector2.Lerp(startPosition, Vector2.zero, t);
+                RectTransform.localRotation = Quaternion.Lerp(startRotation, Quaternion.identity, t);
+                RectTransform.localScale = Vector3.Lerp(new Vector3(0.72f, 0.72f, 1f), Vector3.one, t);
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            RectTransform.anchoredPosition = Vector2.zero;
+            RectTransform.localRotation = Quaternion.identity;
+            RectTransform.localScale = Vector3.one;
+
+            if (faceUpHoldDuration > 0f)
+                yield return new WaitForSecondsRealtime(faceUpHoldDuration);
+
+            OnAnimationFinished?.Invoke(this);
+        }
+
+        private void SetFaceUp()
+        {
+            if (_front != null)
+            {
+                _front.SetActive(true);
+                _front.transform.localRotation = Quaternion.identity;
+            }
+
+            if (_back != null)
+                _back.SetActive(false);
         }
     }
 }

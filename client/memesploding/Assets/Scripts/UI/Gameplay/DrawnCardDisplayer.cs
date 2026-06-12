@@ -43,7 +43,7 @@ namespace UI.Gameplay
             }
         }
 
-        public void PlayDrawCardAnimation(string cardCode)
+        public void PlayDrawCardAnimation(string cardCode, Vector3 deckWorldPosition)
         {
             if (playerDrawCard == null)
             {
@@ -60,8 +60,14 @@ namespace UI.Gameplay
             if (!CardManager.Instance.InitializePlayerDrawCard(playerDrawCard, cardCode))
                 return;
 
+            var parentRect = playerDrawCard.RectTransform.parent as RectTransform;
+            var screenPoint = RectTransformUtility.WorldToScreenPoint(null, deckWorldPosition);
+            var startPosition = Vector2.zero;
+            if (parentRect != null)
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPoint, null, out startPosition);
+
             playerDrawCard.gameObject.SetActive(true);
-            playerDrawCard.PlayAnimation();
+            playerDrawCard.PlayAnimation(startPosition);
         }
     }
 }
