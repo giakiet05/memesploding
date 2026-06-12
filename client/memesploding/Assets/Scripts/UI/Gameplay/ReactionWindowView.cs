@@ -41,6 +41,7 @@ namespace UI.Gameplay
         private Image _statusBadge;
         private RectTransform _visualRoot;
         private RectTransform _timerFillRect;
+        private GameObject _timerTrackObject;
         private float _timerFillWidth;
         private TMP_FontAsset _bodyFont;
         private TMP_FontAsset _titleFont;
@@ -123,6 +124,7 @@ namespace UI.Gameplay
                 gameObject.SetActive(true);
 
             BuildVisuals();
+            SetNotificationLayout(false);
             if (model == null)
                 return;
 
@@ -160,6 +162,7 @@ namespace UI.Gameplay
                 gameObject.SetActive(true);
 
             BuildVisuals();
+            SetNotificationLayout(true);
             titleText.text = title ?? "THÔNG BÁO";
             actionText.text = message ?? string.Empty;
             nopeCountText.text = detail ?? string.Empty;
@@ -189,6 +192,7 @@ namespace UI.Gameplay
 
         public void ShowResult(bool activated)
         {
+            SetNotificationLayout(false);
             SetStatus(activated ? "ĐÃ KÍCH HOẠT" : "ĐÃ BỊ CHẶN", activated);
             _endsAtUtc = null;
             _reactionActive = false;
@@ -333,14 +337,17 @@ namespace UI.Gameplay
             _statusBadge.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 2f);
             _statusText = CreateText("StatusText", _statusBadge.rectTransform, Vector2.zero, Vector2.zero, 14f, Color.white, FontStyles.Bold, TextAlignmentOptions.Center, stretch: true, font: _bodyFont, fontMaterial: _bodyFontMaterial);
 
-            actionText = CreateText("ActorText", _visualRoot, new Vector2(0f, -52f), new Vector2(455f, 26f), 17f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
-            nopeCountText = CreateText("TargetText", _visualRoot, new Vector2(0f, -79f), new Vector2(455f, 24f), 16f, new Color(0.36f, 0.2f, 0.12f), FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
-            _descriptionText = CreateText("DescriptionText", _visualRoot, new Vector2(0f, -105f), new Vector2(455f, 32f), 14f, Ink, FontStyles.Normal, TextAlignmentOptions.Top, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            actionText = CreateText("ActorText", _visualRoot, new Vector2(0f, -52f), new Vector2(455f, 34f), 17f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            nopeCountText = CreateText("TargetText", _visualRoot, new Vector2(0f, -88f), new Vector2(455f, 28f), 16f, new Color(0.36f, 0.2f, 0.12f), FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            _descriptionText = CreateText("DescriptionText", _visualRoot, new Vector2(0f, -119f), new Vector2(455f, 48f), 14f, Ink, FontStyles.Normal, TextAlignmentOptions.Top, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            _descriptionText.textWrappingMode = TextWrappingModes.Normal;
+            _descriptionText.overflowMode = TextOverflowModes.Overflow;
 
-            var timerTrack = CreateImage("TimerTrack", _visualRoot, new Vector2(-20f, -158f), new Vector2(405f, 12f), Ink);
+            var timerTrack = CreateImage("TimerTrack", _visualRoot, new Vector2(-20f, -194f), new Vector2(405f, 12f), Ink);
+            _timerTrackObject = timerTrack.gameObject;
             timerFill = CreateImage("TimerFill", timerTrack.rectTransform, new Vector2(3f, -2f), new Vector2(399f, 6f), Yellow);
             ConfigureTimerFillRect();
-            timerText = CreateText("TimerText", _visualRoot, new Vector2(220f, -151f), new Vector2(45f, 24f), 16f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            timerText = CreateText("TimerText", _visualRoot, new Vector2(220f, -187f), new Vector2(45f, 24f), 16f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
             timerText.overflowMode = TextOverflowModes.Overflow;
         }
 
@@ -355,6 +362,7 @@ namespace UI.Gameplay
                 ? _statusBadge.transform.Find("StatusText")?.GetComponent<TextMeshProUGUI>()
                 : null;
             timerFill = _visualRoot.Find("TimerTrack/TimerFill")?.GetComponent<Image>();
+            _timerTrackObject = _visualRoot.Find("TimerTrack")?.gameObject;
             timerText = _visualRoot.Find("TimerText")?.GetComponent<TextMeshProUGUI>();
             ConfigureTimerFillRect();
         }
@@ -491,6 +499,38 @@ namespace UI.Gameplay
                 _statusBadge.color = positive ? Green : Red;
         }
 
+        private void SetNotificationLayout(bool notification)
+        {
+            var rect = (RectTransform)transform;
+            rect.sizeDelta = notification ? new Vector2(500f, 165f) : new Vector2(500f, 215f);
+
+            if (_timerTrackObject != null)
+                _timerTrackObject.SetActive(!notification);
+            if (timerText != null)
+                timerText.gameObject.SetActive(!notification);
+            if (_descriptionText != null)
+                _descriptionText.gameObject.SetActive(!notification);
+
+            ConfigureToastText(actionText, notification ? new Vector2(455f, 44f) : new Vector2(455f, 34f), true);
+            ConfigureToastText(nopeCountText, notification ? new Vector2(455f, 42f) : new Vector2(455f, 28f), true);
+            if (actionText != null)
+                actionText.rectTransform.anchoredPosition = new Vector2(0f, -52f);
+            if (nopeCountText != null)
+                nopeCountText.rectTransform.anchoredPosition = notification
+                    ? new Vector2(0f, -102f)
+                    : new Vector2(0f, -88f);
+        }
+
+        private static void ConfigureToastText(TextMeshProUGUI text, Vector2 size, bool wrap)
+        {
+            if (text == null)
+                return;
+
+            text.rectTransform.sizeDelta = size;
+            text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            text.overflowMode = wrap ? TextOverflowModes.Overflow : TextOverflowModes.Ellipsis;
+        }
+
         private void SetNopeVisible(bool visible)
         {
             if (nopeButton != null)
@@ -576,6 +616,7 @@ namespace UI.Gameplay
         private void ShowEditorPreview()
         {
             BuildVisuals();
+            SetNotificationLayout(false);
             titleText.text = "ATTACK";
             actionText.text = "Alice đã đánh Attack";
             nopeCountText.text = "Ảnh hưởng: Bob";

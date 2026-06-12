@@ -69,6 +69,23 @@ public class MatchRuntimeInteractionTests
     }
 
     [Fact]
+    public async Task UsedDefuse_IsAddedToDiscardPile_ForComboFiveRecovery()
+    {
+        var (runtime, actor, _) = CreateRuntime(["Defuse"], []);
+        runtime.State.PendingDefuseUserId = actor;
+        runtime.State.PendingBombOwnerUserId = actor;
+        runtime.State.PendingBombCardCode = "ExplodingKitten";
+        runtime.State.DefuseWindowEndsAt = DateTime.UtcNow.AddSeconds(10);
+
+        await runtime.EnqueueAsync(new RuntimeCommand("UseDefuse", actor, "{}"));
+        await runtime.TickAsync();
+
+        Assert.Empty(runtime.State.Players[0].Hand!);
+        Assert.Contains("Defuse", runtime.State.DiscardPile);
+        Assert.Equal("DefuseUsed", runtime.State.EventLog[^1].EventType);
+    }
+
+    [Fact]
     public void CatCard_CannotBePlayedOutsideCombo()
     {
         var (runtime, actor, _) = CreateRuntime(["Cat1"], []);

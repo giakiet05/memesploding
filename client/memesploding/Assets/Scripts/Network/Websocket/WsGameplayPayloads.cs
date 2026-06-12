@@ -99,6 +99,7 @@ namespace Network.Websocket
     {
         public string userId;
         public int position;
+        public int drawPileCount;
     }
 
     [Serializable]
@@ -265,6 +266,7 @@ namespace Network.Websocket
                     return Deserialize<WsTurnContinuesPayload>(payload);
 
                 case WsGameplayEventType.BombReinserted:
+                case WsGameplayEventType.BombReinsertAuto:
                     return Deserialize<WsBombReinsertedPayload>(payload);
 
                 case WsGameplayEventType.PlayerEliminated:
@@ -313,7 +315,6 @@ namespace Network.Websocket
                 case WsGameplayEventType.CatomicBombResolved:
                     return Deserialize<WsCatomicBombResolvedPayload>(payload);
 
-                case WsGameplayEventType.BombReinsertAuto:
                 case WsGameplayEventType.ShuffleApplied:
                 case WsGameplayEventType.MatchStarted:
                 case WsGameplayEventType.DrawPileEmpty:

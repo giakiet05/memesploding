@@ -110,7 +110,10 @@ public class MatchRuntime
             State.BombReinsertWindowEndsAt = null;
             State.PendingBombOwnerUserId = null;
             State.PendingBombCardCode = null;
-            IncrementVersion("BombReinsertAuto", "{}");
+            IncrementVersion("BombReinsertAuto", JsonSerializer.Serialize(new
+            {
+                drawPileCount = State.DrawPile.Count
+            }));
             if (ownerUserId.HasValue && !IsBombResolutionPendingFor(ownerUserId.Value))
             {
                 CompleteCurrentTurnAfterDrawResolution(ownerUserId.Value);
@@ -1147,6 +1150,7 @@ public class MatchRuntime
             return;
         }
 
+        State.DiscardPile.Add("Defuse");
         State.DefuseWindowEndsAt = null;
         State.PendingDefuseUserId = null;
         State.PendingBombOwnerUserId = userId;
@@ -1185,7 +1189,12 @@ public class MatchRuntime
         }
 
         State.DrawPile.Insert(pos, State.PendingBombCardCode);
-        IncrementVersion("BombReinserted", $"{{\"userId\":\"{userId}\",\"position\":{pos}}}");
+        IncrementVersion("BombReinserted", JsonSerializer.Serialize(new
+        {
+            userId,
+            position = pos,
+            drawPileCount = State.DrawPile.Count
+        }));
         State.PendingBombCardCode = null;
         State.BombReinsertWindowEndsAt = null;
         State.PendingBombOwnerUserId = null;

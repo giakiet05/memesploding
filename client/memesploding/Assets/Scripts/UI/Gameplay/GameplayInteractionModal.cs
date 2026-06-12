@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Gameplay.Card;
+using Managers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +15,7 @@ namespace UI.Gameplay
         private TextMeshProUGUI _message;
         private TextMeshProUGUI _countdown;
         private RectTransform _options;
+        private GridLayoutGroup _optionLayout;
         private Slider _slider;
         private TextMeshProUGUI _sliderValue;
         private Button _confirm;
@@ -60,6 +64,7 @@ namespace UI.Gameplay
             Action onCancel = null)
         {
             Prepare(title, message, endsAtUtc);
+            ConfigureTextOptions();
             _onCancel = onCancel;
             foreach (var option in options)
             {
@@ -71,6 +76,42 @@ namespace UI.Gameplay
                     Hide();
                 });
             }
+            gameObject.SetActive(true);
+        }
+
+        public void ShowCardOptions(
+            string title,
+            string message,
+            IEnumerable<string> cardCodes,
+            DateTime? endsAtUtc,
+            Action<string> onSelected,
+            Action onCancel = null)
+        {
+            Prepare(title, message, endsAtUtc);
+            ConfigureCardOptions();
+            _onCancel = onCancel;
+
+            foreach (var cardCode in cardCodes
+                         .Where(code => !string.IsNullOrWhiteSpace(code))
+                         .Distinct())
+            {
+                var value = cardCode;
+                DisplayCard card = CardManager.Instance?.CreateDisplayCard(value, _options);
+                if (card == null)
+                    continue;
+
+                var layout = card.gameObject.GetComponent<LayoutElement>() ?? card.gameObject.AddComponent<LayoutElement>();
+                layout.preferredWidth = _optionLayout.cellSize.x;
+                layout.preferredHeight = _optionLayout.cellSize.y;
+                var button = card.gameObject.GetComponent<Button>() ?? card.gameObject.AddComponent<Button>();
+                button.targetGraphic = card.GetComponent<Graphic>() ?? card.GetComponentInChildren<Graphic>(true);
+                button.onClick.AddListener(() =>
+                {
+                    onSelected?.Invoke(value);
+                    Hide();
+                });
+            }
+
             gameObject.SetActive(true);
         }
 
@@ -141,11 +182,8 @@ namespace UI.Gameplay
             _countdown = CreateText("Countdown", panel, 28, FontStyles.Bold);
 
             _options = CreateRect("Options", panel);
-            var optionLayout = _options.gameObject.AddComponent<GridLayoutGroup>();
-            optionLayout.cellSize = new Vector2(260f, 48f);
-            optionLayout.spacing = new Vector2(10f, 8f);
-            optionLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            optionLayout.constraintCount = 2;
+            _optionLayout = _options.gameObject.AddComponent<GridLayoutGroup>();
+            ConfigureTextOptions();
             _options.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var sliderRect = CreateRect("PositionSlider", panel);
@@ -192,6 +230,22 @@ namespace UI.Gameplay
         {
             for (var i = _options.childCount - 1; i >= 0; i--)
                 Destroy(_options.GetChild(i).gameObject);
+        }
+
+        private void ConfigureTextOptions()
+        {
+            _optionLayout.cellSize = new Vector2(260f, 48f);
+            _optionLayout.spacing = new Vector2(10f, 8f);
+            _optionLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            _optionLayout.constraintCount = 2;
+        }
+
+        private void ConfigureCardOptions()
+        {
+            _optionLayout.cellSize = new Vector2(150f, 210f);
+            _optionLayout.spacing = new Vector2(14f, 14f);
+            _optionLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            _optionLayout.constraintCount = 3;
         }
 
         private static RectTransform CreateRect(string name, Transform parent)

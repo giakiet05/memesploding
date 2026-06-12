@@ -232,7 +232,7 @@ namespace Managers.UIManager
                 }
 
                 EnsureInteractionModal();
-                _interactionModal.ShowOptions(
+                _interactionModal.ShowCardOptions(
                     "COMBO 5",
                     "Chọn một lá từ chồng bài bỏ.",
                     discardCards,
@@ -467,20 +467,29 @@ namespace Managers.UIManager
             if (!GameManager.Instance.IsLocalFavorTarget())
                 return;
 
-            HideInteractionModal();
             CardManager.Instance?.HandLayout?.ClearCardSelection();
-            SetFavorButtonMode(true);
-            ShowActionToast(
+            SetFavorButtonMode(false);
+            var handCards = GameManager.Instance.GetGameState()?.selfHand?
+                .Where(card => !string.IsNullOrWhiteSpace(card))
+                .Distinct()
+                .ToList();
+            if (handCards == null || handCards.Count == 0)
+                return;
+
+            EnsureInteractionModal();
+            _interactionModal.ShowCardOptions(
                 "FAVOR",
                 $"Chọn một lá trong tay để đưa cho {ResolvePlayerName(requesterId)}.",
-                "Bấm GỬI sau khi chọn bài",
-                "CHỌN BÀI");
+                handCards,
+                GameManager.Instance.GetGameState()?.favorWindowEndsAt,
+                cardCode => GameManager.Instance.ChooseFavorCard(cardCode));
         }
 
         public void HideFavorWindow()
         {
             CardManager.Instance?.HandLayout?.ClearCardSelection();
             SetFavorButtonMode(false);
+            HideInteractionModal();
         }
 
         public void HideInteractionModal()

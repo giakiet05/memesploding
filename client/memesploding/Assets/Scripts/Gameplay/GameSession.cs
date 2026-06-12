@@ -296,6 +296,7 @@ namespace Gameplay
                     if (parsedPayload is not WsBombReinsertedPayload bombReinserted)
                         return;
 
+                    GameState.drawPileCount = bombReinserted.drawPileCount;
                     GameState.pendingBombOwnerUserId = null;
                     GameState.pendingBombCardCode = null;
                     GameState.pendingDefuseUserId = null;
@@ -305,6 +306,10 @@ namespace Gameplay
                     break;
 
                 case WsGameplayEventType.BombReinsertAuto:
+                    if (parsedPayload is WsBombReinsertedPayload autoReinsert)
+                        GameState.drawPileCount = autoReinsert.drawPileCount;
+                    else
+                        GameState.drawPileCount++;
                     GameState.pendingBombOwnerUserId = null;
                     GameState.pendingBombCardCode = null;
                     GameState.bombReinsertWindowEndsAt = null;
