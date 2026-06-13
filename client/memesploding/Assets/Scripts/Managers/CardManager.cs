@@ -2,6 +2,7 @@
 using Events.GameEvents;
 using Gameplay;
 using Gameplay.Card;
+using ScriptableObjects;
 using System.Collections.Generic;
 using UnityEngine;
 using EventType = Events.EventType;
@@ -26,6 +27,7 @@ namespace Managers
 
         public HandLayout HandLayout => handLayout;
         public RectTransform DragLayer => dragLayer;
+        public CardData GetCardData(string cardCode) => factory != null ? factory.GetCardData(cardCode) : null;
 
         private void Start()
         {
@@ -61,6 +63,16 @@ namespace Managers
             return handLayout.RemoveFirstCardByCode(cardCode);
         }
 
+        public bool ConfirmPendingPlay()
+        {
+            return handLayout != null && handLayout.ConfirmPendingPlay();
+        }
+
+        public void RejectPendingPlay()
+        {
+            handLayout?.RejectPendingPlay();
+        }
+
         public void SyncHand(List<string> cardCodes)
         {
             if (handLayout == null)
@@ -68,7 +80,16 @@ namespace Managers
 
             handLayout.ClearCards();
             AddCardsToHand(cardCodes);
+            handLayout.ShowInCurrentOrder();
+            StartCoroutine(SortInitialHandAfterReveal());
         }
+
+        private System.Collections.IEnumerator SortInitialHandAfterReveal()
+        {
+            yield return new WaitForSecondsRealtime(0.65f);
+            handLayout?.UpdateVisual();
+        }
+
 
         public PlayableCard CreatePlayableCard(string cardName, Transform parent)
         {

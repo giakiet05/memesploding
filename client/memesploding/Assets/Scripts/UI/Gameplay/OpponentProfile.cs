@@ -45,6 +45,8 @@ namespace UI.Gameplay
 
         private string _userID;
         private Coroutine _avatarLoadRoutine;
+        private TextMeshProUGUI _eliminatedLabel;
+        private bool _isEliminated;
 
         private void Awake()
         {
@@ -61,11 +63,13 @@ namespace UI.Gameplay
         private void Start()
         {
             EventBus.Subscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+            EventBus.Subscribe<TurnEndEventPayload>(EventType.TurnEnd, OnTurnEnd);
         }
 
         private void OnDestroy()
         {
             EventBus.Unsubscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+            EventBus.Unsubscribe<TurnEndEventPayload>(EventType.TurnEnd, OnTurnEnd);
         }
 
         public void Init(WsPlayerPublicStateDto player, string avatarUrl, bool useDefaultAvatar)
@@ -92,6 +96,12 @@ namespace UI.Gameplay
             }
 
             SetTurnIndicator(true);
+        }
+
+        private void OnTurnEnd(TurnEndEventPayload payload)
+        {
+            if (payload != null && payload.UserID == _userID)
+                SetTurnIndicator(false);
         }
 
         public void SetCurrentTurn(bool isCurrentTurn)
@@ -146,9 +156,10 @@ namespace UI.Gameplay
 
             float time = 0f;
 
-            while (time < duration)
+            var effectiveDuration = Mathf.Max(0.8f, duration);
+            while (time < effectiveDuration)
             {
-                float t = time / duration;
+                float t = time / effectiveDuration;
 
                 Vector2 pos = Vector2.Lerp(start, target, t);
 
@@ -186,6 +197,61 @@ namespace UI.Gameplay
         {
             if (selectArrow != null)
                 selectArrow.gameObject.SetActive(active);
+        }
+
+        public void SetEliminated(bool eliminated)
+        {
+            if (_isEliminated == eliminated)
+                return;
+
+            _isEliminated = eliminated;
+            SetArrowActive(false);
+            SetTurnIndicator(false);
+            if (profileImage != null)
+                profileImage.color = eliminated ? new Color(0.28f, 0.28f, 0.28f, 1f) : Color.white;
+
+            if (_eliminatedLabel == null)
+            {
+                var labelObject = new GameObject("EliminatedLabel", typeof(RectTransform));
+                var rect = (RectTransform)labelObject.transform;
+                rect.SetParent(transform, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                _eliminatedLabel = labelObject.AddComponent<TextMeshProUGUI>();
+                _eliminatedLabel.text = "DEAD";
+                _eliminatedLabel.fontSize = 30f;
+                _eliminatedLabel.fontStyle = FontStyles.Bold;
+                _eliminatedLabel.color = Color.red;
+                _eliminatedLabel.alignment = TextAlignmentOptions.Center;
+            }
+
+            _eliminatedLabel.gameObject.SetActive(eliminated);
+            if (eliminated)
+                StartCoroutine(PlayEliminationAnimation());
+        }
+
+        private IEnumerator PlayEliminationAnimation()
+        {
+            var rect = transform as RectTransform;
+            if (rect == null)
+                yield break;
+
+            var origin = rect.anchoredPosition;
+            var originScale = rect.localScale;
+            for (var elapsed = 0f; elapsed < 0.8f; elapsed += Time.unscaledDeltaTime)
+            {
+                var t = elapsed / 0.8f;
+                var strength = Mathf.Lerp(18f, 0f, t);
+                rect.anchoredPosition = origin + Random.insideUnitCircle * strength;
+                rect.localScale = originScale * (1f + Mathf.Sin(t * Mathf.PI * 3f) * (1f - t) * 0.2f);
+                rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * Mathf.PI * 6f) * (1f - t) * 8f);
+                yield return null;
+            }
+            rect.anchoredPosition = origin;
+            rect.localScale = originScale;
+            rect.localRotation = Quaternion.identity;
         }
         public void OnProfileClicked()
         {

@@ -49,6 +49,8 @@ public record WsStateSnapshotDto(
     string? PendingReactionAction,
     DateTime? ReactionWindowEndsAt,
     int PendingNopeCount,
+    IReadOnlyList<Guid> PendingReactionTargetUserIds,
+    string PendingReactionEffectScope,
     Guid? PendingFavorRequesterId,
     Guid? PendingFavorTargetId,
     DateTime? FavorWindowEndsAt

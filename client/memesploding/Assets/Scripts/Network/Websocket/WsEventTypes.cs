@@ -74,6 +74,7 @@ namespace Network.Websocket
         UseDefuse,
         ChooseBombInsertPosition,
         ChooseFavorCard,
+        BeginInteraction,
         ReconnectMatch,
         RequestStateSnapshot
     }
@@ -179,6 +180,7 @@ namespace Network.Websocket
                 case WsClientCommandType.UseDefuse: return "usedefuse";
                 case WsClientCommandType.ChooseBombInsertPosition: return "choosebombinsertposition";
                 case WsClientCommandType.ChooseFavorCard: return "choosefavorcard";
+                case WsClientCommandType.BeginInteraction: return "begininteraction";
                 case WsClientCommandType.ReconnectMatch: return "reconnectmatch";
                 case WsClientCommandType.RequestStateSnapshot: return "requeststatesnapshot";
                 default: return string.Empty;

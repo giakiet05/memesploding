@@ -53,6 +53,11 @@ namespace Gameplay
             TurnTimerSeconds = Math.Max(0, turnTimerSeconds);
         }
 
+        public void PauseTurn()
+        {
+            TurnEndsAtUtc = null;
+        }
+
         private void SyncServerTime(DateTime serverTimeUtc)
         {
             if (serverTimeUtc == default)

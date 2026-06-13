@@ -31,6 +31,7 @@ public class GameHub(
         Connections[Context.ConnectionId] = connectionContext;
         runtimeManager.MarkPlayerConnection(connectionContext.RoomCode, connectionContext.UserId, true);
         await Groups.AddToGroupAsync(Context.ConnectionId, GetRoomGroup(connectionContext.RoomCode));
+        await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroup(connectionContext.UserId));
 
         var payload = WsServerEvent<WsConnectedDto>.Create(
             "Connected",
@@ -48,6 +49,7 @@ public class GameHub(
         {
             runtimeManager.MarkPlayerConnection(connectionContext.RoomCode, connectionContext.UserId, false);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetRoomGroup(connectionContext.RoomCode));
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetUserGroup(connectionContext.UserId));
         }
 
         await base.OnDisconnectedAsync(exception);
@@ -174,6 +176,8 @@ public class GameHub(
                 snapshot.PendingReactionAction,
                 snapshot.ReactionWindowEndsAt,
                 snapshot.PendingNopeCount,
+                snapshot.PendingReactionTargetUserIds,
+                snapshot.PendingReactionEffectScope,
                 snapshot.PendingFavorRequesterId,
                 snapshot.PendingFavorTargetId,
                 snapshot.FavorWindowEndsAt
@@ -184,4 +188,5 @@ public class GameHub(
     }
 
     private static string GetRoomGroup(string roomCode) => $"room:{roomCode.ToUpperInvariant()}";
+    private static string GetUserGroup(Guid userId) => $"user:{userId:N}";
 }

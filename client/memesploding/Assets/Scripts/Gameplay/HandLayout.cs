@@ -47,6 +47,8 @@ namespace Gameplay
 
         private float _reorderTimer;
         private bool _isPlayingSelectedCards;
+        private bool _isAwaitingServerConfirmation;
+        private readonly List<PlayableCard> _pendingPlayedCards = new();
 
         void Start()
         {
@@ -74,6 +76,9 @@ namespace Gameplay
 
         private void OnCardPlayed(CardPlayedEventPayload payload)
         {
+            if (payload.ShouldDispatchCommand)
+                return;
+
             BaseCard card = GetCardById(payload.PlayedCard.Id);
 
             if (card != null)
@@ -321,7 +326,18 @@ namespace Gameplay
 
         public bool CanSelectMoreCards()
         {
+            if (GameManager.Instance?.IsLocalFavorTarget() == true)
+                return GetSelectedPlayableCards().Count < 1;
+
             return GetSelectedPlayableCards().Count < MaxSelectedCards;
+        }
+
+        public void ClearCardSelection()
+        {
+            foreach (var card in GetSelectedPlayableCards())
+                card.SetSelectedForPlay(false);
+
+            RefreshRenderOrder();
         }
 
         public void NotifyCardSelectionChanged()
@@ -331,7 +347,7 @@ namespace Gameplay
 
         public void PlaySelectedCards()
         {
-            if (_isPlayingSelectedCards)
+            if (_isPlayingSelectedCards || _isAwaitingServerConfirmation)
                 return;
 
             StartCoroutine(PlaySelectedCardsRoutine());
@@ -339,17 +355,11 @@ namespace Gameplay
 
         private IEnumerator PlaySelectedCardsRoutine()
         {
-            if (boardArea == null)
-                boardArea = FindFirstObjectByType<BoardArea>();
-
-            if (boardArea == null)
-            {
-                Debug.LogError("BoardArea is not assigned for HandLayout", this);
-                yield break;
-            }
-
             List<PlayableCard> selectedCards = GetSelectedPlayableCards();
             if (selectedCards.Count == 0)
+                yield break;
+
+            if (TryChooseFavorCard(selectedCards))
                 yield break;
 
             if (!IsValidPlaySelection(selectedCards) || !CanDispatchPlaySelection(selectedCards))
@@ -361,18 +371,32 @@ namespace Gameplay
             }
 
             _isPlayingSelectedCards = true;
-
-            if (selectedCards.Count > 1)
-            {
-                yield return PlayComboCards(selectedCards);
-            }
-            else
-            {
-                yield return PlaySingleCard(selectedCards[0]);
-            }
-
+            _isAwaitingServerConfirmation = true;
+            PublishPlayIntent(selectedCards);
             UpdateVisual();
             _isPlayingSelectedCards = false;
+            yield break;
+        }
+
+        private bool TryChooseFavorCard(List<PlayableCard> selectedCards)
+        {
+            if (GameManager.Instance == null || !GameManager.Instance.IsLocalFavorTarget())
+                return false;
+
+            if (selectedCards.Count != 1)
+            {
+                Debug.LogWarning("Select exactly one card to give for Favor.", this);
+                return false;
+            }
+
+            var selectedCard = selectedCards[0];
+            var cardCode = GetCardCode(selectedCard);
+            if (string.IsNullOrWhiteSpace(cardCode))
+                return false;
+
+            selectedCard.SetSelectedForPlay(false);
+            GameManager.Instance.ChooseFavorCard(cardCode);
+            return true;
         }
 
         private bool IsValidPlaySelection(List<PlayableCard> selectedCards)
@@ -405,17 +429,89 @@ namespace Gameplay
                 return false;
             }
 
-            if (selectedCards.Count == 2)
+            if (selectedCards.Count is 2 or 3 or 5)
             {
-                if (GameManager.Instance != null && GameManager.Instance.CanPlayLocalCard(GetCardCode(selectedCards[0])))
+                if (GameManager.Instance != null && GameManager.Instance.CanPlayLocalCombo())
                     return true;
 
                 Debug.LogWarning("Combo cannot be played right now.", this);
                 return false;
             }
 
-            Debug.LogWarning("Combo 3 and combo 5 need card-selection UI before they can be sent safely.", this);
             return false;
+        }
+
+        private void PublishPlayIntent(List<PlayableCard> selectedCards)
+        {
+            var cardCodes = new List<string>();
+            _pendingPlayedCards.Clear();
+            foreach (var card in selectedCards)
+            {
+                card.SetSelectedForPlay(false);
+                cardCodes.Add(GetCardCode(card));
+                _pendingPlayedCards.Add(card);
+            }
+
+            EventBus.Publish(
+                EventType.CardPlayedEvent,
+                new CardPlayedEventPayload(
+                    selectedCards[0],
+                    GameManager.Instance.Player.ID,
+                    cardCodes,
+                    selectedCards.Count > 1 ? selectedCards.Count : 0));
+        }
+
+        public bool ConfirmPendingPlay()
+        {
+            _isAwaitingServerConfirmation = false;
+            if (_pendingPlayedCards.Count == 0 || boardArea == null)
+            {
+                _pendingPlayedCards.Clear();
+                return false;
+            }
+
+            var committedCards = new List<PlayableCard>(_pendingPlayedCards);
+            _pendingPlayedCards.Clear();
+            StartCoroutine(PlayConfirmedCards(committedCards));
+            return true;
+        }
+
+        public void RejectPendingPlay()
+        {
+            _isAwaitingServerConfirmation = false;
+            _pendingPlayedCards.Clear();
+        }
+
+        private IEnumerator PlayConfirmedCards(List<PlayableCard> cards)
+        {
+            var animations = new List<Coroutine>();
+            var committedCards = new List<PlayableCard>();
+            foreach (var card in cards)
+            {
+                if (card == null)
+                    continue;
+
+                DetachCard(card);
+                card.DisableDrag();
+                committedCards.Add(card);
+                animations.Add(StartCoroutine(card.PlayToBoard(
+                    boardArea.PlayableArea,
+                    boardArea.GetRandomCardPosition(),
+                    Mathf.Max(0.8f, GetScaledDuration(moveToBoardDuration)))));
+            }
+
+            foreach (var animation in animations)
+                yield return animation;
+
+            foreach (var card in committedCards)
+            {
+                EventBus.Publish(
+                    EventType.CardPlayedEvent,
+                    new CardPlayedEventPayload(
+                        card,
+                        GameManager.Instance.Player.ID,
+                        shouldDispatchCommand: false));
+            }
         }
 
         private bool IsCompleteCombo(List<PlayableCard> cards)
@@ -760,6 +856,17 @@ namespace Gameplay
                 return 0f;
 
             return playableCard.IsSelectedForPlay ? selectedYOffset : 0f;
+        }
+
+
+        public void ShowInCurrentOrder()
+        {
+            _targetOrder.Clear();
+            foreach (var card in _slots)
+            {
+                if (card != null)
+                    _targetOrder.Add(card);
+            }
         }
     }
 }

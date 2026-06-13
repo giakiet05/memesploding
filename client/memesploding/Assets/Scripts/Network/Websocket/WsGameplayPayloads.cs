@@ -14,6 +14,8 @@ namespace Network.Websocket
     public class WsUserPayload : WsGameplayPayloadBase
     {
         public string userId;
+        public DateTime? defuseWindowEndsAt;
+        public DateTime? bombReinsertWindowEndsAt;
     }
 
     [Serializable]
@@ -47,6 +49,10 @@ namespace Network.Websocket
         public string cardCode;
         public DateTime? reactionWindowEndsAt;
         public int nopeCount;
+        public string[] targetUserIds;
+        public string effectScope;
+        public bool? addedToHand;
+        public int drawPileCount = -1;
     }
 
     [Serializable]
@@ -63,6 +69,8 @@ namespace Network.Websocket
         public string cardCode;
         public int nopeCount;
         public DateTime? reactionWindowEndsAt;
+        public string[] targetUserIds;
+        public string effectScope;
     }
 
     [Serializable]
@@ -92,6 +100,7 @@ namespace Network.Websocket
     {
         public string userId;
         public int position;
+        public int drawPileCount;
     }
 
     [Serializable]
@@ -122,6 +131,7 @@ namespace Network.Websocket
         public int comboSize;
         public string cardCode;
         public string comboCode;
+        public string[] cardCodes;
     }
 
     [Serializable]
@@ -169,6 +179,7 @@ namespace Network.Websocket
     {
         public string requesterId;
         public string targetId;
+        public DateTime? favorWindowEndsAt;
     }
 
     [Serializable]
@@ -256,6 +267,7 @@ namespace Network.Websocket
                     return Deserialize<WsTurnContinuesPayload>(payload);
 
                 case WsGameplayEventType.BombReinserted:
+                case WsGameplayEventType.BombReinsertAuto:
                     return Deserialize<WsBombReinsertedPayload>(payload);
 
                 case WsGameplayEventType.PlayerEliminated:
@@ -304,7 +316,6 @@ namespace Network.Websocket
                 case WsGameplayEventType.CatomicBombResolved:
                     return Deserialize<WsCatomicBombResolvedPayload>(payload);
 
-                case WsGameplayEventType.BombReinsertAuto:
                 case WsGameplayEventType.ShuffleApplied:
                 case WsGameplayEventType.MatchStarted:
                 case WsGameplayEventType.DrawPileEmpty:

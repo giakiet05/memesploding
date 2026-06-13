@@ -43,6 +43,11 @@ namespace Managers
             cardDatabase = database;
         }
 
+        public CardData GetCardData(string cardName)
+        {
+            return cardDatabase != null ? cardDatabase.Get(cardName) : null;
+        }
+
         public T Create<T>(string cardName, Transform parent) where T : BaseCard
         {
             var data = cardDatabase.Get(cardName);
