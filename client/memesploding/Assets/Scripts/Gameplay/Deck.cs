@@ -12,6 +12,8 @@ namespace Gameplay
     public class Deck : MonoBehaviour
     {
         [SerializeField] private GlowImage glowImage;
+        private bool _suppressGlowUntilLocalTurn;
+
 
         private void Awake()
         {
@@ -33,7 +35,10 @@ namespace Gameplay
 
         private void Update()
         {
-            SetGlowActive(GameManager.Instance != null && GameManager.Instance.CanDrawLocalCard());
+            SetGlowActive(
+                !_suppressGlowUntilLocalTurn &&
+                GameManager.Instance != null &&
+                GameManager.Instance.CanDrawLocalCard());
         }
 
         public void OnTurnStart(TurnStartEventPayload payload)
@@ -43,7 +48,10 @@ namespace Gameplay
                               !string.IsNullOrWhiteSpace(localUserId) &&
                               payload.UserID == localUserId;
 
-            SetGlowActive(isLocalTurn);
+            if (isLocalTurn)
+                _suppressGlowUntilLocalTurn = false;
+
+            SetGlowActive(isLocalTurn && !_suppressGlowUntilLocalTurn);
         }
 
         public void OnDeckClicked()
@@ -54,6 +62,7 @@ namespace Gameplay
                 Debug.Log("[DrawTrace] Deck click ignored while another interaction is active.");
                 return;
             }
+            _suppressGlowUntilLocalTurn = true;
             GameManager.Instance.DrawCard();
             SetGlowActive(false);
         }

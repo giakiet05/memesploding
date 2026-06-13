@@ -150,13 +150,20 @@ namespace Gameplay
                     //Handle player draw event
                     if (IsSelf(cardDrawn.userId) && !string.IsNullOrWhiteSpace(cardDrawn.cardCode))
                     {
-                        if (!string.Equals(cardDrawn.cardCode, "Hidden", StringComparison.OrdinalIgnoreCase))
-                            GameplayUIManager.Instance.DisplayDrawnCard(cardDrawn.cardCode);
                         if (addedToHand)
-                        {
-                            CardManager.Instance?.AddCardToHand(cardDrawn.cardCode);
                             GameState.selfHand.Add(cardDrawn.cardCode);
-                        }
+
+                        var shouldAnimate = !string.Equals(
+                            cardDrawn.cardCode,
+                            "Hidden",
+                            StringComparison.OrdinalIgnoreCase);
+                        var animationStarted = shouldAnimate && GameplayUIManager.Instance != null &&
+                            GameplayUIManager.Instance.DisplayDrawnCard(
+                                cardDrawn.cardCode,
+                                addedToHand ? () => CardManager.Instance?.AddCardToHand(cardDrawn.cardCode) : null);
+
+                        if (addedToHand && !animationStarted)
+                            CardManager.Instance?.AddCardToHand(cardDrawn.cardCode);
                     }
                     else if (!IsSelf(cardDrawn.userId))
                     {
@@ -586,8 +593,8 @@ namespace Gameplay
 
         public void UpdateTurn(int newTurnIndex, DateTime? turnEndsAt, int turnTimerSeconds, DateTime serverTimeUtc)
         {
-            GameManager.Instance?.NotifyLocalDrawResolved();
             GameState.turnIndex = newTurnIndex;
+            GameManager.Instance?.NotifyLocalDrawResolved();
             GameState.turnCounter = Math.Max(0, GameState.turnCounter + 1);
             GameState.turnEndsAt = turnEndsAt;
             if (turnTimerSeconds > 0)
@@ -767,5 +774,6 @@ namespace Gameplay
                 }
             }
         }
+
     }
 }

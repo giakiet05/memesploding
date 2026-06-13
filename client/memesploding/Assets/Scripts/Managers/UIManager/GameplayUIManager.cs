@@ -329,8 +329,11 @@ namespace Managers.UIManager
         }
         
         //Draw Card
-        public void DisplayDrawnCard(string cardCode)
+        public bool DisplayDrawnCard(string cardCode, Action onAnimationFinished = null)
         {
+            if (drawnCardDisplayer == null || playingArea == null)
+                return false;
+
             if (drawnCardDisplayer.transform.parent != playingArea)
                 drawnCardDisplayer.transform.SetParent(playingArea, false);
             drawnCardDisplayer.gameObject.SetActive(true);
@@ -338,7 +341,11 @@ namespace Managers.UIManager
             var handWorldPosition = CardManager.Instance?.HandLayout != null
                 ? CardManager.Instance.HandLayout.transform.position
                 : playingArea.position;
-            drawnCardDisplayer.PlayDrawCardAnimation(cardCode, deckWorldPosition, handWorldPosition);
+            return drawnCardDisplayer.PlayDrawCardAnimation(
+                cardCode,
+                deckWorldPosition,
+                handWorldPosition,
+                onAnimationFinished);
         }
 
         public void DisplayOpponentDraw(string userID)
