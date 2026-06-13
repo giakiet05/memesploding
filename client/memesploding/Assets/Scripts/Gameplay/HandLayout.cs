@@ -857,5 +857,16 @@ namespace Gameplay
 
             return playableCard.IsSelectedForPlay ? selectedYOffset : 0f;
         }
+
+
+        public void ShowInCurrentOrder()
+        {
+            _targetOrder.Clear();
+            foreach (var card in _slots)
+            {
+                if (card != null)
+                    _targetOrder.Add(card);
+            }
+        }
     }
 }

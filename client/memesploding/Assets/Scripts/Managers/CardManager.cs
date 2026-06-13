@@ -80,7 +80,16 @@ namespace Managers
 
             handLayout.ClearCards();
             AddCardsToHand(cardCodes);
+            handLayout.ShowInCurrentOrder();
+            StartCoroutine(SortInitialHandAfterReveal());
         }
+
+        private System.Collections.IEnumerator SortInitialHandAfterReveal()
+        {
+            yield return new WaitForSecondsRealtime(0.65f);
+            handLayout?.UpdateVisual();
+        }
+
 
         public PlayableCard CreatePlayableCard(string cardName, Transform parent)
         {

@@ -595,7 +595,7 @@ namespace Managers.UIManager
 
                 var rect = items[i];
                 rect.SetParent(playingArea, false);
-                rect.anchoredPosition = centerLocalPos + new Vector2(x, y);
+                rect.anchoredPosition = centerLocalPos + new Vector2(x, y - 70f);
             }
         }
 
@@ -788,17 +788,27 @@ namespace Managers.UIManager
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = new Vector2(24f, -24f);
-            rect.sizeDelta = new Vector2(260f, 80f);
+            rect.sizeDelta = new Vector2(285f, 92f);
 
+            var shadow = root.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.09f, 0.07f, 0.06f, 0.75f);
+            shadow.effectDistance = new Vector2(7f, -7f);
             var background = root.AddComponent<Image>();
-            background.color = new Color(0.09f, 0.07f, 0.06f, 0.85f);
+            background.color = new Color(1f, 0.94f, 0.72f, 0.98f);
+            var outline = root.AddComponent<Outline>();
+            outline.effectColor = new Color(0.09f, 0.07f, 0.06f, 1f);
+            outline.effectDistance = new Vector2(3f, -3f);
+
             var layout = root.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(12, 12, 8, 8);
+            layout.padding = new RectOffset(16, 16, 10, 10);
+            layout.spacing = 2f;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
 
             _turnTimerHud = CreateHudText("TurnTimer", root.transform);
             _drawPileHud = CreateHudText("DrawPileCount", root.transform);
+            _turnTimerHud.color = new Color(0.86f, 0.12f, 0.1f, 1f);
+            _drawPileHud.color = new Color(0.09f, 0.07f, 0.06f, 1f);
         }
 
         private static TextMeshProUGUI CreateHudText(string name, Transform parent)
@@ -822,31 +832,29 @@ namespace Managers.UIManager
             _eliminatedOverlay.AddComponent<CanvasGroup>();
             var rect = (RectTransform)_eliminatedOverlay.transform;
             rect.SetParent(canvas.transform, false);
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(24f, -132f);
+            rect.sizeDelta = new Vector2(410f, 72f);
             var background = _eliminatedOverlay.AddComponent<Image>();
-            background.color = Color.clear;
+            background.color = new Color(1f, 0.94f, 0.72f, 0.97f);
             background.raycastTarget = false;
-            var banner = new GameObject("SpectatorBanner", typeof(RectTransform));
-            var bannerRect = (RectTransform)banner.transform;
-            bannerRect.SetParent(_eliminatedOverlay.transform, false);
-            bannerRect.anchorMin = bannerRect.anchorMax = new Vector2(0.5f, 0.62f);
-            bannerRect.sizeDelta = new Vector2(760f, 190f);
-            banner.AddComponent<Image>().color = new Color(0.08f, 0.035f, 0.03f, 0.94f);
-            var outline = banner.AddComponent<Outline>();
-            outline.effectColor = new Color(0.85f, 0.1f, 0.08f, 1f);
-            outline.effectDistance = new Vector2(7f, -7f);
-            var text = CreateHudText("Message", banner.transform);
-            text.text = "BẠN ĐÃ BỊ LOẠI\nĐANG XEM TRẬN";
-            text.fontSize = 48f;
-            text.color = new Color(1f, 0.82f, 0.25f, 1f);
+            var shadow = _eliminatedOverlay.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.09f, 0.07f, 0.06f, 0.8f);
+            shadow.effectDistance = new Vector2(7f, -7f);
+            var outline = _eliminatedOverlay.AddComponent<Outline>();
+            outline.effectColor = new Color(0.86f, 0.12f, 0.1f, 1f);
+            outline.effectDistance = new Vector2(4f, -4f);
+
+            var text = CreateHudText("Message", _eliminatedOverlay.transform);
+            text.text = "BẠN ĐÃ BỊ LOẠI  •  ĐANG XEM TRẬN";
+            text.fontSize = 22f;
+            text.color = new Color(0.86f, 0.12f, 0.1f, 1f);
             text.alignment = TextAlignmentOptions.Center;
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
-            text.rectTransform.offsetMin = new Vector2(20f, 16f);
-            text.rectTransform.offsetMax = new Vector2(-20f, -16f);
+            text.rectTransform.offsetMin = new Vector2(18f, 10f);
+            text.rectTransform.offsetMax = new Vector2(-18f, -10f);
         }
 
         private string ResolvePlayerName(string userId)

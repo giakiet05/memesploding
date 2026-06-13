@@ -343,12 +343,12 @@ namespace UI.Gameplay
             _descriptionText.textWrappingMode = TextWrappingModes.Normal;
             _descriptionText.overflowMode = TextOverflowModes.Overflow;
 
-            var timerTrack = CreateImage("TimerTrack", _visualRoot, new Vector2(-20f, -194f), new Vector2(405f, 12f), Ink);
+            var timerTrack = CreateImage("TimerTrack", _visualRoot, new Vector2(-20f, -184f), new Vector2(405f, 12f), Ink);
             _timerTrackObject = timerTrack.gameObject;
             timerFill = CreateImage("TimerFill", timerTrack.rectTransform, new Vector2(3f, -2f), new Vector2(399f, 6f), Yellow);
             ConfigureTimerFillRect();
-            timerText = CreateText("TimerText", _visualRoot, new Vector2(220f, -187f), new Vector2(45f, 24f), 16f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
-            timerText.overflowMode = TextOverflowModes.Overflow;
+            timerText = CreateText("TimerText", _visualRoot, new Vector2(220f, -177f), new Vector2(45f, 24f), 16f, Ink, FontStyles.Bold, TextAlignmentOptions.Center, font: _bodyFont, fontMaterial: _bodyFontMaterial);
+            timerText.overflowMode = TextOverflowModes.Truncate;
         }
 
         private void BindComicToastReferences()
@@ -502,7 +502,7 @@ namespace UI.Gameplay
         private void SetNotificationLayout(bool notification)
         {
             var rect = (RectTransform)transform;
-            rect.sizeDelta = notification ? new Vector2(500f, 165f) : new Vector2(500f, 215f);
+            rect.sizeDelta = new Vector2(500f, 215f);
 
             if (_timerTrackObject != null)
                 _timerTrackObject.SetActive(!notification);
@@ -608,7 +608,7 @@ namespace UI.Gameplay
                 text.fontSharedMaterial = fontMaterial;
             text.raycastTarget = false;
             text.textWrappingMode = TextWrappingModes.NoWrap;
-            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.overflowMode = TextOverflowModes.Truncate;
             return text;
         }
 
