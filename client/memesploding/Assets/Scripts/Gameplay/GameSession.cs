@@ -337,14 +337,49 @@ namespace Gameplay
                     SetPlayerLifeState(eliminated.userId, "Eliminated");
                     GameplayUIManager.Instance?.ShowPlayerEliminated(eliminated.userId, eliminated.reason);
                     if (IsSelf(eliminated.userId))
+                    {
                         GameplayUIManager.Instance?.HideInteractionModal();
+                        GameplayUIManager.Instance?.ShowMatchFinishedConfirm(
+                            "BẠN ĐÃ BỊ LOẠI!",
+                            "Bạn đã bị loại khỏi trận đấu. Bạn có muốn thoát ra màn hình chính?",
+                            () => NavigationManager.Instance.LoadMainMenu(),
+                            true);
+                    }
 
                     //TODO: set a player is eliminated in the UI
                     break;
 
                 case WsGameplayEventType.MatchFinished:
                     GameState.phase = "Finished";
-                    // TODO: Persist and present winner/ranking panel.
+                    if (parsedPayload is WsMatchFinishedPayload finished)
+                    {
+                        var winnerNickname = "Người chơi khác";
+                        if (GameState.players != null)
+                        {
+                            var winner = GameState.players.Find(p => string.Equals(p.userId, finished.winnerUserId, StringComparison.OrdinalIgnoreCase));
+                            if (winner != null && !string.IsNullOrWhiteSpace(winner.nickname))
+                            {
+                                winnerNickname = winner.nickname;
+                            }
+                        }
+
+                        if (IsSelf(finished.winnerUserId))
+                        {
+                            GameplayUIManager.Instance?.ShowMatchFinishedConfirm(
+                                "CHIẾN THẮNG!",
+                                "Bạn đã giành chiến thắng! Quay lại màn hình chính nhé.",
+                                () => NavigationManager.Instance.LoadMainMenu(),
+                                false);
+                        }
+                        else
+                        {
+                            GameplayUIManager.Instance?.ShowMatchFinishedConfirm(
+                                "TRẬN ĐẤU KẾT THÚC!",
+                                $"{winnerNickname} đã giành chiến thắng.",
+                                () => NavigationManager.Instance.LoadMainMenu(),
+                                false);
+                        }
+                    }
                     break;
 
                 case WsGameplayEventType.AttackApplied:
@@ -372,7 +407,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = favorWindow.requesterId;
                     GameState.pendingFavorTargetId = favorWindow.targetId;
                     GameState.favorWindowEndsAt = favorWindow.favorWindowEndsAt;
-                    GameplayUIManager.Instance.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId);
+                    GameplayUIManager.Instance.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId, favorWindow.favorWindowEndsAt);
                     break;
 
                 case WsGameplayEventType.FavorResolved:
@@ -552,7 +587,10 @@ namespace Gameplay
 
                     ChangePlayerHandCount(comboFive.userId, +1);
                     if (IsSelf(comboFive.userId) && !string.IsNullOrWhiteSpace(comboFive.discardCardCode))
+                    {
                         GameState.selfHand.Add(comboFive.discardCardCode);
+                        CardManager.Instance?.AddCardToHand(comboFive.discardCardCode);
+                    }
 
                     RemoveOneCardFromDiscard(comboFive.discardCardCode);
                     break;

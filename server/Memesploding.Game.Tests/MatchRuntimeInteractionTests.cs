@@ -30,6 +30,32 @@ public class MatchRuntimeInteractionTests
     }
 
     [Fact]
+    public async Task ComboFive_CanRetrieveCard_WhenCardIsPartOfCombo()
+    {
+        var (runtime, actor, _) = CreateRuntime(
+            ["Attack", "Skip", "Favor", "Shuffle", "Defuse"],
+            []);
+
+        runtime.HandlePlayCardCommand(actor, JsonSerializer.Serialize(new
+        {
+            cardCode = "Attack",
+            comboSize = 5,
+            cardCodes = new[] { "Attack", "Skip", "Favor", "Shuffle", "Defuse" },
+            discardCardCode = "Defuse"
+        }));
+
+        runtime.State.ReactionWindowEndsAt = DateTime.UtcNow.AddMilliseconds(-1);
+        await runtime.TickAsync();
+        runtime.State.ReactionResolveAt = DateTime.UtcNow.AddMilliseconds(-1);
+        await runtime.TickAsync();
+
+        Assert.Equal(["Defuse"], runtime.State.Players[0].Hand);
+        Assert.Equal(4, runtime.State.DiscardPile.Count);
+        Assert.DoesNotContain("Defuse", runtime.State.DiscardPile);
+        Assert.Contains(runtime.State.EventLog, x => x.EventType == "CatComboFiveResolved");
+    }
+
+    [Fact]
     public async Task InvalidFavorChoice_KeepsFavorWindowOpen()
     {
         var (runtime, actor, target) = CreateRuntime(["Favor"], ["Attack"]);

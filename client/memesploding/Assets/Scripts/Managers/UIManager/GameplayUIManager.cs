@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Events;
 using Events.GameEvents;
@@ -327,6 +327,18 @@ namespace Managers.UIManager
                 endsAtUtc,
                 () => GameManager.Instance.UseDefuse());
         }
+
+        public void ShowMatchFinishedConfirm(string title, string message, Action onExit, bool showCancel = false)
+        {
+            EnsureInteractionModal();
+            _interactionModal.ShowConfirm(
+                title,
+                message,
+                "THOÁT RA MENU",
+                null,
+                onExit,
+                showCancel);
+        }
         
         //Draw Card
         public bool DisplayDrawnCard(string cardCode, Action onAnimationFinished = null)
@@ -429,10 +441,10 @@ namespace Managers.UIManager
             reactionWindowView?.ShowResult(activated);
         }
 
-        public void ShowActionToast(string title, string message, string detail = null, string status = null, bool danger = false)
+        public void ShowActionToast(string title, string message, string detail = null, string status = null, bool danger = false, DateTime? endsAtUtc = null)
         {
             EnsureReactionWindowView();
-            reactionWindowView?.ShowNotification(title, message, detail, status, danger);
+            reactionWindowView?.ShowNotification(title, message, detail, status, danger, endsAtUtc);
         }
 
         public void ShowPlayerEliminated(string userId, string reason)
@@ -473,7 +485,7 @@ namespace Managers.UIManager
             rect.localScale = Vector3.one;
         }
 
-        public void ShowFavorWindow(string requesterId, string targetId)
+        public void ShowFavorWindow(string requesterId, string targetId, DateTime? endsAtUtc = null)
         {
             if (!GameManager.Instance.IsLocalFavorTarget())
                 return;
@@ -485,7 +497,9 @@ namespace Managers.UIManager
                 "FAVOR",
                 $"Chọn một lá trong tay để đưa cho {ResolvePlayerName(requesterId)}.",
                 "Bấm GỬI sau khi chọn bài",
-                "CHỌN BÀI");
+                "CHỌN BÀI",
+                false,
+                endsAtUtc);
         }
 
         public void HideFavorWindow()
@@ -835,7 +849,7 @@ namespace Managers.UIManager
             rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = new Vector2(24f, -132f);
-            rect.sizeDelta = new Vector2(410f, 72f);
+            rect.sizeDelta = new Vector2(550f, 72f);
             var background = _eliminatedOverlay.AddComponent<Image>();
             background.color = new Color(1f, 0.94f, 0.72f, 0.97f);
             background.raycastTarget = false;
@@ -848,17 +862,53 @@ namespace Managers.UIManager
 
             var text = CreateHudText("Message", _eliminatedOverlay.transform);
             text.text = "BẠN ĐÃ BỊ LOẠI  •  ĐANG XEM TRẬN";
-            text.fontSize = 22f;
+            text.fontSize = 20f;
             text.color = new Color(0.86f, 0.12f, 0.1f, 1f);
-            text.alignment = TextAlignmentOptions.Center;
+            text.alignment = TextAlignmentOptions.Left;
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
-            text.rectTransform.offsetMin = new Vector2(18f, 10f);
-            text.rectTransform.offsetMax = new Vector2(-18f, -10f);
+            text.rectTransform.offsetMin = new Vector2(24f, 10f);
+            text.rectTransform.offsetMax = new Vector2(-170f, -10f);
+
+            var buttonGo = new GameObject("ExitButton", typeof(RectTransform));
+            var buttonRect = (RectTransform)buttonGo.transform;
+            buttonRect.SetParent(_eliminatedOverlay.transform, false);
+            buttonRect.anchorMin = new Vector2(1f, 0.5f);
+            buttonRect.anchorMax = new Vector2(1f, 0.5f);
+            buttonRect.pivot = new Vector2(1f, 0.5f);
+            buttonRect.anchoredPosition = new Vector2(-20f, 0f);
+            buttonRect.sizeDelta = new Vector2(130f, 44f);
+
+            var buttonImage = buttonGo.AddComponent<Image>();
+            buttonImage.color = new Color(0.86f, 0.12f, 0.1f, 1f);
+            buttonImage.raycastTarget = true;
+
+            var buttonOutline = buttonGo.AddComponent<Outline>();
+            buttonOutline.effectColor = new Color(0.09f, 0.07f, 0.06f, 1f);
+            buttonOutline.effectDistance = new Vector2(2f, -2f);
+
+            var btn = buttonGo.AddComponent<Button>();
+            btn.onClick.AddListener(() => NavigationManager.Instance.LoadMainMenu());
+
+            var btnText = CreateHudText("Label", buttonGo.transform);
+            btnText.text = "THOÁT";
+            btnText.fontSize = 18f;
+            btnText.fontStyle = FontStyles.Bold;
+            btnText.color = Color.white;
+            btnText.alignment = TextAlignmentOptions.Center;
+            btnText.rectTransform.anchorMin = Vector2.zero;
+            btnText.rectTransform.anchorMax = Vector2.one;
+            btnText.rectTransform.offsetMin = Vector2.zero;
+            btnText.rectTransform.offsetMax = Vector2.zero;
         }
 
         private string ResolvePlayerName(string userId)
         {
+            if (string.Equals(userId, GameManager.Instance?.Player?.ID, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Bạn";
+            }
+
             var player = GameManager.Instance?.GetGameState()?.players?.FirstOrDefault(item =>
                 string.Equals(item.userId, userId, StringComparison.OrdinalIgnoreCase));
             return !string.IsNullOrWhiteSpace(player?.nickname) ? player.nickname : "Người chơi";

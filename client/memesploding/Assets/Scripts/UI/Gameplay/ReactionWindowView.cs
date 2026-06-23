@@ -156,7 +156,7 @@ namespace UI.Gameplay
             PlayToastAnimation();
         }
 
-        public void ShowNotification(string title, string message, string detail = null, string status = null, bool danger = false)
+        public void ShowNotification(string title, string message, string detail = null, string status = null, bool danger = false, DateTime? endsAtUtc = null)
         {
             if (Application.isPlaying && !gameObject.activeSelf)
                 gameObject.SetActive(true);
@@ -169,10 +169,22 @@ namespace UI.Gameplay
             _descriptionText.text = string.Empty;
             SetStatus(status ?? "HÀNH ĐỘNG", !danger);
 
-            if (!_reactionActive)
+            SetNopeVisible(false);
+            SetPlayCardVisible(true);
+
+            if (endsAtUtc.HasValue)
             {
-                SetNopeVisible(false);
-                SetPlayCardVisible(true);
+                _endsAtUtc = endsAtUtc.Value;
+                _initialSeconds = Mathf.Max(0.01f, (float)(_endsAtUtc.Value - DateTime.UtcNow).TotalSeconds);
+                SetTimer(_initialSeconds);
+                _hideAtUtc = null;
+                if (_timerTrackObject != null)
+                    _timerTrackObject.SetActive(true);
+                if (timerText != null)
+                    timerText.gameObject.SetActive(true);
+            }
+            else
+            {
                 _endsAtUtc = null;
                 _hideAtUtc = DateTime.UtcNow.AddSeconds(2f);
                 SetTimer(0f);
@@ -192,6 +204,9 @@ namespace UI.Gameplay
 
         public void ShowResult(bool activated)
         {
+            if (Application.isPlaying && !gameObject.activeSelf)
+                gameObject.SetActive(true);
+
             SetNotificationLayout(false);
             SetStatus(activated ? "ĐÃ KÍCH HOẠT" : "ĐÃ BỊ CHẶN", activated);
             _endsAtUtc = null;
@@ -199,7 +214,6 @@ namespace UI.Gameplay
             _hideAtUtc = DateTime.UtcNow.AddSeconds(1.5f);
             if (nopeButton != null)
                 nopeButton.interactable = false;
-            gameObject.SetActive(true);
         }
 
         public void Hide()
@@ -285,7 +299,7 @@ namespace UI.Gameplay
             rect.anchorMax = Vector2.one;
             rect.pivot = Vector2.one;
             rect.anchoredPosition = new Vector2(-24f, -24f);
-            rect.sizeDelta = new Vector2(500f, 180f);
+            rect.sizeDelta = new Vector2(500f, 215f);
 
             var background = GetComponent<Image>();
             if (background != null)

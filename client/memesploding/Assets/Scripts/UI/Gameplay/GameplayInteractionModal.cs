@@ -21,6 +21,7 @@ namespace UI.Gameplay
         private Slider _slider;
         private TextMeshProUGUI _sliderValue;
         private Button _confirm;
+        private Button _cancelButton;
         private Action _onConfirm;
         private Action _onCancel;
         private DateTime? _endsAtUtc;
@@ -48,13 +49,16 @@ namespace UI.Gameplay
             _countdown.text = $"{seconds}s";
         }
 
-        public void ShowConfirm(string title, string message, string confirmLabel, DateTime? endsAtUtc, Action onConfirm)
+        public void ShowConfirm(string title, string message, string confirmLabel, DateTime? endsAtUtc, Action onConfirm, bool showCancel = false, Action onCancel = null)
         {
             Prepare(title, message, endsAtUtc);
             SetPanelSize(new Vector2(520f, 360f));
             _onConfirm = onConfirm;
+            _onCancel = onCancel;
             SetButtonLabel(_confirm, confirmLabel);
             _confirm.gameObject.SetActive(true);
+            if (_cancelButton != null)
+                _cancelButton.gameObject.SetActive(showCancel);
             gameObject.SetActive(true);
         }
 
@@ -70,6 +74,8 @@ namespace UI.Gameplay
             SetPanelSize(new Vector2(620f, 690f));
             ConfigureCardOptions();
             _onCancel = onCancel;
+            if (_cancelButton != null)
+                _cancelButton.gameObject.SetActive(true);
 
             foreach (var cardCode in cardCodes
                          .Where(code => !string.IsNullOrWhiteSpace(code))
@@ -138,6 +144,8 @@ namespace UI.Gameplay
             _slider.gameObject.SetActive(false);
             _sliderValue.gameObject.SetActive(false);
             _confirm.gameObject.SetActive(false);
+            if (_cancelButton != null)
+                _cancelButton.gameObject.SetActive(false);
             _onConfirm = null;
             _onCancel = null;
         }
@@ -212,8 +220,8 @@ namespace UI.Gameplay
                 callback?.Invoke();
             });
 
-            var cancel = CreateButton(panel, "HỦY");
-            cancel.onClick.AddListener(() =>
+            _cancelButton = CreateButton(panel, "HỦY");
+            _cancelButton.onClick.AddListener(() =>
             {
                 var callback = _onCancel;
                 Hide();

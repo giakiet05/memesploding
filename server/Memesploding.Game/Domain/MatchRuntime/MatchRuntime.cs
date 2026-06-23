@@ -1055,16 +1055,51 @@ public class MatchRuntime
             return false;
         }
 
-        if (comboSize == 5 &&
-            (!TryGetStringProperty(payload, "discardCardCode", out var discardCardCode) ||
-             !State.DiscardPile.Contains(discardCardCode)))
+        if (comboSize == 5)
         {
-            IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+            if (!TryGetStringProperty(payload, "discardCardCode", out var discardCardCode))
             {
-                reason = "INVALID_DISCARD_CARD",
-                userId
-            }));
-            return false;
+                IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+                {
+                    reason = "INVALID_DISCARD_CARD",
+                    userId
+                }));
+                return false;
+            }
+
+            var allowed = State.DiscardPile.Contains(discardCardCode);
+            if (!allowed)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(payload);
+                    if (doc.RootElement.TryGetProperty("cardCodes", out var codesElem) && codesElem.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var elem in codesElem.EnumerateArray())
+                        {
+                            if (elem.GetString() == discardCardCode)
+                            {
+                                allowed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore parse errors here; TryApplyUniversalCombo will handle them
+                }
+            }
+
+            if (!allowed)
+            {
+                IncrementVersion("ActionRejected", JsonSerializer.Serialize(new
+                {
+                    reason = "INVALID_DISCARD_CARD",
+                    userId
+                }));
+                return false;
+            }
         }
 
         return true;

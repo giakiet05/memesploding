@@ -394,7 +394,10 @@ namespace Network.Websocket
             // SignalR ping frame
             var type = root.Value<int?>("type");
             if (type == 6)
+            {
+                _ = SendRawAsync("{\"type\":6}", CancellationToken.None);
                 return; 
+            }
 
             if (type == 7)
             {
