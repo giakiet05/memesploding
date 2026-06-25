@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
+#if !UNITY_WEBGL || UNITY_EDITOR
 using System.Net.WebSockets;
+#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,7 +57,13 @@ namespace Network.Websocket
 
         private readonly object _sync = new object();
         private readonly object _dispatcherSync = new object();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private NativeWebSocket.WebSocket _socket;
+#else
         private ClientWebSocket _socket;
+#endif
+
         private CancellationTokenSource _receiveCts;
         private Task _receiveTask;
         private CancellationTokenSource _reconnectCts;
@@ -107,6 +115,71 @@ namespace Network.Websocket
             EnsureEventDispatcher();
 
             var uri = BuildUriWithAccessToken(wsUrl, wsAccessToken);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            _socket = new NativeWebSocket.WebSocket(uri.ToString());
+            
+            _socket.OnOpen += async () =>
+            {
+                try
+                {
+                    await SendRawAsync("{\"protocol\":\"json\",\"version\":1}", CancellationToken.None);
+                    Session.connectedAtUtc = DateTime.UtcNow;
+                    _reconnectAttempt = 0;
+                    SetStatus(WebsocketConnectionStatus.Connected);
+
+                    if (_isReconnecting && !string.IsNullOrWhiteSpace(Session.matchId))
+                    {
+                        await SendReconnectMatchAsync(CancellationToken.None);
+                        await SendRequestStateSnapshotAsync(CancellationToken.None);
+                    }
+
+                    _isReconnecting = false;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WS WebGL] Error in OnOpen handler: {ex.Message}");
+                }
+            };
+
+            _socket.OnMessage += (bytes) =>
+            {
+                var chunk = Encoding.UTF8.GetString(bytes);
+                var messages = chunk.Split(RecordSeparator, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var message in messages)
+                {
+                    HandleSignalRMessage(message);
+                }
+            };
+
+            _socket.OnError += (errMsg) =>
+            {
+                Session.lastError = errMsg;
+                Session.isHealthy = false;
+                SetStatus(WebsocketConnectionStatus.Faulted);
+                ScheduleReconnect();
+            };
+
+            _socket.OnClose += (closeCode) =>
+            {
+                Session.isHealthy = false;
+                SetStatus(WebsocketConnectionStatus.Disconnected);
+                ScheduleReconnect();
+            };
+
+            try
+            {
+                await _socket.Connect();
+            }
+            catch (Exception ex)
+            {
+                Session.lastError = ex.Message;
+                Session.isHealthy = false;
+                SetStatus(WebsocketConnectionStatus.Faulted);
+                ScheduleReconnect();
+                throw;
+            }
+#else
             _socket = new ClientWebSocket();
             _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
@@ -137,6 +210,7 @@ namespace Network.Websocket
                 ScheduleReconnect();
                 throw;
             }
+#endif
         }
 
         public async Task DisconnectAsync(CancellationToken cancellationToken = default(CancellationToken))
@@ -145,9 +219,19 @@ namespace Network.Websocket
             CancelReconnectLoop();
             _receiveCts?.Cancel();
 
-            if (_socket != null && (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived))
+            if (_socket != null)
             {
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", cancellationToken);
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (_socket.State == NativeWebSocket.WebSocketState.Open || _socket.State == NativeWebSocket.WebSocketState.Closing)
+                {
+                    await _socket.Close();
+                }
+#else
+                if (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived)
+                {
+                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", cancellationToken);
+                }
+#endif
             }
 
             if (_receiveTask != null)
@@ -186,7 +270,11 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(eventName))
                 throw new ArgumentException("eventName is required", nameof(eventName));
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (_socket == null || _socket.State != NativeWebSocket.WebSocketState.Open)
+#else
             if (_socket == null || _socket.State != WebSocketState.Open)
+#endif
                 throw new InvalidOperationException("Websocket is not connected");
 
             var command = new WsClientCommand
@@ -282,7 +370,11 @@ namespace Network.Websocket
 
         public async Task<bool> HealthCheckAsync(int timeoutMs = 5000, CancellationToken cancellationToken = default(CancellationToken))
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (_socket == null || _socket.State != NativeWebSocket.WebSocketState.Open)
+#else
             if (_socket == null || _socket.State != WebSocketState.Open)
+#endif
             {
                 Session.isHealthy = false;
                 return false;
@@ -300,7 +392,11 @@ namespace Network.Websocket
 
                 var hasNewMessage = Session.lastMessageAtUtc.HasValue &&
                                     (!before.HasValue || Session.lastMessageAtUtc.Value > before.Value);
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (_socket.State == NativeWebSocket.WebSocketState.Open && hasNewMessage)
+#else
                 if (_socket.State == WebSocketState.Open && hasNewMessage)
+#endif
                 {
                     Session.isHealthy = true;
                     return true;
@@ -316,10 +412,18 @@ namespace Network.Websocket
         private async Task SendRawAsync(string jsonPayload, CancellationToken cancellationToken)
         {
             var framed = jsonPayload + RecordSeparator;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (_socket != null && _socket.State == NativeWebSocket.WebSocketState.Open)
+            {
+                await _socket.SendText(framed);
+            }
+#else
             var bytes = Encoding.UTF8.GetBytes(framed);
             await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+#endif
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
             var buffer = new byte[8192];
@@ -367,6 +471,7 @@ namespace Network.Websocket
                 Debug.LogError($"[WS] Receive loop error: {ex.Message}");
             }
         }
+#endif
 
         private void HandleSignalRMessage(string message)
         {
@@ -641,16 +746,24 @@ namespace Network.Websocket
 
         private void CleanupSocket()
         {
+#if !UNITY_WEBGL || UNITY_EDITOR
             _receiveCts?.Dispose();
             _receiveCts = null;
+#endif
 
             if (_socket != null)
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                try { _socket.Close(); } catch {}
+#else
                 _socket.Dispose();
+#endif
                 _socket = null;
             }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
             _receiveTask = null;
+#endif
         }
 
         private static TimeSpan GetReconnectDelay(int attempt)
