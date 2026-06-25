@@ -169,6 +169,9 @@ public class Program
         // Mapping đường dẫn của tất cả các Class nhãn [ApiController]
         app.MapControllers();
 
+        // Health check endpoint
+        app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Memesploding.Api" }));
+
         // SignalR WebSocket endpoint
         app.MapHub<Memesploding.Api.Hubs.AppHub>("/ws")
             .RequireAuthorization();

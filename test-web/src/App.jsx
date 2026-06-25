@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import "./App.css";
 
-const API_BASE_URL = "http://localhost:5217/api/v1";
-const DEFAULT_WS_URL = "http://localhost:5204/ws";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5217/api/v1";
+const DEFAULT_WS_URL = import.meta.env.VITE_DEFAULT_WS_URL || "ws://localhost:5204/ws";
 
 function toSignalRUrl(url) {
   if (url.startsWith("ws://")) return "http://" + url.slice("ws://".length);
