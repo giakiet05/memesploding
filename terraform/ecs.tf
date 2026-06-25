@@ -88,7 +88,7 @@ resource "aws_ecs_task_definition" "api" {
                },
                {
                 name = "Realtime__GameWsUrl"
-                value = "ws://${aws_lb.main.dns_name}/ws"
+                value = "wss://${var.custom_domain}/ws"
                }
             ]
         }
