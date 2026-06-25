@@ -1,26 +1,36 @@
 {
   "dependencies": {
- "com.ivanmurzak.unity.mcp": {
-    "version": "0.76.0",
-    "depth": 0,
-    "source": "registry",
-    "dependencies": {
-      "com.unity.test-framework": "1.1.33",
-      "com.unity.modules.uielements": "1.0.0",
-      "extensions.unity.playerprefsex": "2.1.5"
+    "com.coplaydev.unity-mcp": {
+      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.0.2",
+        "com.unity.test-framework": "1.1.31"
+      },
+      "hash": "78ee5418415953b79c358bfe6355fcc3fde7912b"
     },
-    "url": "https://package.openupm.com"
-  },
-  "com.coplaydev.unity-mcp": {
-    "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
-    "depth": 0,
-    "source": "git",
-    "dependencies": {
-      "com.unity.nuget.newtonsoft-json": "3.0.2",
-      "com.unity.test-framework": "1.1.31"
+    "com.ivanmurzak.unity.mcp": {
+      "version": "0.82.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.33",
+        "com.unity.modules.uielements": "1.0.0",
+        "extensions.unity.playerprefsex": "2.1.5"
+      },
+      "url": "https://package.openupm.com"
     },
-    "hash": "78ee5418415953b79c358bfe6355fcc3fde7912b"
-  },
+    "com.ivanmurzak.unity.mcp.inputsystem": {
+      "version": "1.0.7",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.ivanmurzak.unity.mcp": "0.82.1",
+        "com.unity.inputsystem": "1.7.0"
+      },
+      "url": "https://package.openupm.com"
+    },
     "com.unity.2d.animation": {
       "version": "11.0.0",
       "depth": 0,
