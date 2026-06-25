@@ -811,6 +811,7 @@ GameObject:
   - component: {fileID: 2854292572390886903}
   - component: {fileID: 2812933753686469690}
   - component: {fileID: 3006110829425423275}
+  - component: {fileID: -8039993313675361924}
   m_Layer: 5
   m_Name: Invite Button
   m_TagString: Untagged
@@ -921,6 +922,22 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &-8039993313675361924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5119519561930281630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee20919d4f4eb44b94003b12786aa3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playOnClick: 1
+  clickSound: 0
+  playOnHover: 0
+  hoverSound: 6
 --- !u!1 &6085645335393725539
 GameObject:
   m_ObjectHideFlags: 0
@@ -1280,6 +1297,7 @@ GameObject:
   - component: {fileID: 3867223743684631610}
   - component: {fileID: 5956374917730313308}
   - component: {fileID: 2055654626266324955}
+  - component: {fileID: 4159633443131768874}
   m_Layer: 5
   m_Name: Invite Button (1)
   m_TagString: Untagged
@@ -1390,6 +1408,22 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4159633443131768874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7735655214888426955}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee20919d4f4eb44b94003b12786aa3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playOnClick: 1
+  clickSound: 0
+  playOnHover: 0
+  hoverSound: 6
 --- !u!1 &8671045679894063571
 GameObject:
   m_ObjectHideFlags: 0

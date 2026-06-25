@@ -17,16 +17,72 @@ namespace Managers.Audio
     /// </summary>
     public class SoundEventListener : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void AutoInitialize()
+        {
+            var go = new GameObject("[AudioSystem]");
+            DontDestroyOnLoad(go);
+            go.AddComponent<SoundEventListener>();
+            SoundManager.EnsureInstance();
+        }
+
         private void OnEnable()
         {
             EventBus.Subscribe<WsGameplayEventPayload>(EventType.WsGameplayEvent, OnGameplayEvent);
             EventBus.Subscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+            EventBus.Subscribe<SceneChangedEventPayload>(EventType.SceneChanged, OnSceneChanged);
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnUnitySceneLoaded;
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<WsGameplayEventPayload>(EventType.WsGameplayEvent, OnGameplayEvent);
             EventBus.Unsubscribe<TurnStartEventPayload>(EventType.TurnStart, OnTurnStart);
+            EventBus.Unsubscribe<SceneChangedEventPayload>(EventType.SceneChanged, OnSceneChanged);
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnUnitySceneLoaded;
+        }
+
+        private void Start()
+        {
+            // BGM will be handled by OnUnitySceneLoaded for the initial scene too, 
+            // since sceneLoaded fires when the scene is loaded. However, if this Start 
+            // happens after sceneLoaded, we ensure it's playing.
+            CheckAndPlayBgm(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        }
+
+        private void OnUnitySceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            CheckAndPlayBgm(scene.name);
+        }
+
+        private void CheckAndPlayBgm(string toScene)
+        {
+            if (string.Equals(toScene, "Gameplay", StringComparison.OrdinalIgnoreCase))
+            {
+                SoundManager.PlaySound(SoundEvent.BgmGameplay);
+            }
+            else if (IsMenuScene(toScene))
+            {
+                SoundManager.PlaySound(SoundEvent.BgmMainMenu);
+            }
+        }
+
+        private void OnSceneChanged(SceneChangedEventPayload payload)
+        {
+            if (payload == null) return;
+            CheckAndPlayBgm(payload.ToScene);
+        }
+
+        private bool IsMenuScene(string sceneName)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return false;
+            return string.Equals(sceneName, "Welcome", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "MainMenu", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "CreateRoom", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "JoinRoom", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "WaitRoom", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "Profile", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(sceneName, "MatchHistory", StringComparison.OrdinalIgnoreCase);
         }
 
         // ── Turn ──────────────────────────────────────────────────────────────────

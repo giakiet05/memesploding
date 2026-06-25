@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1670081037082022852}
   - component: {fileID: 2990613645298223892}
   - component: {fileID: 698611830997903555}
+  - component: {fileID: -868147642387996821}
   m_Layer: 5
   m_Name: CardSet Button
   m_TagString: Untagged
@@ -121,6 +122,22 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &-868147642387996821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 105235858743857395}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee20919d4f4eb44b94003b12786aa3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playOnClick: 1
+  clickSound: 0
+  playOnHover: 0
+  hoverSound: 6
 --- !u!1 &7635546968769145026
 GameObject:
   m_ObjectHideFlags: 0
@@ -224,7 +241,6 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
-  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

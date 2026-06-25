@@ -795,6 +795,7 @@ GameObject:
   - component: {fileID: 3865165675071803017}
   - component: {fileID: 8683825662025373759}
   - component: {fileID: 6046979662750941291}
+  - component: {fileID: -3766659622525063297}
   m_Layer: 5
   m_Name: OpponentProfile
   m_TagString: Untagged
@@ -942,3 +943,19 @@ MonoBehaviour:
   jumpHeight: 0
   duration: 0
   glowImage: {fileID: 2196812774976537106}
+--- !u!114 &-3766659622525063297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8886795637514968351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee20919d4f4eb44b94003b12786aa3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playOnClick: 1
+  clickSound: 0
+  playOnHover: 0
+  hoverSound: 6

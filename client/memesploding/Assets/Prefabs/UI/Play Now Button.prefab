@@ -103,7 +103,6 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
-  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -151,6 +150,7 @@ GameObject:
   - component: {fileID: 1805086568186389500}
   - component: {fileID: 5741124310184056197}
   - component: {fileID: 1276310343191693175}
+  - component: {fileID: -3681688362851613395}
   m_Layer: 5
   m_Name: Play Now Button
   m_TagString: Untagged
@@ -290,3 +290,19 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
   m_EffectDistance: {x: 5, y: 5}
   m_UseGraphicAlpha: 1
+--- !u!114 &-3681688362851613395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5465360817584846360}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee20919d4f4eb44b94003b12786aa3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playOnClick: 1
+  clickSound: 0
+  playOnHover: 0
+  hoverSound: 6

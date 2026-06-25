@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
-    "com.ivanmurzak.unity.mcp": "0.82.2",
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm",
     "com.unity.2d.animation": "11.0.0",
     "com.unity.2d.aseprite": "1.2.5",
     "com.unity.2d.psdimporter": "10.1.1",
@@ -51,22 +50,7 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.ivanmurzak.unity.mcp.inputsystem": "1.0.7",
-    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm"
+    "com.unity.modules.xr": "1.0.0"
   },
-  "scopedRegistries": [
-    {
-      "name": "package.openupm.com",
-      "url": "https://package.openupm.com",
-      "scopes": [
-        "com.ivanmurzak",
-        "extensions.unity",
-        "org.nuget.com.ivanmurzak",
-        "org.nuget.microsoft",
-        "org.nuget.system",
-        "org.nuget.r3"
-      ]
-    }
-  ]
+  "scopedRegistries": []
 }
