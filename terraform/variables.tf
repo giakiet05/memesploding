@@ -26,3 +26,8 @@ variable "game_ticket_key" {
   type = string
   sensitive = true
 }
+
+variable "custom_domain" {
+  description = "Custom domain name for the application (e.g. memesploding.giakiet.io.vn)"
+  type = string
+}
