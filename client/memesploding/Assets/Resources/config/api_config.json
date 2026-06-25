@@ -1,4 +1,4 @@
 {
-  "baseUrl": "http://memesploding-alb-990136336.ap-southeast-1.elb.amazonaws.com",
+  "baseUrl": "https://memesploding.giakiet.io.vn",
   "timeout": 30
 }
