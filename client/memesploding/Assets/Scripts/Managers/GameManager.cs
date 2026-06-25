@@ -62,9 +62,6 @@ namespace Managers
             DontDestroyOnLoad(gameObject);
             LoadCachedSession();
             AudioManager.EnsureInstance();
-            SoundManager.EnsureInstance();
-            if (GetComponent<SoundEventListener>() == null)
-                gameObject.AddComponent<SoundEventListener>();
         }
 
         public Player Player { get; set; }

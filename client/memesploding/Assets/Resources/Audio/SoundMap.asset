@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f92fb53637dd0c240a1c7640a3333b36, type: 3}
+  m_Name: SoundMap
+  m_EditorClassIdentifier: 
+  entries:
+  - soundEvent: 0
+    cue: {fileID: 11400000, guid: 7737773eff0d0b142b3ebc668835965b, type: 2}
+  - soundEvent: 3
+    cue: {fileID: 11400000, guid: 3f4d06e83d8af1b4d8c9be48015bf8e6, type: 2}
+  - soundEvent: 4
+    cue: {fileID: 11400000, guid: 415e118e9cf72b741af22400ea808ca7, type: 2}
+  - soundEvent: 5
+    cue: {fileID: 11400000, guid: c3ea91d205658b04e88a95a0f6f93472, type: 2}
+  - soundEvent: 7
+    cue: {fileID: 11400000, guid: ef7905e2100b11c4db02fdae69554946, type: 2}
+  - soundEvent: 8
+    cue: {fileID: 11400000, guid: 25f8db20f2a6fd24c9c4efe60ea5ace7, type: 2}
+  - soundEvent: 9
+    cue: {fileID: 11400000, guid: 7e520c4327c6e6e438f348be35d9b462, type: 2}
+  - soundEvent: 10
+    cue: {fileID: 11400000, guid: a6ddbb440b0a44040a23fe12e01ea28a, type: 2}
+  - soundEvent: 11
+    cue: {fileID: 11400000, guid: c199c13c43a99db42b9be6603d7e9a26, type: 2}
+  - soundEvent: 12
+    cue: {fileID: 11400000, guid: c4577c419d0f0fe4f99d12a9d50f6c14, type: 2}
+  - soundEvent: 13
+    cue: {fileID: 11400000, guid: 24b28a24042996f4ab62744e956b7ae7, type: 2}
+  - soundEvent: 14
+    cue: {fileID: 11400000, guid: 6ef479104205c1c4e8b61e5457a24009, type: 2}
+  - soundEvent: 15
+    cue: {fileID: 11400000, guid: aff847b037a2a674e9e67e2f37b40be3, type: 2}
+  - soundEvent: 17
+    cue: {fileID: 11400000, guid: 4b11fe32e544ff042956acf334f9062d, type: 2}
+  - soundEvent: 18
+    cue: {fileID: 11400000, guid: edd86a42b8b5d27429ea43b19853ada0, type: 2}
+  - soundEvent: 19
+    cue: {fileID: 11400000, guid: c1cee0685ab14d0458cd8c3e4bb4a95b, type: 2}
+  - soundEvent: 21
+    cue: {fileID: 11400000, guid: 9fc6c2727eda55445b7f78fbc3173b6e, type: 2}
+  - soundEvent: 23
+    cue: {fileID: 11400000, guid: a8cbc6c8ed2dff14e8359a92bf2d8dde, type: 2}
+  - soundEvent: 24
+    cue: {fileID: 11400000, guid: 8b9cb0eeb7b0c054883a9a8d03deecd5, type: 2}
+  - soundEvent: 29
+    cue: {fileID: 11400000, guid: 619354a4aec2c6d4aa202648e64d9798, type: 2}
+  - soundEvent: 30
+    cue: {fileID: 11400000, guid: 5a028956aaa1eb54f80d8c0be33407f8, type: 2}
