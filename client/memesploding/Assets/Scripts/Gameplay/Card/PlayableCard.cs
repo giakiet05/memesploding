@@ -1,5 +1,6 @@
 using System.Collections;
 using Managers;
+using Managers.Audio;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -57,6 +58,9 @@ namespace Gameplay.Card
 
             IsSelectedForPlay = isSelected;
             _handLayout?.NotifyCardSelectionChanged();
+
+            // Audio feedback
+            SoundManager.PlaySound(isSelected ? SoundEvent.CardSelect : SoundEvent.CardDeselect);
         }
 
         public IEnumerator PlayToBoard(
