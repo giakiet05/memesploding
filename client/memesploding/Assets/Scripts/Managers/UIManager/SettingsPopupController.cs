@@ -149,13 +149,13 @@ namespace Managers.UIManager
 
             if (musicValueText == null)
             {
-                var t = transform.Find("Audio Setting Button/Text (TMP) (2)");
+                var t = transform.Find("Audio Setting Button/Text (TMP) (3)");
                 if (t != null) musicValueText = t.GetComponent<TextMeshProUGUI>();
             }
 
             if (sfxValueText == null)
             {
-                var t = transform.Find("Audio Setting Button/Text (TMP) (3)");
+                var t = transform.Find("Audio Setting Button/Text (TMP) (2)");
                 if (t != null) sfxValueText = t.GetComponent<TextMeshProUGUI>();
             }
 

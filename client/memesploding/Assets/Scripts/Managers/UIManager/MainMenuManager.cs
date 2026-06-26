@@ -134,6 +134,11 @@ namespace Managers.UIManager
                     btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
                 }
+                else if (name.Contains("matchhistory") || name.Contains("match history") || name.Contains("match_history") || name.Contains("history"))
+                {
+                    btn.onClick = new Button.ButtonClickedEvent();
+                    btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
+                }
                 else if (name.Contains("friend"))
                 {
                     btn.onClick = new Button.ButtonClickedEvent();
