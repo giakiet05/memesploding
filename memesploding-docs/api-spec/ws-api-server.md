@@ -2,12 +2,12 @@
 
 ## Connection
 
-- URL: `wss://<host>/ws?access_token=<jwt_access_token>`
+- URL: `wss://<host>/api/v1/ws?access_token=<jwt_access_token>`
 - Nếu token invalid/expired -> kết nối bị từ chối.
 
 ## Ownership (API WS vs Game WS)
 
-- **API WS**: social + room lifecycle ngoài trận (`invite/request/leave/kick/ready/start-request`).
+- **API WS**: social + room lifecycle ngoài trận (`invite/request/kick/ready/start-request`). `leave` dùng REST `POST /rooms/{code}/leave`.
 - **Game WS**: gameplay in-match (`play/draw/nope/defuse/...`).
 - Client có thể giữ đồng thời cả 2 kết nối, nhưng action gửi đúng owner.
 
@@ -223,9 +223,9 @@ Chủ phòng phản hồi yêu cầu xin vào phòng.
 
 ---
 
-### 4.6) LeaveRoom (API WS)
+### 4.6) LeaveRoom (API WS, deprecated)
 
-Rời phòng hiện tại.
+Rời phòng hiện tại. Client mới phải dùng REST `POST /api/v1/rooms/{code}/leave`. Method WebSocket này chỉ giữ để tương thích client cũ.
 
 **Client request**
 ```json
@@ -339,7 +339,7 @@ Chủ phòng yêu cầu bắt đầu trận đấu.
     "roomCode": "ABC123",
     "startedByUserId": "guid",
     "connection": {
-      "wsUrl": "ws://localhost:5217/ws",
+      "wsUrl": "ws://localhost:5217/api/v1/ws",
       "wsAccessToken": "jwt-game-ticket"
     }
   }

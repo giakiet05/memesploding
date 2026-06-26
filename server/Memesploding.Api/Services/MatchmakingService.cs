@@ -16,7 +16,7 @@ public class MatchmakingService(ICacheStore cache, ApplicationDbContext db, IRoo
         var existingRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(userId));
         if (!string.IsNullOrEmpty(existingRoomCode))
         {
-            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room", new { roomId = existingRoomCode });
         }
 
         // 2. Find available public rooms

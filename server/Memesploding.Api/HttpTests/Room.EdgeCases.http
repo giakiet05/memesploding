@@ -289,21 +289,8 @@ Content-Type: application/json
 }
 
 ### 4.9 Bob tries LeaveRoom in wrong room code (expect NOT_IN_ROOM)
-WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
-Content-Type: application/json
-
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "LeaveRoom",
-  "arguments": [
-    "ABC123"
-  ]
-}
+POST {{baseUrl}}/rooms/ABC123/leave
+Authorization: Bearer {{bobEdgeToken}}
 
 
 ### ============================================

@@ -46,7 +46,7 @@ public class ExceptionHandlingMiddleware
         {
             // Lỗi có chủ ý (4xx): Dùng status code và error code của AppException
             context.Response.StatusCode = appEx.StatusCode;
-            errorResponse = new ApiErrorResponse(appEx.Message, appEx.ErrorCode);
+            errorResponse = new ApiErrorResponse(appEx.Message, appEx.ErrorCode, appEx.Details);
         }
         else
         {

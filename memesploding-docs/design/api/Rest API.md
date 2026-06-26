@@ -485,6 +485,33 @@ Vào một phòng thông qua mã code.
 **Các lỗi có thể gặp:**
 - `UNAUTHORIZED`, `NOT_FOUND`, `ROOM_IS_FULL`, `MATCH_ALREADY_STARTED`, `PLAYER_ALREADY_IN_ROOM`
 
+### POST `/rooms/{code}/leave`
+
+Rời khỏi phòng hiện tại.
+
+**Path params**
+
+- `code` (string)
+
+**Request body:** none
+
+**Response 200**
+
+```json
+{
+  "message": "Left room successfully",
+  "data": null
+}
+```
+
+**Realtime side effects:**
+- Server vẫn gửi `RoomMemberLeft` qua AppHub cho các thành viên liên quan.
+- Nếu host rời phòng và còn người chơi khác, server chọn host mới và gửi thêm `RoomHostChanged`.
+- Nếu không còn người chơi nào, server xoá phòng.
+
+**Các lỗi có thể gặp:**
+- `UNAUTHORIZED`, `NOT_IN_ROOM`, `NOT_FOUND`
+
 ### PATCH `/rooms/{code}`
 
 Cập nhật thông tin cài đặt của phòng (Chỉ dành cho chủ phòng).
