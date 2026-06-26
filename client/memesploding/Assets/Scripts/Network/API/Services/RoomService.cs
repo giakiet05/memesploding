@@ -24,6 +24,11 @@ namespace Network.API.Services
             return ApiClient.Instance.PostAsync<RoomDetailDto>($"{_baseUrl}/{roomCode}/join", new object(), accessToken);
         }
 
+        public Task<ApiResponse<object>> LeaveRoomAsync(string roomCode, string accessToken)
+        {
+            return ApiClient.Instance.PostAsync<object>($"{_baseUrl}/{roomCode}/leave", new object(), accessToken);
+        }
+
         public Task<ApiResponse<RoomDetailDto>> UpdateRoomSettingsAsync(string roomCode, UpdateRoomDto request, string accessToken)
         {
             return ApiClient.Instance.PatchAsync<RoomDetailDto>($"{_baseUrl}/{roomCode}", request, accessToken);

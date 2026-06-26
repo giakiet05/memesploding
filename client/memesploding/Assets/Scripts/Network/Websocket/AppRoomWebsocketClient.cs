@@ -120,34 +120,18 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(roomCode))
                 return;
 
-            var client = Instance;
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                if (client.Status != AppRoomConnectionStatus.Connected)
-                {
-                    Debug.Log($"[ForceLeaveRoom] Connecting WS to leave room {roomCode}...");
-                    await client.ConnectAsync(accessToken, roomCode, cts.Token);
-                    Debug.Log("[ForceLeaveRoom] WS connected.");
-                }
+                Debug.Log($"[ForceLeaveRoom] Leaving room {roomCode} via REST...");
+                var response = await Network.API.Services.RoomService.Instance.LeaveRoomAsync(roomCode, accessToken);
+                if (response?.success == true)
+                    Debug.Log($"[ForceLeaveRoom] Left room {roomCode} successfully.");
                 else
-                {
-                    Debug.Log($"[ForceLeaveRoom] Already connected, reusing WS for room {roomCode}.");
-                }
-                Debug.Log("[ForceLeaveRoom] Sending LeaveRoom invocation...");
-                await client.LeaveRoomAsync(roomCode, cts.Token);
-                Debug.Log("[ForceLeaveRoom] LeaveRoom sent. Waiting for server to process...");
-                await Task.Delay(1000, cts.Token);
-                Debug.Log("[ForceLeaveRoom] Done.");
+                    Debug.LogWarning($"[ForceLeaveRoom] Leave room {roomCode}: errorCode={response?.errorCode} message={response?.message}");
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"[ForceLeaveRoom] Failed: {ex.Message}");
-            }
-            finally
-            {
-                try { await client.DisconnectAsync(); }
-                catch { }
             }
         }
 
