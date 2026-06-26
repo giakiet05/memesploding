@@ -123,11 +123,22 @@ namespace Network.Websocket
             var client = Instance;
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 if (client.Status != AppRoomConnectionStatus.Connected)
+                {
+                    Debug.Log($"[ForceLeaveRoom] Connecting WS to leave room {roomCode}...");
                     await client.ConnectAsync(accessToken, roomCode, cts.Token);
+                    Debug.Log("[ForceLeaveRoom] WS connected.");
+                }
+                else
+                {
+                    Debug.Log($"[ForceLeaveRoom] Already connected, reusing WS for room {roomCode}.");
+                }
+                Debug.Log("[ForceLeaveRoom] Sending LeaveRoom invocation...");
                 await client.LeaveRoomAsync(roomCode, cts.Token);
-                await Task.Delay(300, cts.Token);
+                Debug.Log("[ForceLeaveRoom] LeaveRoom sent. Waiting for server to process...");
+                await Task.Delay(1000, cts.Token);
+                Debug.Log("[ForceLeaveRoom] Done.");
             }
             catch (Exception ex)
             {

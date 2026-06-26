@@ -122,17 +122,18 @@ namespace Managers.UIManager
                         if (!string.IsNullOrWhiteSpace(oldRoomId))
                         {
                             UniversalPopup.ShowInfo("Bạn đang ở trong phòng khác. Đang rời phòng cũ để tạo lại...");
+                            Debug.Log($"[CreateRoom] PLAYER_ALREADY_IN_ROOM — leaving old room {oldRoomId} via WebSocket...");
                             try
                             {
                                 await Network.Websocket.AppRoomWebsocketClient.ForceLeaveRoomAsync(gameManager.AccessToken, oldRoomId);
+                                Debug.Log("[CreateRoom] ForceLeaveRoom complete. Retrying CreateRoom...");
                                 RoomManager.EnsureInstance().ClearCurrentRoom();
-                                
-                                // Retry creation
                                 response = await RoomService.Instance.CreateRoomAsync(request, gameManager.AccessToken);
+                                Debug.Log($"[CreateRoom] Retry result: success={response?.success} errorCode={response?.errorCode}");
                             }
                             catch (Exception wsEx)
                             {
-                                Debug.LogWarning($"[CreateRoom] Failed to auto-leave old room {oldRoomId}: {wsEx.Message}");
+                                Debug.LogWarning($"[CreateRoom] ForceLeaveRoom threw: {wsEx.Message}");
                             }
                         }
                     }
