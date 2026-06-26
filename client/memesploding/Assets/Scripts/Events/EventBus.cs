@@ -20,11 +20,14 @@ namespace Events
         public class EventBus : MonoBehaviour
         {
             private static EventBus _instance;
+            private static bool _isQuitting;
+
             public static EventBus Instance
             {
                 get
                 {
                     if (_instance != null) return _instance;
+                    if (_isQuitting) return null;
 
                     var go = new GameObject("[EventBus]");
                     _instance = go.AddComponent<EventBus>();
@@ -41,10 +44,12 @@ namespace Events
                     return;
                 }
                 _instance = this;
+                _isQuitting = false;
                 DontDestroyOnLoad(gameObject);
             }
             private void OnApplicationQuit()
             {
+                _isQuitting = true;
                 ClearAllListeners();
                 if (_instance != null)
                     Destroy(_instance.gameObject);
@@ -54,19 +59,19 @@ namespace Events
                 = new Dictionary<EventType, Delegate>();
 
             public static void Subscribe<T>(EventType type, Action<T> listener)
-                where T : BaseEventPayload => Instance.AddListener(type, listener);
+                where T : BaseEventPayload => Instance?.AddListener(type, listener);
 
             public static void Unsubscribe<T>(EventType type, Action<T> listener)
-                where T : BaseEventPayload => Instance.RemoveListener(type, listener);
+                where T : BaseEventPayload => Instance?.RemoveListener(type, listener);
 
             public static void Publish<T>(EventType type, T payload)
-                where T : BaseEventPayload => Instance.Dispatch(type, payload);
+                where T : BaseEventPayload => Instance?.Dispatch(type, payload);
 
             /// <summary>Remove ALL listeners for an event type. Use sparingly.</summary>
-            public static void Clear(EventType type) => Instance.ClearListeners(type);
+            public static void Clear(EventType type) => Instance?.ClearListeners(type);
 
             /// <summary>Remove every listener for every event type.</summary>
-            public static void ClearAll() => Instance.ClearAllListeners();
+            public static void ClearAll() => Instance?.ClearAllListeners();
 
             private void AddListener<T>(EventType type, Action<T> listener)
                 where T : BaseEventPayload

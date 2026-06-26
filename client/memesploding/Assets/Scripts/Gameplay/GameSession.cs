@@ -95,7 +95,7 @@ namespace Gameplay
                 GameState.pendingReactionAction = null;
                 GameState.pendingReactionTargetUserIds = null;
                 GameState.pendingReactionEffectScope = null;
-                GameplayUIManager.Instance.ShowReactionResult(activated: true);
+                GameplayUIManager.Instance?.ShowReactionResult(activated: true);
             }
 
             switch (payload.EventType)
@@ -167,7 +167,7 @@ namespace Gameplay
                     }
                     else if (!IsSelf(cardDrawn.userId))
                     {
-                        GameplayUIManager.Instance.DisplayOpponentDraw(cardDrawn.userId);
+                        GameplayUIManager.Instance?.DisplayOpponentDraw(cardDrawn.userId);
                     }
                     GameplayUIManager.Instance?.ShowActionToast(
                         "RÚT BÀI",
@@ -202,7 +202,7 @@ namespace Gameplay
                     else
                     {
                         //Make opponent play a card
-                        GameplayUIManager.Instance.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
+                        GameplayUIManager.Instance?.PlayOpponentCard(cardPlayed.userId, cardPlayed.cardCode);
                     }
                     GameplayUIManager.Instance?.ShowActionToast(
                         cardPlayed.cardCode,
@@ -405,7 +405,7 @@ namespace Gameplay
 
                     // TODO: Store peek.cards in dedicated UI state instead of GameState when UI model is introduced.
                     if (IsSelf(peek.userId) && peek.cards != null)
-                        GameplayUIManager.Instance.DisplayCards(peek.cards.ToList());
+                        GameplayUIManager.Instance?.DisplayCards(peek.cards.ToList());
                     break;
 
                 case WsGameplayEventType.FavorWindowOpened:
@@ -415,7 +415,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = favorWindow.requesterId;
                     GameState.pendingFavorTargetId = favorWindow.targetId;
                     GameState.favorWindowEndsAt = favorWindow.favorWindowEndsAt;
-                    GameplayUIManager.Instance.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId, favorWindow.favorWindowEndsAt);
+                    GameplayUIManager.Instance?.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId, favorWindow.favorWindowEndsAt);
                     break;
 
                 case WsGameplayEventType.FavorResolved:
@@ -428,7 +428,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = null;
                     GameState.pendingFavorTargetId = null;
                     GameState.favorWindowEndsAt = null;
-                    GameplayUIManager.Instance.HideFavorWindow();
+                    GameplayUIManager.Instance?.HideFavorWindow();
                     break;
 
                 case WsGameplayEventType.CatComboTwoResolved:
@@ -447,7 +447,7 @@ namespace Gameplay
                     GameState.pendingFavorRequesterId = null;
                     GameState.pendingFavorTargetId = null;
                     GameState.favorWindowEndsAt = null;
-                    GameplayUIManager.Instance.HideFavorWindow();
+                    GameplayUIManager.Instance?.HideFavorWindow();
                     break;
 
                 case WsGameplayEventType.DrawPileEmpty:
@@ -495,7 +495,7 @@ namespace Gameplay
                         GameState.reactionWindowEndsAt = reactionOpen.reactionWindowEndsAt;
                     GameState.turnEndsAt = null;
                     Clock.PauseTurn();
-                    GameplayUIManager.Instance.ShowReactionWindow(
+                    GameplayUIManager.Instance?.ShowReactionWindow(
                         reactionOpen.userId,
                         reactionOpen.cardCode,
                         GameState.pendingNopeCount,
@@ -522,11 +522,11 @@ namespace Gameplay
                     {
                         RemoveOneCardFromSelfHand("Nope");
                         CardManager.Instance?.RemoveCardFromHand("Nope");
-                        GameplayUIManager.Instance.PlayLocalCard("Nope");
+                        GameplayUIManager.Instance?.PlayLocalCard("Nope");
                     }
                     else
                     {
-                        GameplayUIManager.Instance.PlayOpponentCard(nopePlayed.userId, "Nope");
+                        GameplayUIManager.Instance?.PlayOpponentCard(nopePlayed.userId, "Nope");
                     }
 
                     GameState.discardPile.Add("Nope");
@@ -535,7 +535,7 @@ namespace Gameplay
                         $"{GameplayUIManager.Instance.GetPlayerDisplayName(nopePlayed.userId)} đã đánh NOPE",
                         status: "NOPE",
                         danger: true);
-                    GameplayUIManager.Instance.ShowReactionWindow(
+                    GameplayUIManager.Instance?.ShowReactionWindow(
                         GameState.pendingReactionUserId,
                         GameState.pendingReactionAction,
                         GameState.pendingNopeCount,
@@ -550,7 +550,7 @@ namespace Gameplay
 
                     GameState.pendingNopeCount = Math.Max(0, reactionClosed.nopeCount);
                     GameState.reactionWindowEndsAt = null;
-                    GameplayUIManager.Instance.HoldReactionWindowForResolution();
+                    GameplayUIManager.Instance?.HoldReactionWindowForResolution();
                     break;
 
                 case WsGameplayEventType.ActionNoped:
@@ -564,14 +564,14 @@ namespace Gameplay
                     GameState.reactionWindowEndsAt = null;
                     GameState.pendingReactionTargetUserIds = null;
                     GameState.pendingReactionEffectScope = null;
-                    GameplayUIManager.Instance.ShowReactionResult(activated: false);
+                    GameplayUIManager.Instance?.ShowReactionResult(activated: false);
                     break;
 
                 case WsGameplayEventType.ActionRejected:
                     if (parsedPayload is not WsActionRejectedPayload rejected)
                         return;
 
-                    GameplayUIManager.Instance.ClearTargetSelection();
+                    GameplayUIManager.Instance?.ClearTargetSelection();
                     CardManager.Instance?.RejectPendingPlay();
                     GameManager.Instance?.NotifyLocalDrawResolved();
                     GameplayUIManager.Instance?.HideInteractionModal();

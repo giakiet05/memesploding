@@ -299,6 +299,16 @@ namespace Managers.UIManager
                         cardCodes: new List<string> { obj.PlayedCard.Data.cardCode });
                     break;
 
+                case "Cat1":
+                case "Cat2":
+                case "Cat3":
+                case "Cat4":
+                case "Cat5":
+                case "ExplodingKitten":
+                case "ImplodingKitten":
+                    CardManager.Instance?.RejectPendingPlay();
+                    break;
+
                 default:
                     Debug.LogWarning($"Unhandled card: {obj.PlayedCard.Data.cardCode}");
                     break;

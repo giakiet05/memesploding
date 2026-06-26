@@ -55,6 +55,7 @@ namespace UI.Gameplay
             cardCounterText ??= transform.Find("CardCounter/Text (TMP)")?.GetComponent<TextMeshProUGUI>();
             profileImage ??= transform.Find("Image")?.GetComponent<Image>();
             glowImage ??= transform.Find("GlowImage")?.GetComponent<GlowImage>();
+            nicknameText ??= transform.Find("NicknamePlate/NicknameText")?.GetComponent<TextMeshProUGUI>();
 
             if (nicknameText == null)
                 Debug.LogWarning("[OpponentProfile] NicknameText reference is missing on the prefab.");

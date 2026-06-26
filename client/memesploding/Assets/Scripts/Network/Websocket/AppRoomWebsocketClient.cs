@@ -128,14 +128,18 @@ namespace Network.Websocket
 
                 try
                 {
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8)))
                     {
                         await socket.ConnectAsync(uri, cts.Token);
-                        
+
                         // Handshake
                         var handshake = "{\"protocol\":\"json\",\"version\":1}" + RecordSeparator;
                         var bytes = Encoding.UTF8.GetBytes(handshake);
                         await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cts.Token);
+
+                        // Wait for server handshake ACK ({}) — required before SignalR processes any invocation
+                        var ackBuffer = new byte[4096];
+                        await socket.ReceiveAsync(new ArraySegment<byte>(ackBuffer), cts.Token);
 
                         // LeaveRoom Invocation
                         var invocation = new
@@ -148,9 +152,9 @@ namespace Network.Websocket
                         var invBytes = Encoding.UTF8.GetBytes(json);
                         await socket.SendAsync(new ArraySegment<byte>(invBytes), WebSocketMessageType.Text, true, cts.Token);
 
-                        // Give it a moment to flush the TCP buffer
-                        await Task.Delay(200, cts.Token);
-                        
+                        // Give server time to process the leave before closing
+                        await Task.Delay(400, cts.Token);
+
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Force leave complete", cts.Token);
                     }
                 }
