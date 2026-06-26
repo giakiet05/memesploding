@@ -121,11 +121,10 @@ namespace Network.Websocket
                 return;
 
             var client = Instance;
-            var needConnect = client.Status != AppRoomConnectionStatus.Connected;
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                if (needConnect)
+                if (client.Status != AppRoomConnectionStatus.Connected)
                     await client.ConnectAsync(accessToken, roomCode, cts.Token);
                 await client.LeaveRoomAsync(roomCode, cts.Token);
                 await Task.Delay(300, cts.Token);
@@ -136,11 +135,8 @@ namespace Network.Websocket
             }
             finally
             {
-                if (needConnect)
-                {
-                    try { await client.DisconnectAsync(); }
-                    catch { }
-                }
+                try { await client.DisconnectAsync(); }
+                catch { }
             }
         }
 

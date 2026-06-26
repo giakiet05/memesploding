@@ -11,6 +11,15 @@ namespace Managers.UIManager
 {
     public class SettingsPopupController : MonoBehaviour
     {
+        // Comic Style Theme — matches GameplayGuidePopup
+        private static readonly Color ComicInk      = new Color(0.09f, 0.07f, 0.06f, 1.00f);
+        private static readonly Color ComicNavBg    = new Color(0.92f, 0.48f, 0.15f, 1.00f);
+        private static readonly Color ComicNavHov   = new Color(0.98f, 0.58f, 0.25f, 1.00f);
+        private static readonly Color ComicNavPrs   = new Color(0.80f, 0.38f, 0.08f, 1.00f);
+        private static readonly Color ComicDanger   = new Color(0.75f, 0.18f, 0.12f, 1.00f);
+        private static readonly Color ComicDangerHov = new Color(0.86f, 0.25f, 0.18f, 1.00f);
+        private static readonly Color ComicDangerPrs = new Color(0.62f, 0.12f, 0.08f, 1.00f);
+
         [Header("Audio")]
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
@@ -306,6 +315,111 @@ namespace Managers.UIManager
             }
 
             _isInitialized = true;
+            ApplyComicTheme();
+        }
+
+        private void ApplyComicTheme()
+        {
+            // Panel background — apply comic popup sprite + ink outline
+            var panelImg = GetComponent<Image>();
+            if (panelImg != null)
+            {
+                var sprite = Resources.Load<Sprite>("bg-SettingPopup");
+                if (sprite != null)
+                {
+                    panelImg.sprite = sprite;
+                    panelImg.type = Image.Type.Sliced;
+                }
+            }
+            if (!gameObject.TryGetComponent<Outline>(out _))
+            {
+                var outline = gameObject.AddComponent<Outline>();
+                outline.effectColor = ComicInk;
+                outline.effectDistance = new Vector2(5f, -5f);
+            }
+
+            // Navigation / info buttons — orange accent
+            StyleComicButton(accountButton,  ComicNavBg, ComicNavHov, ComicNavPrs);
+            StyleComicButton(supportButton,  ComicNavBg, ComicNavHov, ComicNavPrs);
+            StyleComicButton(graphicButton,  ComicNavBg, ComicNavHov, ComicNavPrs);
+            StyleComicButton(gameplayButton, ComicNavBg, ComicNavHov, ComicNavPrs);
+            StyleComicButton(languageButton, ComicNavBg, ComicNavHov, ComicNavPrs);
+
+            // Destructive buttons — red accent
+            StyleComicButton(logoutButton, ComicDanger, ComicDangerHov, ComicDangerPrs);
+            StyleComicButton(quitButton,   ComicDanger, ComicDangerHov, ComicDangerPrs);
+
+            // Close button — transparent with ink X
+            StyleComicCloseButton(closeButton);
+
+            // Sliders
+            StyleComicSlider(musicSlider);
+            StyleComicSlider(sfxSlider);
+        }
+
+        private void StyleComicButton(Button btn, Color normal, Color hover, Color pressed)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = Color.white;
+                if (!btn.TryGetComponent<Outline>(out _))
+                {
+                    var o = btn.gameObject.AddComponent<Outline>();
+                    o.effectColor = ComicInk;
+                    o.effectDistance = new Vector2(2f, -2f);
+                }
+            }
+            btn.colors = new ColorBlock
+            {
+                normalColor      = normal,
+                highlightedColor = hover,
+                pressedColor     = pressed,
+                selectedColor    = hover,
+                disabledColor    = new Color(0.70f, 0.70f, 0.70f, 0.5f),
+                colorMultiplier  = 1f,
+                fadeDuration     = 0.1f
+            };
+            var tmp = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmp != null) tmp.color = Color.white;
+        }
+
+        private void StyleComicCloseButton(Button btn)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null) img.color = Color.clear;
+            btn.colors = new ColorBlock
+            {
+                normalColor      = Color.clear,
+                highlightedColor = new Color(0.86f, 0.12f, 0.10f, 0.15f),
+                pressedColor     = new Color(0.86f, 0.12f, 0.10f, 0.35f),
+                selectedColor    = new Color(0.86f, 0.12f, 0.10f, 0.15f),
+                disabledColor    = new Color(0.7f, 0.7f, 0.7f, 0.5f),
+                colorMultiplier  = 1f,
+                fadeDuration     = 0.1f
+            };
+            var tmp = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmp != null) tmp.color = ComicInk;
+        }
+
+        private static void StyleComicSlider(Slider slider)
+        {
+            if (slider == null) return;
+            var fillImg = slider.fillRect?.GetComponent<Image>();
+            if (fillImg != null) fillImg.color = ComicNavBg;
+            var handleImg = slider.handleRect?.GetComponent<Image>();
+            if (handleImg != null)
+            {
+                handleImg.color = Color.white;
+                if (!handleImg.TryGetComponent<Outline>(out _))
+                {
+                    var o = handleImg.gameObject.AddComponent<Outline>();
+                    o.effectColor = ComicInk;
+                    o.effectDistance = new Vector2(2f, -2f);
+                }
+            }
         }
 
         private void HandleMusicChanged(float value)
