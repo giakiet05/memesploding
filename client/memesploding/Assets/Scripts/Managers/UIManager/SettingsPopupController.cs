@@ -250,7 +250,7 @@ namespace Managers.UIManager
                 var btnText = logoutButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (isGameplayOrWaitRoom)
                 {
-                    if (btnText != null) btnText.text = "Thoat phong";
+                    if (btnText != null) btnText.text = "Thoát phòng";
                     logoutButton.onClick.AddListener(HandleQuitClicked);
                     // Hide child icon images so they don't overlap the text
                     HideChildIconImages(logoutButton);
@@ -265,7 +265,7 @@ namespace Managers.UIManager
                 }
                 else
                 {
-                    if (btnText != null) btnText.text = "Dang xuat";
+                    if (btnText != null) btnText.text = "Đăng xuất";
                     logoutButton.onClick.AddListener(HandleLogoutClicked);
                 }
                 logoutButton.gameObject.SetActive(true);
