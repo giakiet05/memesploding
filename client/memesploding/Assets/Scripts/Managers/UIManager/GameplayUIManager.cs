@@ -1154,7 +1154,7 @@ namespace Managers.UIManager
             switch (effectScope)
             {
                 case "self":
-                    return "Ảnh hưởng: bản thân";
+                    return $"Ảnh hưởng: {ResolvePlayerName(actorUserId)}";
                 case "all_players":
                     return "Ảnh hưởng: tất cả người chơi";
                 case "draw_pile":

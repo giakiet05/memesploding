@@ -37,10 +37,13 @@ namespace Managers.UIManager
         [SerializeField] private Transform memberContentRoot;
         [SerializeField] private WaitingRoomMemberItemView memberItemTemplate;
 
+        private const float RoomRefreshIntervalSeconds = 15f;
+
         private readonly List<WaitingRoomMemberItemView> _spawnedItems = new List<WaitingRoomMemberItemView>();
         private AppRoomWebsocketClient _roomSocket;
         private bool _isLoading;
         private bool _isTransitioningToGameplay;
+        private float _timeSinceLastRefresh;
 
         private void Awake()
         {
@@ -59,9 +62,29 @@ namespace Managers.UIManager
             inviteButton?.onClick.AddListener(HandleInviteClicked);
             actionButton?.onClick.AddListener(HandleActionClicked);
 
+            _timeSinceLastRefresh = 0f;
             SubscribeRoomSocket();
             Render();
             await InitializeAsync();
+        }
+
+        private async void Update()
+        {
+            if (_isTransitioningToGameplay || _isLoading)
+                return;
+
+            _timeSinceLastRefresh += Time.deltaTime;
+            if (_timeSinceLastRefresh >= RoomRefreshIntervalSeconds)
+            {
+                _timeSinceLastRefresh = 0f;
+                var gameManager = GameManager.EnsureInstance();
+                var roomManager = RoomManager.EnsureInstance();
+                if (gameManager.IsAuthenticated && roomManager.HasRoom)
+                {
+                    await RefreshRoomAsync(gameManager.AccessToken, roomManager.GetRoomCode());
+                    Render();
+                }
+            }
         }
 
         private async void OnDisable()
@@ -104,8 +127,12 @@ namespace Managers.UIManager
             }
 
             var roomCode = roomManager.GetRoomCode();
-            await RefreshRoomAsync(gameManager.AccessToken, roomCode);
 
+            // Always start with a clean connection — avoids stuck Connected state from
+            // a previous session whose async OnDisable.DisconnectAsync() lost the race.
+            try { await _roomSocket.DisconnectAsync(); } catch { }
+
+            // Connect FIRST so no member-join events are missed while waiting for the REST refresh.
             try
             {
                 await _roomSocket.ConnectAsync(gameManager.AccessToken, roomCode);
@@ -114,6 +141,9 @@ namespace Managers.UIManager
             {
                 UniversalPopup.ShowError(string.IsNullOrWhiteSpace(ex.Message) ? "Unable to connect to the room." : ex.Message);
             }
+
+            // Refresh after connecting to catch any joins that happened before we established the WS connection.
+            await RefreshRoomAsync(gameManager.AccessToken, roomCode);
 
             Render();
         }

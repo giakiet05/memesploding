@@ -46,8 +46,13 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new ArgumentException("accessToken is required", nameof(accessToken));
 
+            // If already connected, disconnect first to get a fresh connection.
+            // This handles the race where OnDisable's async DisconnectAsync lost to OnEnable's ConnectAsync.
             if (Status == AppRoomConnectionStatus.Connected || Status == AppRoomConnectionStatus.Connecting)
-                return;
+            {
+                Debug.LogWarning("[RoomWS] ConnectAsync called while already connected — forcing disconnect first.");
+                try { await DisconnectAsync(cancellationToken); } catch { }
+            }
 
             CleanupSocket();
             EnsureDispatcher();

@@ -139,6 +139,8 @@ namespace Gameplay
                     if (parsedPayload is not WsCardActionPayload cardDrawn)
                         return;
                     EventBus.Publish(EventType.TurnEnd, new TurnEndEventPayload(cardDrawn.userId));
+                    if (GetPlayerPendingDraw(cardDrawn.userId) > 0)
+                        SetPlayerPendingDraw(cardDrawn.userId, GetPlayerPendingDraw(cardDrawn.userId) - 1);
                     var addedToHand = cardDrawn.addedToHand ??
                                       cardDrawn.cardCode is not ("ExplodingKitten" or "ImplodingKitten");
                     GameState.drawPileCount = cardDrawn.drawPileCount >= 0
@@ -587,10 +589,13 @@ namespace Gameplay
                     if (!string.IsNullOrWhiteSpace(comboThreeResolved.requestedCardCode))
                     {
                         ApplyCardTransfer(comboThreeResolved.fromUserId, comboThreeResolved.toUserId, comboThreeResolved.requestedCardCode);
+                        var c3From = GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.fromUserId);
+                        var c3To = GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.toUserId);
                         GameplayUIManager.Instance?.ShowActionToast(
                             "COMBO 3 – LẤY BÀI",
-                            $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.fromUserId)} lấy lá '{comboThreeResolved.requestedCardCode}' từ {GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.toUserId)}",
-                            status: "COMBO 3");
+                            $"{c3From} lấy từ {c3To}",
+                            $"Lá: {comboThreeResolved.requestedCardCode}",
+                            "COMBO 3");
                     }
                     break;
 
@@ -614,10 +619,12 @@ namespace Gameplay
                     }
 
                     RemoveOneCardFromDiscard(comboFive.discardCardCode);
+                    var c5Name = GameplayUIManager.Instance?.GetPlayerDisplayName(comboFive.userId);
                     GameplayUIManager.Instance?.ShowActionToast(
-                        "COMBO 5 – LẤY TỪ Bỏ",
-                        $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboFive.userId)} lấy lá '{comboFive.discardCardCode}' từ chồng bài bỏ",
-                        status: "COMBO 5");
+                        "COMBO 5 – LẤY TỪ BỎ",
+                        $"{c5Name} lấy từ chồng bài bỏ",
+                        $"Lá: {comboFive.discardCardCode}",
+                        "COMBO 5");
                     break;
 
                 default:
