@@ -120,47 +120,26 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(roomCode))
                 return;
 
-            using (var socket = new ClientWebSocket())
+            var client = Instance;
+            var needConnect = client.Status != AppRoomConnectionStatus.Connected;
+            try
             {
-                socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-                var wsUrl = BuildAppHubWsUrl();
-                var uri = BuildUriWithAccessToken(wsUrl, accessToken);
-
-                try
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                if (needConnect)
+                    await client.ConnectAsync(accessToken, roomCode, cts.Token);
+                await client.LeaveRoomAsync(roomCode, cts.Token);
+                await Task.Delay(300, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ForceLeaveRoom] Failed: {ex.Message}");
+            }
+            finally
+            {
+                if (needConnect)
                 {
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8)))
-                    {
-                        await socket.ConnectAsync(uri, cts.Token);
-
-                        // Handshake
-                        var handshake = "{\"protocol\":\"json\",\"version\":1}" + RecordSeparator;
-                        var bytes = Encoding.UTF8.GetBytes(handshake);
-                        await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cts.Token);
-
-                        // Wait for server handshake ACK ({}) — required before SignalR processes any invocation
-                        var ackBuffer = new byte[4096];
-                        await socket.ReceiveAsync(new ArraySegment<byte>(ackBuffer), cts.Token);
-
-                        // LeaveRoom Invocation
-                        var invocation = new
-                        {
-                            type = 1,
-                            target = "LeaveRoom",
-                            arguments = new[] { roomCode }
-                        };
-                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(invocation) + RecordSeparator;
-                        var invBytes = Encoding.UTF8.GetBytes(json);
-                        await socket.SendAsync(new ArraySegment<byte>(invBytes), WebSocketMessageType.Text, true, cts.Token);
-
-                        // Give server time to process the leave before closing
-                        await Task.Delay(400, cts.Token);
-
-                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Force leave complete", cts.Token);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[ForceLeaveRoom] Failed: {ex.Message}");
+                    try { await client.DisconnectAsync(); }
+                    catch { }
                 }
             }
         }
