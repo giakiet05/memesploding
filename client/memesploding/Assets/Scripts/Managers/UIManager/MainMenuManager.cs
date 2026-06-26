@@ -13,7 +13,6 @@ namespace Managers.UIManager
     {
         public static MainMenuManager Instance;
         [Header("Popups")]
-        [SerializeField] private Popup quickMatchBackdrop;
         [SerializeField] private Popup settingPopupBackdrop;
         public Popup SettingPopupBackdrop => settingPopupBackdrop;
         [SerializeField] private Popup playNowBackdrop;
@@ -79,7 +78,7 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("quickmatch") || name.Contains("quick match"))
                 {
-                    if (quickMatchBackdrop == null) quickMatchBackdrop = p;
+                    p.gameObject.SetActive(false);
                 }
                 else if (name.Contains("invitation") || name.Contains("invite"))
                 {
@@ -104,7 +103,11 @@ namespace Managers.UIManager
                 if (btn == null) continue;
 
                 var name = btn.name.ToLower();
-                if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
+                if (name.Contains("quickmatch") || name.Contains("quick match") || name.Contains("quick_match"))
+                {
+                    btn.gameObject.SetActive(false);
+                }
+                else if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
                 {
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(OpenPlayNowBackdrop);
@@ -139,7 +142,6 @@ namespace Managers.UIManager
 
         public void HideAllPopups()
         {
-            Hide(quickMatchBackdrop);
             Hide(settingPopupBackdrop);
             Hide(playNowBackdrop);
             Hide(roomInvitationBackdrop);
@@ -161,12 +163,6 @@ namespace Managers.UIManager
             {
                 Hide(popup);
             }
-        }
-
-        public void OpenQuickMatch()
-        {
-            Hide(playNowBackdrop);
-            ShowGroup(quickMatchBackdrop);
         }
 
         public void OpenSettings()

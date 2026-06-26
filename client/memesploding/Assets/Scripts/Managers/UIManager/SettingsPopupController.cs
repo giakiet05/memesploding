@@ -315,8 +315,8 @@ namespace Managers.UIManager
                 });
             }
 
-            // Bind backdrop click to close
-            if (_backdropGo != null)
+            // Bind backdrop click to close (backdrop is the transparent overlay BEHIND the panel)
+            if (_backdropGo != null && _backdropGo != gameObject)
             {
                 var backdropBtn = _backdropGo.GetComponent<Button>() ?? _backdropGo.AddComponent<Button>();
                 backdropBtn.transition = Selectable.Transition.None;
@@ -324,22 +324,28 @@ namespace Managers.UIManager
                 backdropBtn.onClick.AddListener(HandleCloseClicked);
             }
 
+            // Fallback: any unbound child button shows "under development" toast
+            BindUnhandledButtons(logoutButton, closeButton, quitButton,
+                accountButton, supportButton, graphicButton, gameplayButton, languageButton);
+
             _isInitialized = true;
             ApplyComicTheme();
         }
 
         private void ApplyComicTheme()
         {
-            // Panel background — apply comic popup sprite + ink outline
-            var panelImg = GetComponent<Image>();
-            if (panelImg != null)
+            // Panel background — must block raycasts so backdrop Button doesn't fire through the panel
+            var panelImg = GetComponent<Image>() ?? gameObject.AddComponent<Image>();
+            panelImg.raycastTarget = true;
+            var sprite = Resources.Load<Sprite>("bg-SettingPopup");
+            if (sprite != null)
             {
-                var sprite = Resources.Load<Sprite>("bg-SettingPopup");
-                if (sprite != null)
-                {
-                    panelImg.sprite = sprite;
-                    panelImg.type = Image.Type.Sliced;
-                }
+                panelImg.sprite = sprite;
+                panelImg.type = Image.Type.Sliced;
+            }
+            else if (panelImg.color.a < 0.01f)
+            {
+                panelImg.color = new Color(1f, 1f, 1f, 0.01f);
             }
             if (!gameObject.TryGetComponent<Outline>(out _))
             {
@@ -478,7 +484,7 @@ namespace Managers.UIManager
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[SettingsQuit] Failed to leave room on API server: {ex.Message}");
+                    Debug.LogWarning($"[SettingsQuit] Failed to leave room via WebSocket: {ex.Message}");
                 }
             }
 
@@ -520,6 +526,19 @@ namespace Managers.UIManager
         private void ShowFeatureUnderDevelopment(string featureName)
         {
             UniversalPopup.ShowInfo($"{featureName}: Tính năng đang phát triển!");
+        }
+
+        private void BindUnhandledButtons(params Button[] knownButtons)
+        {
+            var known = new System.Collections.Generic.HashSet<Button>(knownButtons);
+            foreach (var btn in GetComponentsInChildren<Button>(true))
+            {
+                if (btn == null || known.Contains(btn)) continue;
+                if (btn.onClick.GetPersistentEventCount() > 0) continue;
+                var capturedName = btn.name;
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => ShowFeatureUnderDevelopment(capturedName));
+            }
         }
 
         private static void HideChildIconImages(Button btn)
