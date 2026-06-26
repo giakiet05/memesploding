@@ -374,6 +374,13 @@ MonoBehaviour:
   musicValueText: {fileID: 1378139606}
   sfxValueText: {fileID: 4027673294037182081}
   logoutButton: {fileID: 20935208449117715}
+  quitButton: {fileID: 0}
+  closeButton: {fileID: 0}
+  accountButton: {fileID: 0}
+  supportButton: {fileID: 0}
+  graphicButton: {fileID: 0}
+  gameplayButton: {fileID: 0}
+  languageButton: {fileID: 0}
 --- !u!4 &46179251
 Transform:
   m_ObjectHideFlags: 0
@@ -20497,7 +20504,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 1925457448764862323, guid: b27582af14f7e88468bb7cd5061dc58d, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b27582af14f7e88468bb7cd5061dc58d, type: 3}

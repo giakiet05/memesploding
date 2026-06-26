@@ -28,7 +28,19 @@ public class BotRuntimeWorker(
             foreach (var runtime in runtimeManager.GetAllRuntimes())
             {
                 stoppingToken.ThrowIfCancellationRequested();
-                await TickRuntimeBotsAsync(runtime, stoppingToken);
+                try
+                {
+                    await TickRuntimeBotsAsync(runtime, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "[BotRuntimeWorker] Unhandled exception ticking runtime {MatchId}. Worker will continue.",
+                        runtime.State?.MatchId);
+                }
             }
 
             try
@@ -197,7 +209,7 @@ public class BotRuntimeWorker(
             var target = state.Players
                 .Where(player => player.UserId != botUserId &&
                                  player.LifeState == PlayerLifeState.Alive)
-                .OrderBy(player => player.Role.Equals("bot", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+                .OrderBy(player => string.Equals(player.Role, "bot", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
                 .Select(player => (Guid?)player.UserId)
                 .FirstOrDefault();
 
@@ -228,7 +240,7 @@ public class BotRuntimeWorker(
 
     private static bool IsAliveBot(MatchRuntimePlayerState player)
     {
-        return player.Role.Equals("bot", StringComparison.OrdinalIgnoreCase) &&
+        return string.Equals(player.Role, "bot", StringComparison.OrdinalIgnoreCase) &&
                player.LifeState == PlayerLifeState.Alive;
     }
 
@@ -243,7 +255,7 @@ public class BotRuntimeWorker(
     {
         return userId.HasValue &&
                state.Players.Any(player => player.UserId == userId.Value &&
-                                           player.Role.Equals("bot", StringComparison.OrdinalIgnoreCase));
+                                           string.Equals(player.Role, "bot", StringComparison.OrdinalIgnoreCase));
     }
 
     private bool TryReserveBotNopeForCurrentWindow(MatchRuntimeState state)

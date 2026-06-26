@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Newtonsoft.Json.Linq;
 
 namespace Network.API.Models
 {
@@ -7,7 +8,8 @@ namespace Network.API.Models
     {
         public bool success;
         public string message;
+        public string errorCode;
+        public JObject details;
         public T data;
     }
-
 }

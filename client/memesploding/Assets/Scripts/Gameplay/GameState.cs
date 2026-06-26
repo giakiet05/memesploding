@@ -1,4 +1,4 @@
-﻿using Network.Websocket;
+using Network.Websocket;
 using System;
 using System.Collections.Generic;
 using Managers;
@@ -19,7 +19,7 @@ namespace Gameplay
                 if (turnIndex < 0 || turnIndex >= players.Count)
                     return false;
 
-                return player.ID == players[turnIndex].userId;
+                return string.Equals(player.ID, players[turnIndex].userId, StringComparison.OrdinalIgnoreCase);
             }
         }
 

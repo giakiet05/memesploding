@@ -115,6 +115,52 @@ namespace Network.Websocket
             return SendInvocationAsync("LeaveRoom", cancellationToken, roomCode);
         }
 
+        public static async Task ForceLeaveRoomAsync(string accessToken, string roomCode)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(roomCode))
+                return;
+
+            using (var socket = new ClientWebSocket())
+            {
+                socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                var wsUrl = BuildAppHubWsUrl();
+                var uri = BuildUriWithAccessToken(wsUrl, accessToken);
+
+                try
+                {
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                    {
+                        await socket.ConnectAsync(uri, cts.Token);
+                        
+                        // Handshake
+                        var handshake = "{\"protocol\":\"json\",\"version\":1}" + RecordSeparator;
+                        var bytes = Encoding.UTF8.GetBytes(handshake);
+                        await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cts.Token);
+
+                        // LeaveRoom Invocation
+                        var invocation = new
+                        {
+                            type = 1,
+                            target = "LeaveRoom",
+                            arguments = new[] { roomCode }
+                        };
+                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(invocation) + RecordSeparator;
+                        var invBytes = Encoding.UTF8.GetBytes(json);
+                        await socket.SendAsync(new ArraySegment<byte>(invBytes), WebSocketMessageType.Text, true, cts.Token);
+
+                        // Give it a moment to flush the TCP buffer
+                        await Task.Delay(200, cts.Token);
+                        
+                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Force leave complete", cts.Token);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ForceLeaveRoom] Failed: {ex.Message}");
+                }
+            }
+        }
+
         public Task SetReadyStatusAsync(string roomCode, bool isReady, CancellationToken cancellationToken = default)
         {
             return SendInvocationAsync("SetReadyStatus", cancellationToken, roomCode, isReady);

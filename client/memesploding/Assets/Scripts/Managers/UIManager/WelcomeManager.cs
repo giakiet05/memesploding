@@ -66,6 +66,7 @@ namespace Managers.UIManager
 
         private void Awake()
         {
+            EnsureInputModule();
             if (Instance != null && Instance != this)
                 Destroy(gameObject);
             else
@@ -651,6 +652,21 @@ namespace Managers.UIManager
                 return;
 
             popup.Hide();
+        }
+
+        private void EnsureInputModule()
+        {
+            var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem != null)
+            {
+                var legacyInput = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (legacyInput != null)
+                {
+                    DestroyImmediate(legacyInput);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log($"[InputHelper] Successfully upgraded EventSystem in scene {gameObject.scene.name} to InputSystemUIInputModule.");
+                }
+            }
         }
     }
 }

@@ -240,7 +240,7 @@ namespace UI.Gameplay
         private IEnumerator AnimateToast()
         {
             var rect = (RectTransform)transform;
-            var target = new Vector2(-24f, -24f);
+            var target = new Vector2(-232f, -24f);
             var start = target + new Vector2(80f, 0f);
             rect.anchoredPosition = start;
             rect.localScale = new Vector3(0.92f, 0.92f, 1f);
@@ -298,7 +298,7 @@ namespace UI.Gameplay
             rect.anchorMin = Vector2.one;
             rect.anchorMax = Vector2.one;
             rect.pivot = Vector2.one;
-            rect.anchoredPosition = new Vector2(-24f, -24f);
+            rect.anchoredPosition = new Vector2(-232f, -24f);
             rect.sizeDelta = new Vector2(500f, 215f);
 
             var background = GetComponent<Image>();

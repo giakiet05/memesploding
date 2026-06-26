@@ -346,6 +346,17 @@ namespace Managers
         public TimeSpan GetCurrentTurnTimeLeft() => _session?.Clock.CurrentTurnTimeLeft ?? TimeSpan.Zero;
         public TimeSpan GetOverallPlaytime() => _session?.Clock.OverallPlaytime ?? TimeSpan.Zero;
 
+        /// <summary>Returns the number of cards the local player is required to draw this turn (due to Attack stacking).</summary>
+        public int GetLocalPendingDrawCount()
+        {
+            var localId = Player?.ID;
+            if (string.IsNullOrWhiteSpace(localId) || _session?.GameState?.players == null)
+                return 0;
+            var me = _session.GameState.players.FirstOrDefault(p =>
+                string.Equals(p.userId, localId, StringComparison.OrdinalIgnoreCase));
+            return me?.pendingDrawCount ?? 0;
+        }
+
         public bool CanPlayLocalCard(string cardCode)
         {
             if (_session?.GameState == null || string.IsNullOrWhiteSpace(cardCode))

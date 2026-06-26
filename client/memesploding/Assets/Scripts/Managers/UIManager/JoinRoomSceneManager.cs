@@ -22,6 +22,7 @@ namespace Managers.UIManager
 
         private void Awake()
         {
+            EnsureInputModule();
             AutoBind();
         }
 
@@ -60,6 +61,30 @@ namespace Managers.UIManager
             try
             {
                 var response = await RoomService.Instance.JoinRoomAsync(roomCode, gameManager.AccessToken);
+                if (response?.success != true || response.data == null)
+                {
+                    if (response != null && response.errorCode == "PLAYER_ALREADY_IN_ROOM" && response.details != null)
+                    {
+                        var oldRoomId = response.details.Value<string>("roomId");
+                        if (!string.IsNullOrWhiteSpace(oldRoomId))
+                        {
+                            UniversalPopup.ShowInfo("Bạn đang ở trong phòng khác. Đang rời phòng cũ để tham gia phòng mới...");
+                            try
+                            {
+                                await Network.Websocket.AppRoomWebsocketClient.ForceLeaveRoomAsync(gameManager.AccessToken, oldRoomId);
+                                RoomManager.EnsureInstance().ClearCurrentRoom();
+                                
+                                // Retry join
+                                response = await RoomService.Instance.JoinRoomAsync(roomCode, gameManager.AccessToken);
+                            }
+                            catch (Exception wsEx)
+                            {
+                                Debug.LogWarning($"[JoinRoom] Failed to auto-leave old room {oldRoomId}: {wsEx.Message}");
+                            }
+                        }
+                    }
+                }
+
                 if (response?.success != true || response.data == null)
                 {
                     UniversalPopup.ShowError(string.IsNullOrWhiteSpace(response?.message)
@@ -110,9 +135,9 @@ namespace Managers.UIManager
             backButton ??= FindByPath("Canvas/BackButton")?.GetComponent<Button>();
         }
 
-        private static Transform FindByPath(string path)
+        private Transform FindByPath(string path)
         {
-            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var roots = gameObject.scene.GetRootGameObjects();
             foreach (var root in roots)
             {
                 var result = FindByPath(root.transform, path);
@@ -169,6 +194,21 @@ namespace Managers.UIManager
             }
 
             SceneManager.LoadScene(MainMenuSceneName);
+        }
+
+        private void EnsureInputModule()
+        {
+            var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem != null)
+            {
+                var legacyInput = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (legacyInput != null)
+                {
+                    DestroyImmediate(legacyInput);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log($"[InputHelper] Successfully upgraded EventSystem in scene {gameObject.scene.name} to InputSystemUIInputModule.");
+                }
+            }
         }
     }
 }

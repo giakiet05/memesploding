@@ -44,6 +44,7 @@ namespace Managers.UIManager
 
         private void Awake()
         {
+            EnsureInputModule();
             AutoBind();
             _roomSocket = AppRoomWebsocketClient.Instance;
 
@@ -484,9 +485,9 @@ namespace Managers.UIManager
                 actionButtonText = actionButton.GetComponentInChildren<TextMeshProUGUI>(true);
         }
 
-        private static Transform FindByPath(string path)
+        private Transform FindByPath(string path)
         {
-            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var roots = gameObject.scene.GetRootGameObjects();
             foreach (var root in roots)
             {
                 var result = FindByPath(root.transform, path);
@@ -521,6 +522,21 @@ namespace Managers.UIManager
             }
 
             return null;
+        }
+
+        private void EnsureInputModule()
+        {
+            var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem != null)
+            {
+                var legacyInput = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (legacyInput != null)
+                {
+                    DestroyImmediate(legacyInput);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log($"[InputHelper] Successfully upgraded EventSystem in scene {gameObject.scene.name} to InputSystemUIInputModule.");
+                }
+            }
         }
     }
 }

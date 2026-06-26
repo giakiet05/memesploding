@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ScriptableObjects
@@ -7,6 +7,7 @@ namespace ScriptableObjects
     public class CardDatabase : ScriptableObject
     {
         [SerializeField] private List<CardData> cards;
+        public List<CardData> Cards => cards;
 
         private Dictionary<string, CardData> _lookup;
 

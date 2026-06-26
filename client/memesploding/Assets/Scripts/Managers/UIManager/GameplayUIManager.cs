@@ -21,6 +21,7 @@ namespace Managers.UIManager
 
         private void Awake()
         {
+            EnsureInputModule();
             if (Instance != null && Instance != this)
                 Destroy(gameObject);
             else
@@ -36,10 +37,15 @@ namespace Managers.UIManager
             if (opponentPlayArea == null)
                 Debug.LogError("[GameplayUIManager] OpponentPlayArea reference is missing.");
 
-            opponentDrawCard ??= playingArea != null ? playingArea.Find("OpponenDrawCard")?.GetComponent<OpponentDrawCard>() : null;
+            opponentDrawCard ??= playingArea != null ? playingArea.Find("OpponentDrawCard")?.GetComponent<OpponentDrawCard>() : null;
             if (opponentDrawCard == null)
                 Debug.LogError("[GameplayUIManager] OpponentDrawCard reference is missing.");
         }
+
+        [Header("Settings")]
+        [SerializeField] private GameObject settingsPopupPrefab; // legacy – no longer required
+        private GameObject _settingsPopupInstance;
+        private bool _isSettingsVisible;
 
         [SerializeField] private Canvas canvas;
         [SerializeField] private RectTransform playingArea;
@@ -68,6 +74,7 @@ namespace Managers.UIManager
         private GameplayInteractionModal _interactionModal;
         private TextMeshProUGUI _turnTimerHud;
         private TextMeshProUGUI _drawPileHud;
+        private TextMeshProUGUI _pendingDrawHud;
         private GameObject _eliminatedOverlay;
         private Button _playCardButton;
         private TextMeshProUGUI _playCardButtonLabel;
@@ -90,6 +97,54 @@ namespace Managers.UIManager
             EnsureInteractionModal();
             EnsureGameplayHud();
             EnsurePlayCardButton();
+            EnsureHelpButton();
+            BindSettingButton();
+        }
+
+        private void BindSettingButton()
+        {
+            // Strategy 1: search under assigned canvas
+            Transform settingBtnTransform = canvas != null ? canvas.transform.Find("Setting Button") : null;
+
+            // Strategy 2: search all canvases in scene
+            if (settingBtnTransform == null)
+            {
+                foreach (var c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                {
+                    settingBtnTransform = c.transform.Find("Setting Button");
+                    if (settingBtnTransform != null)
+                    {
+                        canvas ??= c; // also capture canvas if not already set
+                        break;
+                    }
+                }
+            }
+
+            // Strategy 3: find by name anywhere in scene
+            if (settingBtnTransform == null)
+            {
+                var go = GameObject.Find("Setting Button");
+                if (go != null) settingBtnTransform = go.transform;
+            }
+
+            if (settingBtnTransform != null)
+            {
+                var settingBtn = settingBtnTransform.GetComponent<Button>();
+                if (settingBtn != null)
+                {
+                    settingBtn.onClick = new Button.ButtonClickedEvent();
+                    settingBtn.onClick.AddListener(ToggleSettingsPopup);
+                    Debug.Log("[GameplayUIManager] Setting Button bound successfully.");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameplayUIManager] 'Setting Button' found but has no Button component.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GameplayUIManager] 'Setting Button' not found in scene.");
+            }
         }
 
         private void Update()
@@ -103,6 +158,77 @@ namespace Managers.UIManager
             }
             if (_drawPileHud != null && GameManager.Instance != null)
                 _drawPileHud.text = $"CHỒNG RÚT: {GameManager.Instance.GetDrawPileCount()}";
+
+            if (_pendingDrawHud != null && GameManager.Instance != null)
+            {
+                var pendingDraw = GameManager.Instance.GetLocalPendingDrawCount();
+                _pendingDrawHud.gameObject.SetActive(pendingDraw > 0);
+                if (pendingDraw > 0)
+                    _pendingDrawHud.text = $"PHẢI RÚT: {pendingDraw} LÁ";
+            }
+
+            // Toggle Settings Popup on Escape key press
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                ToggleSettingsPopup();
+            }
+        }
+
+        public void ToggleSettingsPopup()
+        {
+            if (_settingsPopupInstance == null)
+            {
+                // Fallback: find canvas if not assigned
+                var targetCanvas = canvas != null ? canvas : FindFirstObjectByType<Canvas>();
+                if (targetCanvas == null)
+                {
+                    Debug.LogError("[GameplayUIManager] No Canvas found for Settings popup.");
+                    return;
+                }
+
+                var prefab = settingsPopupPrefab;
+                if (prefab == null)
+                {
+                    prefab = Resources.Load<GameObject>("PopupsSetting");
+                }
+
+                if (prefab != null)
+                {
+                    _settingsPopupInstance = Instantiate(prefab, targetCanvas.transform);
+                    _settingsPopupInstance.name = "PopupsSetting";
+                    
+                    var controller = _settingsPopupInstance.GetComponent<SettingsPopupController>() 
+                                     ?? _settingsPopupInstance.AddComponent<SettingsPopupController>();
+                    
+                    controller.RefreshUi();
+                    _isSettingsVisible = false;
+                }
+                else
+                {
+                    Debug.LogError("[GameplayUIManager] Settings popup prefab is null and could not be loaded.");
+                    return;
+                }
+            }
+
+            _isSettingsVisible = !_isSettingsVisible;
+            _settingsPopupInstance.SetActive(_isSettingsVisible);
+            if (_isSettingsVisible)
+            {
+                _settingsPopupInstance.transform.SetAsLastSibling();
+                var controller = _settingsPopupInstance.GetComponent<SettingsPopupController>();
+                if (controller != null)
+                {
+                    controller.RefreshUi();
+                }
+            }
+        }
+
+        /// <summary>Called by the popup's close/backdrop button to sync the visibility flag.</summary>
+        public void OnSettingsPopupClosed()
+        {
+            _isSettingsVisible = false;
+            if (_settingsPopupInstance != null)
+                _settingsPopupInstance.SetActive(false);
         }
 
         private void OnDestroy()
@@ -790,6 +916,102 @@ namespace Managers.UIManager
                 : string.IsNullOrWhiteSpace(_defaultPlayCardButtonText) ? "ĐÁNH" : _defaultPlayCardButtonText;
         }
 
+        private void EnsureHelpButton()
+        {
+            if (canvas == null)
+                canvas = GetComponentInParent<Canvas>() ?? FindFirstObjectByType<Canvas>();
+            if (canvas == null) return;
+
+            var settingBtnTransform = canvas.transform.Find("Setting Button");
+            if (settingBtnTransform == null)
+            {
+                foreach (var c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                {
+                    settingBtnTransform = c.transform.Find("Setting Button");
+                    if (settingBtnTransform != null)
+                    {
+                        canvas = c;
+                        break;
+                    }
+                }
+            }
+
+            if (settingBtnTransform == null)
+            {
+                var go = GameObject.Find("Setting Button");
+                if (go != null)
+                {
+                    settingBtnTransform = go.transform;
+                    if (go.GetComponentInParent<Canvas>() != null)
+                        canvas = go.GetComponentInParent<Canvas>();
+                }
+            }
+
+            if (settingBtnTransform == null) return;
+
+            var helpBtnTransform = canvas.transform.Find("Help Button");
+            if (helpBtnTransform != null) return; // Already exists
+
+            // Instantiate settingBtn as a template for helpBtn
+            var helpBtnObj = Instantiate(settingBtnTransform.gameObject, canvas.transform);
+            helpBtnObj.name = "Help Button";
+            var helpRect = helpBtnObj.GetComponent<RectTransform>();
+            var settingRect = settingBtnTransform.GetComponent<RectTransform>();
+
+            // Copy transform settings
+            helpRect.anchorMin = settingRect.anchorMin;
+            helpRect.anchorMax = settingRect.anchorMax;
+            helpRect.pivot = settingRect.pivot;
+            
+            // Calculate dynamic position next to the Settings Button
+            float width = settingRect.rect.width > 0 ? settingRect.rect.width : settingRect.sizeDelta.x;
+            if (width <= 0) width = 80f; // fallback
+            float offset = -(width + 24f);
+            helpRect.anchoredPosition = new Vector2(settingRect.anchoredPosition.x + offset, settingRect.anchoredPosition.y);
+            helpRect.sizeDelta = settingRect.sizeDelta;
+
+            // Change the icon to a "?" question mark
+            var imageChild = helpBtnObj.transform.Find("Image")?.gameObject;
+            if (imageChild != null)
+            {
+                DestroyImmediate(imageChild);
+            }
+
+            // Add text child for "?"
+            var textObj = new GameObject("Text (TMP)", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            textObj.transform.SetParent(helpBtnObj.transform, false);
+            var textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            var tmpText = textObj.GetComponent<TextMeshProUGUI>();
+            tmpText.text = "?";
+            tmpText.fontSize = 44f;
+            tmpText.color = new Color(0.09f, 0.07f, 0.06f, 1f); // Ink
+            tmpText.alignment = TextAlignmentOptions.Center;
+            
+            // Set font if possible
+            var fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
+            foreach (var f in fonts)
+            {
+                if (f.name.Contains("Bangers"))
+                {
+                    tmpText.font = f;
+                    break;
+                }
+            }
+
+            // Hook up onClick listener
+            var helpBtn = helpBtnObj.GetComponent<Button>();
+            if (helpBtn != null)
+            {
+                helpBtn.onClick = new Button.ButtonClickedEvent(); // Reset completely to avoid opening settings too!
+                helpBtn.onClick.AddListener(UI.GameplayGuidePopup.Show);
+            }
+        }
+
         private void EnsureGameplayHud()
         {
             if (canvas == null || _turnTimerHud != null)
@@ -821,8 +1043,11 @@ namespace Managers.UIManager
 
             _turnTimerHud = CreateHudText("TurnTimer", root.transform);
             _drawPileHud = CreateHudText("DrawPileCount", root.transform);
+            _pendingDrawHud = CreateHudText("PendingDrawCount", root.transform);
             _turnTimerHud.color = new Color(0.86f, 0.12f, 0.1f, 1f);
             _drawPileHud.color = new Color(0.09f, 0.07f, 0.06f, 1f);
+            _pendingDrawHud.color = new Color(0.86f, 0.55f, 0.05f, 1f); // amber — warning color
+            _pendingDrawHud.gameObject.SetActive(false);
         }
 
         private static TextMeshProUGUI CreateHudText(string name, Transform parent)
@@ -939,5 +1164,19 @@ namespace Managers.UIManager
                 : $"Ảnh hưởng: {ResolvePlayerName(actorUserId)}";
         }
 
+        private void EnsureInputModule()
+        {
+            var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem != null)
+            {
+                var legacyInput = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (legacyInput != null)
+                {
+                    DestroyImmediate(legacyInput);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log($"[InputHelper] Successfully upgraded EventSystem in scene {gameObject.scene.name} to InputSystemUIInputModule.");
+                }
+            }
+        }
     }
 }

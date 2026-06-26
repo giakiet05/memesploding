@@ -109,9 +109,10 @@ MonoBehaviour:
   messageText: {fileID: 0}
   backgroundImage: {fileID: 0}
   defaultDuration: 2.5
-  successColor: {r: 0.18, g: 0.58, b: 0.32, a: 0.96}
-  errorColor: {r: 0.75, g: 0.2, b: 0.2, a: 0.96}
-  infoColor: {r: 0.18, g: 0.35, b: 0.67, a: 0.96}
+  successColor: {r: 0.1, g: 0.58, b: 0.25, a: 0.96}
+  errorColor: {r: 0.86, g: 0.12, b: 0.1, a: 0.96}
+  infoColor: {r: 0.09, g: 0.07, b: 0.06, a: 0.96}
+  cardDatabase: {fileID: 11400000, guid: 6be4115a4908e994ab70764ea773fd6f, type: 2}
 --- !u!1 &7636777930469772600
 GameObject:
   m_ObjectHideFlags: 0
@@ -124,6 +125,7 @@ GameObject:
   - component: {fileID: 8442214955817819670}
   - component: {fileID: 21485762941363348}
   - component: {fileID: 7917775049816229788}
+  - component: {fileID: 4946235327412741141}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -182,13 +184,15 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
   m_sharedMaterial: {fileID: 1742337123619735987, guid: 0fc9ef9cdc8114a49a6618fd56b31332, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 0}
   m_fontMaterial: {fileID: 0}
-  m_fontMaterials: []
+  m_fontMaterials:
+  - {fileID: 0}
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -263,3 +267,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_HorizontalFit: 2
   m_VerticalFit: 2
+--- !u!114 &4946235327412741141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7636777930469772600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6366ee97f6b541449155028b9487355a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

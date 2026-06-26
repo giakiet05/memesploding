@@ -15,9 +15,14 @@ namespace UI
         [SerializeField] private TextMeshProUGUI messageText;
         [SerializeField] private Image backgroundImage;
         [SerializeField, Min(0.1f)] private float defaultDuration = 2.5f;
-        [SerializeField] private Color successColor = new Color(0.18f, 0.58f, 0.32f, 0.96f);
-        [SerializeField] private Color errorColor = new Color(0.75f, 0.20f, 0.20f, 0.96f);
-        [SerializeField] private Color infoColor = new Color(0.18f, 0.35f, 0.67f, 0.96f);
+        [SerializeField] private Color successColor = new Color(0.1f, 0.58f, 0.25f, 0.96f);
+        [SerializeField] private Color errorColor = new Color(0.86f, 0.12f, 0.1f, 0.96f);
+        [SerializeField] private Color infoColor = new Color(0.09f, 0.07f, 0.06f, 0.96f);
+
+        [Header("Preloaded Databases")]
+        [SerializeField] private ScriptableObjects.CardDatabase cardDatabase;
+        public ScriptableObjects.CardDatabase CardDatabase => cardDatabase;
+        public TMP_FontAsset PopupFont => messageText != null ? messageText.font : null;
 
         private Coroutine _hideRoutine;
 
@@ -98,7 +103,13 @@ namespace UI
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 32000;
-            canvasObject.AddComponent<CanvasScaler>();
+
+            var scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
             canvasObject.AddComponent<GraphicRaycaster>();
             return canvas;
         }
@@ -141,6 +152,17 @@ namespace UI
         {
             AutoBind();
 
+#if UNITY_EDITOR
+            if (cardDatabase == null)
+            {
+                cardDatabase = UnityEditor.AssetDatabase.LoadAssetAtPath<ScriptableObjects.CardDatabase>("Assets/ScriptableObjects/Cards/CardDatabase/ClassicCardDatabase.asset");
+                if (cardDatabase != null)
+                {
+                    UnityEditor.EditorUtility.SetDirty(this);
+                }
+            }
+#endif
+
             if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);
@@ -149,6 +171,8 @@ namespace UI
 
             _instance = this;
             MakePersistent(transform.root.gameObject);
+
+            ConfigureTheme();
         }
 
         private void Display(string message, MessageKind kind, float duration)
@@ -184,6 +208,53 @@ namespace UI
                 MessageKind.Error => errorColor,
                 _ => infoColor
             };
+        }
+
+        private void Start()
+        {
+            ConfigureTheme();
+        }
+
+        private void ConfigureTheme()
+        {
+            // Configure root RectTransform layout
+            var rect = GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(1f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(1f, 1f);
+                rect.anchoredPosition = new Vector2(-232f, -24f); // offset from right (Settings/Help buttons start at x=-24)
+                rect.sizeDelta = new Vector2(450f, 96f);
+            }
+
+            // Configure comic outline theme
+            var outline = GetComponent<Outline>() ?? gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.09f, 0.07f, 0.06f, 1f); // Ink
+            outline.effectDistance = new Vector2(6f, -6f);
+            outline.useGraphicAlpha = true;
+
+            // Configure text to fit and wrap nicely
+            if (messageText != null)
+            {
+                var textFitter = messageText.GetComponent<ContentSizeFitter>();
+                if (textFitter != null)
+                {
+                    textFitter.enabled = false;
+                    if (Application.isPlaying) Destroy(textFitter); else DestroyImmediate(textFitter);
+                }
+                var textRect = messageText.rectTransform;
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.pivot = new Vector2(0.5f, 0.5f);
+                textRect.offsetMin = new Vector2(24f, 12f);
+                textRect.offsetMax = new Vector2(-24f, -12f);
+
+                messageText.alignment = TextAlignmentOptions.Center;
+                messageText.fontSize = 20f;
+                messageText.color = Color.white;
+                messageText.textWrappingMode = TextWrappingModes.Normal;
+            }
         }
 
         private void AutoBind()

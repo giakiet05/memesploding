@@ -15,6 +15,7 @@ namespace Managers.UIManager
         [Header("Popups")]
         [SerializeField] private Popup quickMatchBackdrop;
         [SerializeField] private Popup settingPopupBackdrop;
+        public Popup SettingPopupBackdrop => settingPopupBackdrop;
         [SerializeField] private Popup playNowBackdrop;
         [SerializeField] private Popup roomInvitationBackdrop;
         [SerializeField] private Popup leaderboardPopup;
@@ -31,6 +32,7 @@ namespace Managers.UIManager
 
         private void Awake()
         {
+            EnsureInputModule();
             AutoBind();
 
             if (Instance != null && Instance != this)
@@ -39,14 +41,100 @@ namespace Managers.UIManager
                 Instance = this;
         }
 
+        private void Start()
+        {
+            AutoBindPopups();
+            BindMenuButtons();
+        }
+
         private void OnEnable()
         {
-            playTestButton?.onClick.AddListener(HandlePlayTestClicked);
+            AutoBindPopups();
+            BindMenuButtons();
         }
 
         private void OnDisable()
         {
-            playTestButton?.onClick.RemoveListener(HandlePlayTestClicked);
+        }
+
+        private void AutoBindPopups()
+        {
+            var popups = FindObjectsByType<Popup>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var p in popups)
+            {
+                if (p == null) continue;
+
+                var name = p.name.ToLower();
+                if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
+                {
+                    if (playNowBackdrop == null) playNowBackdrop = p;
+                }
+                else if (name.Contains("setting") && (name.Contains("backdrop") || name.Contains("popup")))
+                {
+                    if (settingPopupBackdrop == null) settingPopupBackdrop = p;
+                }
+                else if (name.Contains("leaderboard"))
+                {
+                    if (leaderboardPopup == null) leaderboardPopup = p;
+                }
+                else if (name.Contains("quickmatch") || name.Contains("quick match"))
+                {
+                    if (quickMatchBackdrop == null) quickMatchBackdrop = p;
+                }
+                else if (name.Contains("invitation") || name.Contains("invite"))
+                {
+                    if (roomInvitationBackdrop == null) roomInvitationBackdrop = p;
+                }
+                else if (name.Contains("friends"))
+                {
+                    if (friendsPannel == null) friendsPannel = p;
+                }
+                else if (name.Contains("notification"))
+                {
+                    if (notificationPannel == null) notificationPannel = p;
+                }
+            }
+        }
+
+        private void BindMenuButtons()
+        {
+            var buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var btn in buttons)
+            {
+                if (btn == null) continue;
+
+                var name = btn.name.ToLower();
+                if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(OpenPlayNowBackdrop);
+                }
+                else if (name.Contains("setting button") || name.Contains("settingbutton") || name == "settings" || name == "setting")
+                {
+                    btn.onClick = new Button.ButtonClickedEvent();
+                    btn.onClick.AddListener(OpenSettings);
+
+                    // Center settings icon
+                    var img = btn.transform.Find("Image") ?? btn.transform.Find("Icon") ?? (btn.transform.childCount > 0 ? btn.transform.GetChild(0) : null);
+                    if (img != null)
+                    {
+                        var imgRect = img.GetComponent<RectTransform>();
+                        if (imgRect != null)
+                        {
+                            imgRect.anchoredPosition = Vector2.zero;
+                        }
+                    }
+                }
+                else if (name.Contains("leaderboard") || name.Contains("leader board"))
+                {
+                    btn.gameObject.SetActive(false);
+                }
+                else if (name.Contains("playtest") || name.Contains("play test"))
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(HandlePlayTestClicked);
+                }
+            }
         }
 
         public void HideAllPopups()
@@ -132,6 +220,30 @@ namespace Managers.UIManager
             try
             {
                 var response = await TestMatchService.Instance.StartBotMatchAsync(gameManager.AccessToken);
+                if (response?.success != true || response.data == null)
+                {
+                    if (response != null && response.errorCode == "PLAYER_ALREADY_IN_ROOM" && response.details != null)
+                    {
+                        var oldRoomId = response.details.Value<string>("roomId");
+                        if (!string.IsNullOrWhiteSpace(oldRoomId))
+                        {
+                            UniversalPopup.ShowInfo("Bạn đang ở trong phòng khác. Đang rời phòng cũ để chơi...");
+                            try
+                            {
+                                await Network.Websocket.AppRoomWebsocketClient.ForceLeaveRoomAsync(gameManager.AccessToken, oldRoomId);
+                                RoomManager.EnsureInstance().ClearCurrentRoom();
+                                
+                                // Retry bot match
+                                response = await TestMatchService.Instance.StartBotMatchAsync(gameManager.AccessToken);
+                            }
+                            catch (Exception wsEx)
+                            {
+                                Debug.LogWarning($"[MainMenu] Failed to auto-leave old room {oldRoomId} for bot match: {wsEx.Message}");
+                            }
+                        }
+                    }
+                }
+
                 if (response?.success != true || response.data == null)
                 {
                     UniversalPopup.ShowError(string.IsNullOrWhiteSpace(response?.message)
@@ -251,9 +363,9 @@ namespace Managers.UIManager
             SceneManager.LoadScene("Loading");
         }
 
-        private static Transform FindByPath(string path)
+        private Transform FindByPath(string path)
         {
-            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var roots = gameObject.scene.GetRootGameObjects();
             foreach (var root in roots)
             {
                 var result = FindByPath(root.transform, path);
@@ -288,6 +400,21 @@ namespace Managers.UIManager
             }
 
             return null;
+        }
+
+        private void EnsureInputModule()
+        {
+            var eventSystem = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem != null)
+            {
+                var legacyInput = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (legacyInput != null)
+                {
+                    DestroyImmediate(legacyInput);
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                    Debug.Log($"[InputHelper] Successfully upgraded EventSystem in scene {gameObject.scene.name} to InputSystemUIInputModule.");
+                }
+            }
         }
     }
 }

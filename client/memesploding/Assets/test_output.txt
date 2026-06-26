@@ -1,0 +1,16 @@
+PlayableCard.prefab (Loaded): Components: 
+- RectTransform
+- CanvasRenderer
+- Image
+- PlayableCard
+- CanvasGroup
+
+DisplayCard.prefab (Loaded): Components: 
+- RectTransform
+- CanvasRenderer
+- Image
+- CanvasGroup
+- DisplayCard
+
+CardDisplayer.prefab (Loaded): Components: 
+- RectTransform

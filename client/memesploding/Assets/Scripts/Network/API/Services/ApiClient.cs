@@ -97,6 +97,25 @@ namespace Network.API.Services
 
             var message = TryReadErrorMessage(responseText);
             Debug.LogError($"[API Error] {request.responseCode} {request.error} | {request.url} | Response: {responseText}");
+
+            if (!string.IsNullOrWhiteSpace(responseText))
+            {
+                try
+                {
+                    var response = JsonConvert.DeserializeObject<ApiResponse<T>>(responseText);
+                    if (response != null)
+                    {
+                        response.success = false;
+                        if (string.IsNullOrWhiteSpace(response.message))
+                            response.message = string.IsNullOrWhiteSpace(message) ? request.error : message;
+                        return response;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
             return new ApiResponse<T>
             {
                 success = false,

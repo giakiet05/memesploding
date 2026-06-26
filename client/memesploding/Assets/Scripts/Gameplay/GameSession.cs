@@ -241,7 +241,7 @@ namespace Gameplay
                     }
                     GameplayUIManager.Instance?.ShowActionToast(
                         $"COMBO {comboPlayed.comboSize}",
-                        $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboPlayed.userId)} đã đánh combo",
+                        $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboPlayed.userId)} đã đánh combo {comboPlayed.comboSize} lá",
                         status: "COMBO");
                     break;
 
@@ -388,7 +388,15 @@ namespace Gameplay
 
                     SetPlayerPendingDraw(attack.toUserId, Math.Max(0, GetPlayerPendingDraw(attack.toUserId) + attack.added));
 
-                    //TODO: Display attack effect
+                    var attackToName = GameplayUIManager.Instance?.GetPlayerDisplayName(attack.toUserId) ?? attack.toUserId;
+                    var attackFromName = GameplayUIManager.Instance?.GetPlayerDisplayName(attack.fromUserId) ?? attack.fromUserId;
+                    var totalPending = GetPlayerPendingDraw(attack.toUserId);
+                    GameplayUIManager.Instance?.ShowActionToast(
+                        "ATTACK!",
+                        $"{attackFromName} đánh {attackToName} (+{attack.added} lượt rút)",
+                        $"{attackToName} phải rút {totalPending} lá",
+                        "ATTACK",
+                        danger: true);
                     break;
 
                 case WsGameplayEventType.FuturePeeked:
@@ -428,6 +436,11 @@ namespace Gameplay
                         return;
 
                     ApplyCardTransfer(comboTwoResolved.fromUserId, comboTwoResolved.toUserId, comboTwoResolved.cardCode);
+                    GameplayUIManager.Instance?.ShowActionToast(
+                        "COMBO 2 – LẤY BÀI",
+                        $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboTwoResolved.fromUserId)} lấy 1 lá ngẫu từ {GameplayUIManager.Instance.GetPlayerDisplayName(comboTwoResolved.toUserId)}",
+                        !string.IsNullOrWhiteSpace(comboTwoResolved.cardCode) ? $"Lá lấy: {comboTwoResolved.cardCode}" : null,
+                        "COMBO 2");
                     break;
 
                 case WsGameplayEventType.FavorTargetEmpty:
@@ -574,11 +587,19 @@ namespace Gameplay
                     if (!string.IsNullOrWhiteSpace(comboThreeResolved.requestedCardCode))
                     {
                         ApplyCardTransfer(comboThreeResolved.fromUserId, comboThreeResolved.toUserId, comboThreeResolved.requestedCardCode);
+                        GameplayUIManager.Instance?.ShowActionToast(
+                            "COMBO 3 – LẤY BÀI",
+                            $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.fromUserId)} lấy lá '{comboThreeResolved.requestedCardCode}' từ {GameplayUIManager.Instance.GetPlayerDisplayName(comboThreeResolved.toUserId)}",
+                            status: "COMBO 3");
                     }
                     break;
 
                 case WsGameplayEventType.CatComboThreeMiss:
                     // No card transfer to apply.
+                    GameplayUIManager.Instance?.ShowActionToast(
+                        "COMBO 3 – HỤT BÀI",
+                        "Không tìm thấy lá bài yêu cầu ở đối thủ.",
+                        status: "MISS");
                     break;
 
                 case WsGameplayEventType.CatComboFiveResolved:
@@ -593,6 +614,10 @@ namespace Gameplay
                     }
 
                     RemoveOneCardFromDiscard(comboFive.discardCardCode);
+                    GameplayUIManager.Instance?.ShowActionToast(
+                        "COMBO 5 – LẤY TỪ Bỏ",
+                        $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboFive.userId)} lấy lá '{comboFive.discardCardCode}' từ chồng bài bỏ",
+                        status: "COMBO 5");
                     break;
 
                 default:
