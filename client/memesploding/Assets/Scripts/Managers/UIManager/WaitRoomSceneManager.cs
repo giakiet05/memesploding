@@ -43,6 +43,7 @@ namespace Managers.UIManager
         private AppRoomWebsocketClient _roomSocket;
         private bool _isLoading;
         private bool _isTransitioningToGameplay;
+        private bool _isRefreshing;
         private float _timeSinceLastRefresh;
 
         private void Awake()
@@ -63,14 +64,15 @@ namespace Managers.UIManager
             actionButton?.onClick.AddListener(HandleActionClicked);
 
             _timeSinceLastRefresh = 0f;
+            _isRefreshing = false;
             SubscribeRoomSocket();
             Render();
             await InitializeAsync();
         }
 
-        private async void Update()
+        private void Update()
         {
-            if (_isTransitioningToGameplay || _isLoading)
+            if (_isTransitioningToGameplay || _isLoading || _isRefreshing)
                 return;
 
             _timeSinceLastRefresh += Time.deltaTime;
@@ -80,10 +82,22 @@ namespace Managers.UIManager
                 var gameManager = GameManager.EnsureInstance();
                 var roomManager = RoomManager.EnsureInstance();
                 if (gameManager.IsAuthenticated && roomManager.HasRoom)
-                {
-                    await RefreshRoomAsync(gameManager.AccessToken, roomManager.GetRoomCode());
+                    DoPeriodicRefresh(gameManager.AccessToken, roomManager.GetRoomCode());
+            }
+        }
+
+        private async void DoPeriodicRefresh(string accessToken, string roomCode)
+        {
+            _isRefreshing = true;
+            try
+            {
+                await RefreshRoomAsync(accessToken, roomCode);
+                if (!_isTransitioningToGameplay)
                     Render();
-                }
+            }
+            finally
+            {
+                _isRefreshing = false;
             }
         }
 
@@ -278,12 +292,22 @@ namespace Managers.UIManager
         private async void HandleActionClicked()
         {
             if (_isLoading)
+            {
+                Debug.LogWarning("[WaitRoom] Action clicked while _isLoading=true — ignored.");
                 return;
+            }
 
             var roomManager = RoomManager.EnsureInstance();
             var roomCode = roomManager.GetRoomCode();
             if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                Debug.LogWarning("[WaitRoom] Action clicked but roomCode is empty — ignored.");
                 return;
+            }
+
+            var isHost = roomManager.IsLocalPlayerHost();
+            var wsStatus = _roomSocket?.Status.ToString() ?? "null";
+            Debug.Log($"[WaitRoom] Action clicked — isHost={isHost}, wsStatus={wsStatus}, canStart={roomManager.CanLocalPlayerStartMatch()}, isReady={roomManager.IsLocalPlayerReady()}");
 
             _isLoading = true;
             RenderActionPanel(roomManager);
