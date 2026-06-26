@@ -78,7 +78,7 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("quickmatch") || name.Contains("quick match"))
                 {
-                    // popup kept hidden — button shows toast instead of opening it
+                    p.gameObject.SetActive(false);
                 }
                 else if (name.Contains("invitation") || name.Contains("invite"))
                 {
@@ -86,11 +86,11 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("friends"))
                 {
-                    if (friendsPannel == null) friendsPannel = p;
+                    p.gameObject.SetActive(false);
                 }
                 else if (name.Contains("notification"))
                 {
-                    if (notificationPannel == null) notificationPannel = p;
+                    p.gameObject.SetActive(false);
                 }
             }
         }
@@ -105,12 +105,12 @@ namespace Managers.UIManager
                 var name = btn.name.ToLower();
                 if (name.Contains("quickmatch") || name.Contains("quick match") || name.Contains("quick_match"))
                 {
-                    btn.onClick.RemoveAllListeners();
+                    btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
                 }
                 else if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
                 {
-                    btn.onClick.RemoveAllListeners();
+                    btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(OpenPlayNowBackdrop);
                 }
                 else if (name.Contains("setting button") || name.Contains("settingbutton") || name == "settings" || name == "setting")
@@ -131,12 +131,22 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("leaderboard") || name.Contains("leader board"))
                 {
-                    btn.onClick.RemoveAllListeners();
+                    btn.onClick = new Button.ButtonClickedEvent();
+                    btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
+                }
+                else if (name.Contains("friend"))
+                {
+                    btn.onClick = new Button.ButtonClickedEvent();
+                    btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
+                }
+                else if (name.Contains("notification") || name.Contains("notif") || name.Contains("bell"))
+                {
+                    btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
                 }
                 else if (name.Contains("playtest") || name.Contains("play test"))
                 {
-                    btn.onClick.RemoveAllListeners();
+                    btn.onClick = new Button.ButtonClickedEvent();
                     btn.onClick.AddListener(HandlePlayTestClicked);
                 }
             }

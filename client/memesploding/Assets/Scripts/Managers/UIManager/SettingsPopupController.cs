@@ -37,6 +37,7 @@ namespace Managers.UIManager
         [SerializeField] private Button graphicButton;
         [SerializeField] private Button gameplayButton;
         [SerializeField] private Button languageButton;
+        [SerializeField] private Button audioButton;
 
         private bool _isInitialized;
         private GameObject _backdropGo;
@@ -69,11 +70,12 @@ namespace Managers.UIManager
             if (closeButton != null)
                 closeButton.onClick.RemoveListener(HandleCloseClicked);
 
-            if (accountButton != null) accountButton.onClick.RemoveAllListeners();
-            if (supportButton != null) supportButton.onClick.RemoveAllListeners();
-            if (graphicButton != null) graphicButton.onClick.RemoveAllListeners();
+            if (accountButton != null) accountButton.onClick = new Button.ButtonClickedEvent();
+            if (supportButton != null) supportButton.onClick = new Button.ButtonClickedEvent();
+            if (graphicButton != null) graphicButton.onClick = new Button.ButtonClickedEvent();
             if (gameplayButton != null) gameplayButton.onClick.RemoveAllListeners();
             if (languageButton != null) languageButton.onClick.RemoveAllListeners();
+            if (audioButton != null) audioButton.onClick.RemoveAllListeners();
         }
 
         public void RefreshUi()
@@ -221,6 +223,20 @@ namespace Managers.UIManager
                 if (t != null) languageButton = t.GetComponent<Button>();
             }
 
+            if (audioButton == null)
+            {
+                var t = transform.Find("Audio Setting Button");
+                if (t != null) audioButton = t.GetComponent<Button>();
+            }
+            if (audioButton == null)
+            {
+                foreach (var btn in GetComponentsInChildren<Button>(true))
+                {
+                    if (btn != null && btn.name.ToLower().Contains("audio"))
+                    { audioButton = btn; break; }
+                }
+            }
+
             // Bind Sliders
             if (musicSlider != null)
             {
@@ -246,7 +262,7 @@ namespace Managers.UIManager
 
             if (logoutButton != null)
             {
-                logoutButton.onClick.RemoveAllListeners();
+                logoutButton.onClick = new Button.ButtonClickedEvent();
                 var btnText = logoutButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (isGameplayOrWaitRoom)
                 {
@@ -273,42 +289,48 @@ namespace Managers.UIManager
 
             if (quitButton != null)
             {
-                quitButton.onClick.RemoveAllListeners();
+                quitButton.onClick = new Button.ButtonClickedEvent();
                 quitButton.onClick.AddListener(HandleQuitClicked);
             }
 
             if (closeButton != null)
             {
-                closeButton.onClick.RemoveAllListeners();
+                closeButton.onClick = new Button.ButtonClickedEvent();
                 closeButton.onClick.AddListener(HandleCloseClicked);
             }
 
             // Unimplemented tabs
             if (accountButton != null)
             {
-                accountButton.onClick.RemoveAllListeners();
+                accountButton.onClick = new Button.ButtonClickedEvent();
                 accountButton.onClick.AddListener(() => ShowFeatureUnderDevelopment("Tài khoản"));
             }
             if (supportButton != null)
             {
-                supportButton.onClick.RemoveAllListeners();
+                supportButton.onClick = new Button.ButtonClickedEvent();
                 supportButton.onClick.AddListener(() => ShowFeatureUnderDevelopment("Hỗ trợ"));
             }
             if (graphicButton != null)
             {
-                graphicButton.onClick.RemoveAllListeners();
+                graphicButton.onClick = new Button.ButtonClickedEvent();
                 graphicButton.onClick.AddListener(() => ShowFeatureUnderDevelopment("Đồ họa"));
             }
             if (languageButton != null)
             {
-                languageButton.onClick.RemoveAllListeners();
+                languageButton.onClick = new Button.ButtonClickedEvent();
                 languageButton.onClick.AddListener(() => ShowFeatureUnderDevelopment("Ngôn ngữ"));
+            }
+
+            if (audioButton != null)
+            {
+                audioButton.onClick = new Button.ButtonClickedEvent();
+                audioButton.onClick.AddListener(() => ShowFeatureUnderDevelopment("Âm thanh"));
             }
 
             // Gameplay (guide) button
             if (gameplayButton != null)
             {
-                gameplayButton.onClick.RemoveAllListeners();
+                gameplayButton.onClick = new Button.ButtonClickedEvent();
                 gameplayButton.onClick.AddListener(() => {
                     HandleCloseClicked();
                     GameplayGuidePopup.Show();
@@ -320,13 +342,13 @@ namespace Managers.UIManager
             {
                 var backdropBtn = _backdropGo.GetComponent<Button>() ?? _backdropGo.AddComponent<Button>();
                 backdropBtn.transition = Selectable.Transition.None;
-                backdropBtn.onClick.RemoveAllListeners();
+                backdropBtn.onClick = new Button.ButtonClickedEvent();
                 backdropBtn.onClick.AddListener(HandleCloseClicked);
             }
 
             // Fallback: any unbound child button shows "under development" toast
             BindUnhandledButtons(logoutButton, closeButton, quitButton,
-                accountButton, supportButton, graphicButton, gameplayButton, languageButton);
+                accountButton, supportButton, graphicButton, gameplayButton, languageButton, audioButton);
 
             _isInitialized = true;
             ApplyComicTheme();
@@ -548,7 +570,8 @@ namespace Managers.UIManager
             {
                 if (btn == null || known.Contains(btn)) continue;
                 var capturedName = btn.name;
-                btn.onClick.RemoveAllListeners();
+                // Replace the entire event object to clear both runtime and persistent listeners
+                btn.onClick = new Button.ButtonClickedEvent();
                 btn.onClick.AddListener(() => ShowFeatureUnderDevelopment(capturedName));
             }
         }
