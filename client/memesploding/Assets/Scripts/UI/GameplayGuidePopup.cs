@@ -136,7 +136,7 @@ namespace UI
             hLine.anchoredPosition = Vector2.zero;
             AddImg(hLine, DividerCol);
 
-            var titleTxt = MakeTMP("Title", header.transform, "📖  HƯỚNG DẪN CÁCH CHƠI", 18f, TextPri, FontStyles.Bold);
+            var titleTxt = MakeTMP("Title", header.transform, "HUONG DAN CACH CHOI", 18f, TextPri, FontStyles.Bold);
             Stretch(titleTxt.rectTransform);
             titleTxt.rectTransform.offsetMin = new Vector2(28f, 2f);
             titleTxt.alignment = TextAlignmentOptions.Left;
@@ -149,7 +149,7 @@ namespace UI
             AddImg(closeRt, Color.clear);
             var closeBtn = closeRt.gameObject.AddComponent<Button>();
             AddColors(closeBtn, Color.clear, new Color(0.86f, 0.12f, 0.10f, 0.15f), new Color(0.86f, 0.12f, 0.10f, 0.35f));
-            var closeX = MakeTMP("X", closeRt.transform, "✕", 20f, TextMuted, FontStyles.Bold);
+            var closeX = MakeTMP("X", closeRt.transform, "X", 20f, TextMuted, FontStyles.Bold);
             Stretch(closeX.rectTransform);
             closeX.alignment = TextAlignmentOptions.Center;
             closeBtn.onClick.AddListener(Close);
@@ -262,7 +262,7 @@ namespace UI
             fhl.childForceExpandHeight = false;
             fhl.padding = new RectOffset(20, 20, 8, 8);
 
-            _prevButton = MakeNavBtn(footer.transform, "◀  Trước");
+            _prevButton = MakeNavBtn(footer.transform, "< Truoc");
             _prevButton.onClick.AddListener(ShowPrevPage);
 
             _pageIndicatorText = MakeTMP("PageInd", footer.transform, "1 / 10", 14f, TextMuted, FontStyles.Bold, GetReadableFont());
@@ -271,7 +271,7 @@ namespace UI
             pLE.preferredWidth = 80;
             _pageIndicatorText.alignment = TextAlignmentOptions.Center;
 
-            _nextButton = MakeNavBtn(footer.transform, "Tiếp  ▶");
+            _nextButton = MakeNavBtn(footer.transform, "Tiep >");
             _nextButton.onClick.AddListener(ShowNextPage);
         }
 

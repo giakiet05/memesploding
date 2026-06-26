@@ -250,12 +250,22 @@ namespace Managers.UIManager
                 var btnText = logoutButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (isGameplayOrWaitRoom)
                 {
-                    if (btnText != null) btnText.text = "Thoát phòng";
+                    if (btnText != null) btnText.text = "Thoat phong";
                     logoutButton.onClick.AddListener(HandleQuitClicked);
+                    // Hide child icon images so they don't overlap the text
+                    HideChildIconImages(logoutButton);
+                    if (btnText != null)
+                    {
+                        btnText.rectTransform.anchorMin = Vector2.zero;
+                        btnText.rectTransform.anchorMax = Vector2.one;
+                        btnText.rectTransform.offsetMin = Vector2.zero;
+                        btnText.rectTransform.offsetMax = Vector2.zero;
+                        btnText.alignment = TextAlignmentOptions.Center;
+                    }
                 }
                 else
                 {
-                    if (btnText != null) btnText.text = "Đăng xuất";
+                    if (btnText != null) btnText.text = "Dang xuat";
                     logoutButton.onClick.AddListener(HandleLogoutClicked);
                 }
                 logoutButton.gameObject.SetActive(true);
@@ -510,6 +520,17 @@ namespace Managers.UIManager
         private void ShowFeatureUnderDevelopment(string featureName)
         {
             UniversalPopup.ShowInfo($"{featureName}: Tính năng đang phát triển!");
+        }
+
+        private static void HideChildIconImages(Button btn)
+        {
+            if (btn == null) return;
+            foreach (Transform child in btn.transform)
+            {
+                var img = child.GetComponent<Image>();
+                if (img != null)
+                    img.gameObject.SetActive(false);
+            }
         }
 
         private static void UpdateValueText(TextMeshProUGUI label, float value)

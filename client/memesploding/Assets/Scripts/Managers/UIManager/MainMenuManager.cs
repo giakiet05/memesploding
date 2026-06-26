@@ -165,6 +165,7 @@ namespace Managers.UIManager
 
         public void OpenQuickMatch()
         {
+            Hide(playNowBackdrop);
             ShowGroup(quickMatchBackdrop);
         }
 
