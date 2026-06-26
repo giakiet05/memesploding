@@ -331,11 +331,11 @@ namespace Network.Websocket
                 return;
             }
 
-            var target = root.Value<string>("target");
-            if (!string.Equals(target, "ReceiveMessage", StringComparison.Ordinal))
+            var target = root.GetValue("target", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            if (!string.Equals(target, "ReceiveMessage", StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var args = root["arguments"] as JArray;
+            var args = root.GetValue("arguments", StringComparison.OrdinalIgnoreCase) as JArray;
             if (args == null || args.Count == 0)
                 return;
 
@@ -343,8 +343,8 @@ namespace Network.Websocket
             if (serverEvent == null)
                 return;
 
-            var eventName = serverEvent.Value<string>("event");
-            var dataToken = serverEvent["data"];
+            var eventName = serverEvent.GetValue("event", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            var dataToken = serverEvent.GetValue("data", StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(eventName) || dataToken == null)
                 return;
 
