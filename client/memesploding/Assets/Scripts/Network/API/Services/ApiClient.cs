@@ -16,6 +16,7 @@ namespace Network.API.Services
 
         public async Task<ApiResponse<T>> GetAsync<T>(string url, string token = null)
         {
+            Debug.Log($"[API →] GET {url}");
             using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
                 SetHeaders(request, token);
@@ -44,6 +45,7 @@ namespace Network.API.Services
 
         public async Task<ApiResponse<T>> DeleteAsync<T>(string url, string token = null)
         {
+            Debug.Log($"[API →] DELETE {url}");
             using (UnityWebRequest request = UnityWebRequest.Delete(url))
             {
                 SetHeaders(request, token);
@@ -58,6 +60,7 @@ namespace Network.API.Services
         private async Task<ApiResponse<T>> SendRequestAsync<T>(string url, string method, object body, string token)
         {
             string json = JsonConvert.SerializeObject(body ?? new object());
+            Debug.Log($"[API →] {method} {url} | body: {json}");
 
             using (UnityWebRequest request = new UnityWebRequest(url, method))
             {
@@ -88,6 +91,7 @@ namespace Network.API.Services
             var responseText = request.downloadHandler?.text;
             if (request.result == UnityWebRequest.Result.Success)
             {
+                Debug.Log($"[API ←] {request.responseCode} {request.method} {request.url} | {responseText}");
                 var response = JsonConvert.DeserializeObject<ApiResponse<T>>(responseText);
                 if (response != null)
                     response.success = true;
@@ -96,7 +100,7 @@ namespace Network.API.Services
             }
 
             var message = TryReadErrorMessage(responseText);
-            Debug.LogError($"[API Error] {request.responseCode} {request.error} | {request.url} | Response: {responseText}");
+            Debug.LogError($"[API ←] ERROR {request.responseCode} {request.method} {request.url} | {responseText}");
 
             if (!string.IsNullOrWhiteSpace(responseText))
             {

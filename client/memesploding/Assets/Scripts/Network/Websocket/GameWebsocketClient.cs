@@ -411,6 +411,7 @@ namespace Network.Websocket
 
         private async Task SendRawAsync(string jsonPayload, CancellationToken cancellationToken)
         {
+            Debug.Log($"[GameWS →] {jsonPayload}");
             var framed = jsonPayload + RecordSeparator;
 #if UNITY_WEBGL && !UNITY_EDITOR
             if (_socket != null && _socket.State == NativeWebSocket.WebSocketState.Open)
@@ -478,6 +479,7 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(message))
                 return;
 
+            Debug.Log($"[GameWS ←] {message}");
             Session.lastMessageAtUtc = DateTime.UtcNow;
             Session.isHealthy = true;
 

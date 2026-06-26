@@ -175,6 +175,7 @@ namespace Network.Websocket
 
         private async Task SendRawAsync(string jsonPayload, CancellationToken cancellationToken)
         {
+            Debug.Log($"[RoomWS →] {jsonPayload}");
             var framed = jsonPayload + RecordSeparator;
             var bytes = Encoding.UTF8.GetBytes(framed);
             await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
@@ -226,6 +227,7 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(message))
                 return;
 
+            Debug.Log($"[RoomWS ←] {message}");
             Session.lastMessageAtUtc = DateTime.UtcNow;
 
             if (message == "{}")
