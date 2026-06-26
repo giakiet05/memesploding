@@ -354,6 +354,13 @@ namespace Managers.UIManager
                 outline.effectDistance = new Vector2(5f, -5f);
             }
 
+            // Absorb pointer events on the panel itself so they don't bubble up to the backdrop Button.
+            // Without this, clicking a slider (which doesn't implement IPointerClickHandler) lets the
+            // click propagate upward through the hierarchy and fires the backdrop's close handler.
+            var clickBlocker = GetComponent<Button>() ?? gameObject.AddComponent<Button>();
+            clickBlocker.transition = Selectable.Transition.None;
+            clickBlocker.onClick.RemoveAllListeners();
+
             // Navigation / info buttons — orange accent
             StyleComicButton(accountButton,  ComicNavBg, ComicNavHov, ComicNavPrs);
             StyleComicButton(supportButton,  ComicNavBg, ComicNavHov, ComicNavPrs);
@@ -423,6 +430,12 @@ namespace Managers.UIManager
         private static void StyleComicSlider(Slider slider)
         {
             if (slider == null) return;
+
+            // Ensure every Image in the slider blocks raycasts so clicks on the track/fill
+            // don't fall through to the backdrop Button behind the panel.
+            foreach (var img in slider.GetComponentsInChildren<Image>(true))
+                img.raycastTarget = true;
+
             var fillImg = slider.fillRect?.GetComponent<Image>();
             if (fillImg != null) fillImg.color = ComicNavBg;
             var handleImg = slider.handleRect?.GetComponent<Image>();
@@ -534,7 +547,6 @@ namespace Managers.UIManager
             foreach (var btn in GetComponentsInChildren<Button>(true))
             {
                 if (btn == null || known.Contains(btn)) continue;
-                if (btn.onClick.GetPersistentEventCount() > 0) continue;
                 var capturedName = btn.name;
                 btn.onClick.RemoveAllListeners();
                 btn.onClick.AddListener(() => ShowFeatureUnderDevelopment(capturedName));

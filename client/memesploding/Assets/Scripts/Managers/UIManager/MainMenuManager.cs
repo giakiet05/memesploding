@@ -78,7 +78,7 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("quickmatch") || name.Contains("quick match"))
                 {
-                    p.gameObject.SetActive(false);
+                    // popup kept hidden — button shows toast instead of opening it
                 }
                 else if (name.Contains("invitation") || name.Contains("invite"))
                 {
@@ -105,7 +105,8 @@ namespace Managers.UIManager
                 var name = btn.name.ToLower();
                 if (name.Contains("quickmatch") || name.Contains("quick match") || name.Contains("quick_match"))
                 {
-                    btn.gameObject.SetActive(false);
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
                 }
                 else if (name.Contains("playnow") || name.Contains("play now") || name.Contains("play_now"))
                 {
@@ -130,7 +131,8 @@ namespace Managers.UIManager
                 }
                 else if (name.Contains("leaderboard") || name.Contains("leader board"))
                 {
-                    btn.gameObject.SetActive(false);
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => UniversalPopup.ShowInfo("Tính năng đang phát triển!"));
                 }
                 else if (name.Contains("playtest") || name.Contains("play test"))
                 {
