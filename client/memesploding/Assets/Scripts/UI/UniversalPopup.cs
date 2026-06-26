@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace UI
@@ -14,7 +15,7 @@ namespace UI
         [Header("Message")]
         [SerializeField] private TextMeshProUGUI messageText;
         [SerializeField] private Image backgroundImage;
-        [SerializeField, Min(0.1f)] private float defaultDuration = 2.5f;
+        [SerializeField, Min(0.1f)] private float defaultDuration = 0.2f;
         [SerializeField] private Color successColor = new Color(0.18f, 0.58f, 0.32f, 0.96f);
         [SerializeField] private Color errorColor = new Color(0.75f, 0.20f, 0.20f, 0.96f);
         [SerializeField] private Color infoColor = new Color(0.18f, 0.35f, 0.67f, 0.96f);
@@ -151,6 +152,15 @@ namespace UI
             MakePersistent(transform.root.gameObject);
         }
 
+        private void Update()
+        {
+            if (!gameObject.activeInHierarchy)
+                return;
+
+            if (WasDismissInputPressed())
+                DismissImmediate();
+        }
+
         private void Display(string message, MessageKind kind, float duration)
         {
             AutoBind();
@@ -172,8 +182,29 @@ namespace UI
         private IEnumerator HideAfter(float delay)
         {
             yield return new WaitForSecondsRealtime(delay);
+            DismissImmediate();
+        }
+
+        private void DismissImmediate()
+        {
+            if (_hideRoutine != null)
+            {
+                StopCoroutine(_hideRoutine);
+                _hideRoutine = null;
+            }
+
             Hide();
-            _hideRoutine = null;
+        }
+
+        private static bool WasDismissInputPressed()
+        {
+            if (Mouse.current?.leftButton.wasPressedThisFrame == true)
+                return true;
+
+            if (Touchscreen.current?.primaryTouch.press.wasPressedThisFrame == true)
+                return true;
+
+            return false;
         }
 
         private Color GetColor(MessageKind kind)

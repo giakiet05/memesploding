@@ -164,6 +164,14 @@ namespace Managers.Audio
         public void PlayBgm(AudioCueSO cue)
         {
             if (cue == null || !cue.HasClips) return;
+
+            if (_currentBgmCue == cue && _bgmSource != null && _bgmSource.isPlaying)
+            {
+                if (_bgmCoroutine == null)
+                    _bgmSource.volume = cue.Volume * AudioManager.Instance.GetVolume(AudioChannel.Music);
+                return;
+            }
+
             _currentBgmCue = cue;
 
             if (_bgmCoroutine != null) StopCoroutine(_bgmCoroutine);

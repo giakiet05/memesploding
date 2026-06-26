@@ -1,4 +1,4 @@
-﻿using Events;
+using Events;
 using Managers;
 using System;
 using Events.GameEvents;
@@ -69,8 +69,13 @@ namespace Gameplay
 
         private void SetGlowActive(bool isActive)
         {
-            if (glowImage != null)
-                glowImage.gameObject.SetActive(isActive);
+            if (glowImage == null)
+                return;
+
+            if (!glowImage.gameObject.activeSelf)
+                glowImage.gameObject.SetActive(true);
+
+            glowImage.SetGlowActive(isActive);
         }
     }
 }
