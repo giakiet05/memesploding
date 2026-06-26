@@ -1,7 +1,9 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+#if !UNITY_WEBGL || UNITY_EDITOR
 using System.Net.WebSockets;
+#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +13,7 @@ namespace Network.Websocket
 {
     public class AppRoomWebsocketClient
     {
-        private const char RecordSeparator = '\u001e';
+        private const char RecordSeparator = '';
 
         private static AppRoomWebsocketClient _instance;
         public static AppRoomWebsocketClient Instance => _instance ??= new AppRoomWebsocketClient();
@@ -19,9 +21,13 @@ namespace Network.Websocket
         private readonly object _sync = new object();
         private readonly object _dispatcherSync = new object();
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private NativeWebSocket.WebSocket _socket;
+#else
         private ClientWebSocket _socket;
         private CancellationTokenSource _receiveCts;
         private Task _receiveTask;
+#endif
         private EventQueueDispatcher _dispatcher;
 
         public AppRoomConnectionStatus Status { get; private set; } = AppRoomConnectionStatus.Disconnected;
@@ -46,8 +52,6 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new ArgumentException("accessToken is required", nameof(accessToken));
 
-            // If already connected, disconnect first to get a fresh connection.
-            // This handles the race where OnDisable's async DisconnectAsync lost to OnEnable's ConnectAsync.
             if (Status == AppRoomConnectionStatus.Connected || Status == AppRoomConnectionStatus.Connecting)
             {
                 Debug.LogWarning("[RoomWS] ConnectAsync called while already connected — forcing disconnect first.");
@@ -63,12 +67,67 @@ namespace Network.Websocket
             Session.roomCode = roomCode ?? string.Empty;
             Session.lastError = null;
 
+            var uri = BuildUriWithAccessToken(Session.wsUrl, accessToken);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            _socket = new NativeWebSocket.WebSocket(uri.ToString());
+
+            _socket.OnOpen += async () =>
+            {
+                try
+                {
+                    await SendRawAsync("{\"protocol\":\"json\",\"version\":1}", CancellationToken.None);
+                    Session.connectedAtUtc = DateTime.UtcNow;
+                    SetStatus(AppRoomConnectionStatus.Connected);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[RoomWS WebGL] OnOpen error: {ex.Message}");
+                    Session.lastError = ex.Message;
+                    CleanupSocket();
+                    SetStatus(AppRoomConnectionStatus.Faulted);
+                }
+            };
+
+            _socket.OnMessage += (bytes) =>
+            {
+                var chunk = Encoding.UTF8.GetString(bytes);
+                var messages = chunk.Split(RecordSeparator, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var message in messages)
+                    HandleSignalRMessage(message);
+            };
+
+            _socket.OnError += (errMsg) =>
+            {
+                Session.lastError = errMsg;
+                CleanupSocket();
+                SetStatus(AppRoomConnectionStatus.Faulted);
+            };
+
+            _socket.OnClose += (closeCode) =>
+            {
+                CleanupSocket();
+                SetStatus(AppRoomConnectionStatus.Disconnected);
+            };
+
+            try
+            {
+                await _socket.Connect();
+            }
+            catch (Exception ex)
+            {
+                Session.lastError = ex.Message;
+                CleanupSocket();
+                SetStatus(AppRoomConnectionStatus.Faulted);
+                throw;
+            }
+#else
             _socket = new ClientWebSocket();
             _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
             try
             {
-                await _socket.ConnectAsync(BuildUriWithAccessToken(Session.wsUrl, accessToken), cancellationToken);
+                await _socket.ConnectAsync(uri, cancellationToken);
                 await SendRawAsync("{\"protocol\":\"json\",\"version\":1}", cancellationToken);
 
                 _receiveCts = new CancellationTokenSource();
@@ -83,33 +142,40 @@ namespace Network.Websocket
                 SetStatus(AppRoomConnectionStatus.Faulted);
                 throw;
             }
+#endif
         }
 
         public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
+#if !UNITY_WEBGL || UNITY_EDITOR
             _receiveCts?.Cancel();
+#endif
 
-            if (_socket != null && (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived))
+            if (_socket != null)
             {
-                try
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (_socket.State == NativeWebSocket.WebSocketState.Open)
                 {
-                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", cancellationToken);
+                    try { await _socket.Close(); } catch { }
                 }
-                catch
+#else
+                if (_socket.State == WebSocketState.Open || _socket.State == WebSocketState.CloseReceived)
                 {
+                    try
+                    {
+                        await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", cancellationToken);
+                    }
+                    catch { }
                 }
+#endif
             }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
             if (_receiveTask != null)
             {
-                try
-                {
-                    await _receiveTask;
-                }
-                catch
-                {
-                }
+                try { await _receiveTask; } catch { }
             }
+#endif
 
             CleanupSocket();
             SetStatus(AppRoomConnectionStatus.Disconnected);
@@ -160,7 +226,11 @@ namespace Network.Websocket
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentException("target is required", nameof(target));
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (_socket == null || _socket.State != NativeWebSocket.WebSocketState.Open)
+#else
             if (_socket == null || _socket.State != WebSocketState.Open)
+#endif
                 throw new InvalidOperationException("Room websocket is not connected");
 
             var invocation = new
@@ -177,10 +247,15 @@ namespace Network.Websocket
         {
             Debug.Log($"[RoomWS →] {jsonPayload}");
             var framed = jsonPayload + RecordSeparator;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            await _socket.SendText(framed);
+#else
             var bytes = Encoding.UTF8.GetBytes(framed);
             await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+#endif
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
             var buffer = new byte[8192];
@@ -221,6 +296,7 @@ namespace Network.Websocket
                 Debug.LogError($"[RoomWS] Receive loop error: {ex.Message}");
             }
         }
+#endif
 
         private void HandleSignalRMessage(string message)
         {
@@ -308,16 +384,22 @@ namespace Network.Websocket
 
         private void CleanupSocket()
         {
+#if !UNITY_WEBGL || UNITY_EDITOR
             _receiveCts?.Dispose();
             _receiveCts = null;
+#endif
 
             if (_socket != null)
             {
+#if !UNITY_WEBGL || UNITY_EDITOR
                 _socket.Dispose();
+#endif
                 _socket = null;
             }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
             _receiveTask = null;
+#endif
         }
 
         private void SetStatus(AppRoomConnectionStatus status)
@@ -406,6 +488,9 @@ namespace Network.Websocket
 
             private void Update()
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                NativeWebSocket.WebSocket.DispatchMessageQueue();
+#endif
                 while (_queue.TryDequeue(out var action))
                 {
                     try
