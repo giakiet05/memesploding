@@ -3156,12 +3156,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15b2a9bae643e9247ba2e64492ebe758, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pulseSpeed: 2
+  pulseSpeed: 3
   minAlpha: 0.15
   maxAlpha: 0.65
-  minScale: 1
-  maxScale: 1.12
-  startEnabled: 1
+  minScale: 0.9
+  maxScale: 1
+  startEnabled: 0
 --- !u!1 &824469167
 GameObject:
   m_ObjectHideFlags: 0

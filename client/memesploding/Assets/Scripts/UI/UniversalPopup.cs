@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace UI
@@ -175,6 +176,15 @@ namespace UI
             ConfigureTheme();
         }
 
+        private void Update()
+        {
+            if (!gameObject.activeInHierarchy)
+                return;
+
+            if (WasDismissInputPressed())
+                DismissImmediate();
+        }
+
         private void Display(string message, MessageKind kind, float duration)
         {
             AutoBind();
@@ -196,8 +206,29 @@ namespace UI
         private IEnumerator HideAfter(float delay)
         {
             yield return new WaitForSecondsRealtime(delay);
+            DismissImmediate();
+        }
+
+        private void DismissImmediate()
+        {
+            if (_hideRoutine != null)
+            {
+                StopCoroutine(_hideRoutine);
+                _hideRoutine = null;
+            }
+
             Hide();
-            _hideRoutine = null;
+        }
+
+        private static bool WasDismissInputPressed()
+        {
+            if (Mouse.current?.leftButton.wasPressedThisFrame == true)
+                return true;
+
+            if (Touchscreen.current?.primaryTouch.press.wasPressedThisFrame == true)
+                return true;
+
+            return false;
         }
 
         private Color GetColor(MessageKind kind)
