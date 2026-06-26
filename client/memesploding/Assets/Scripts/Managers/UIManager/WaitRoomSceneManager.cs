@@ -3,6 +3,7 @@ using Network.API.Services;
 using Network.Websocket;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using TMPro;
 using UI;
@@ -503,9 +504,18 @@ namespace Managers.UIManager
                 return;
             }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            CopyToClipboard(roomCode);
+#else
             GUIUtility.systemCopyBuffer = roomCode;
+#endif
             UniversalPopup.ShowSuccess("Room code copied.");
         }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void CopyToClipboard(string text);
+#endif
 
         private bool IsCurrentRoomEvent(string roomCode)
         {
