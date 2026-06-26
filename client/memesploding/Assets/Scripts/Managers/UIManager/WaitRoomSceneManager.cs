@@ -542,6 +542,32 @@ namespace Managers.UIManager
 
             if (actionButtonText == null && actionButton != null)
                 actionButtonText = actionButton.GetComponentInChildren<TextMeshProUGUI>(true);
+
+            LogAutoBind();
+        }
+
+        private void LogAutoBind()
+        {
+            Debug.Log($"[WaitRoom] AutoBind: roomCodeText={roomCodeText != null}, playerCountText={playerCountText != null}, " +
+                      $"roleText={roleText != null}, actionButton={actionButton != null}, " +
+                      $"memberContentRoot={memberContentRoot != null}, memberItemTemplate={memberItemTemplate != null}");
+
+            if (actionButton != null)
+                return;
+
+            Debug.LogWarning("[WaitRoom] actionButton is NULL — READY/START button won't respond to clicks. " +
+                             "Check scene path 'Canvas/Content/Panel/StatusPanel/BackButton' or assign in Inspector.");
+
+            var sb = new System.Text.StringBuilder("[WaitRoom] All Buttons in scene: ");
+            var allButtons = FindObjectsByType<Button>(FindObjectsSortMode.None);
+            foreach (var btn in allButtons)
+            {
+                var p = btn.name;
+                var t = btn.transform.parent;
+                while (t != null) { p = $"{t.name}/{p}"; t = t.parent; }
+                sb.Append(p).Append(" | ");
+            }
+            Debug.LogWarning(sb.ToString());
         }
 
         private Transform FindByPath(string path)
