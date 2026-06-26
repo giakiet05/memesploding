@@ -40,7 +40,7 @@ public class InvitationService(
         var friendRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(friendUserId));
         if (!string.IsNullOrEmpty(friendRoomCode) && string.Equals(friendRoomCode, normalizedRoomCode, StringComparison.OrdinalIgnoreCase))
         {
-            return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "Friend is already in this room");
+            return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "Friend is already in this room", new { roomId = friendRoomCode.ToString() });
         }
 
         var areFriends = await db.Friendships
@@ -176,7 +176,7 @@ public class InvitationService(
         var actualRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(requesterId));
         if (!string.IsNullOrEmpty(actualRoomCode) && string.Equals(actualRoomCode, normalizedRoomCode, StringComparison.OrdinalIgnoreCase))
         {
-            return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "You are already in this room");
+            return ServiceResult.Fail(ErrorCode.PlayerAlreadyInRoom, "You are already in this room", new { roomId = actualRoomCode.ToString() });
         }
 
         var roomKey = CacheKeys.RoomInfo(normalizedRoomCode);

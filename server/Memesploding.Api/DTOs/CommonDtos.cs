@@ -18,5 +18,5 @@ public record ListResponseData<T>(IEnumerable<T> Items, PaginationMeta Paginatio
 public record ApiListResponse<T>(string Message, ListResponseData<T> Data);
 
 // 3. Định dạng Trả về Lỗi
-public record ApiErrorResponse(string Message, ErrorCode ErrorCode);
+public record ApiErrorResponse(string Message, ErrorCode ErrorCode, object? Details = null);
 

@@ -32,6 +32,14 @@ public class RoomsController(IRoomService roomService) : ControllerBase
         return Ok(new ApiResponse<RoomDetailDto>("Joined room successfully", room));
     }
 
+    [HttpPost("{code}/leave")]
+    public async Task<IActionResult> LeaveRoom(string code)
+    {
+        var userId = User.GetUserId();
+        await roomService.LeaveRoomAsync(userId, code);
+        return Ok(new ApiResponse<object?>("Left room successfully", null));
+    }
+
     [HttpPatch("{code}")]
     public async Task<IActionResult> UpdateRoomSettings(string code, [FromBody] UpdateRoomDto dto)
     {

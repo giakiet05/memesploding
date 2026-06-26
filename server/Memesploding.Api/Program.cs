@@ -114,7 +114,7 @@ public class Program
                         var accessToken = context.Request.Query["access_token"];
                         var path = context.HttpContext.Request.Path;
                         
-                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/ws"))
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/api/v1/ws"))
                         {
                             context.Token = accessToken;
                         }
@@ -173,7 +173,7 @@ public class Program
         app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "Memesploding.Api" }));
 
         // SignalR WebSocket endpoint
-        app.MapHub<Memesploding.Api.Hubs.AppHub>("/ws")
+        app.MapHub<Memesploding.Api.Hubs.AppHub>("/api/v1/ws")
             .RequireAuthorization();
 
         app.Run();

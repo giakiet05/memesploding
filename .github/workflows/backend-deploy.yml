@@ -1,0 +1,62 @@
+name: Build and Deploy Backend to Amazon ECS
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-deploy.yml'
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: 045861053633.dkr.ecr.ap-southeast-1.amazonaws.com
+  ECS_CLUSTER: memesploding-ecs-cluster
+  API_SERVICE: memesploding-api-service
+  GAME_SERVICE: memesploding-game-service
+  ROLE_TO_ASSUME: arn:aws:iam::045861053633:role/memesploding-github-actions-role
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Amazon ECS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API Server image
+        env:
+          ECR_REPOSITORY: memesploding-api-server
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f server/Memesploding.Api/Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Build and push Game Server image
+        env:
+          ECR_REPOSITORY: memesploding-game-server
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f server/Memesploding.Game/Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Force ECS to update services with new images
+        run: |
+          aws ecs update-service --cluster $ECS_CLUSTER --service $API_SERVICE --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER --service $GAME_SERVICE --force-new-deployment

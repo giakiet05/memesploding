@@ -47,7 +47,7 @@ public class RoomService(
 
         var existingRoomCode = await cache.StringGetAsync(CacheKeys.UserInRoom(hostId));
         if (!string.IsNullOrEmpty(existingRoomCode))
-            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in a room", new { roomId = existingRoomCode });
 
         var roomCode = await GenerateUniqueRoomCodeAsync();
 
@@ -163,7 +163,7 @@ public class RoomService(
         if (!string.IsNullOrEmpty(existingRoom))
         {
             if (existingRoom == roomCode) return await GetRoomByCodeAsync(roomCode, userId);
-            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in another room");
+            throw AppException.BadRequest(ErrorCode.PlayerAlreadyInRoom, "You are already in another room", new { roomId = existingRoom });
         }
 
         var roomInfoKey = CacheKeys.RoomInfo(roomCode);

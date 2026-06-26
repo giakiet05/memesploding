@@ -259,56 +259,17 @@ Content-Type: application/json
 POST {{baseUrl}}/rooms/{{roomCodeA}}/join
 Authorization: Bearer {{charlieToken}}
 
-### 5.5 Charlie leaves room A (WS)
-WEBSOCKET {{wsUrl}}?access_token={{charlieToken}}
-Content-Type: application/json
+### 5.5 Charlie leaves room A (REST)
+POST {{baseUrl}}/rooms/{{roomCodeA}}/leave
+Authorization: Bearer {{charlieToken}}
 
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "LeaveRoom",
-  "arguments": [
-    "{{roomCodeA}}"
-  ]
-}
+### 5.6 Alice leaves room A (REST, host handover expected)
+POST {{baseUrl}}/rooms/{{roomCodeA}}/leave
+Authorization: Bearer {{aliceToken}}
 
-### 5.6 Alice leaves room A (WS, host handover expected)
-WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
-Content-Type: application/json
-
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "LeaveRoom",
-  "arguments": [
-    "{{roomCodeA}}"
-  ]
-}
-
-### 5.7 Bob leaves room A (WS, last member -> room auto-killed)
-WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
-Content-Type: application/json
-
-{
-  "protocol": "json",
-  "version": 1
-}
-=== wait-for-server
-{
-  "type": 1,
-  "target": "LeaveRoom",
-  "arguments": [
-    "{{roomCodeA}}"
-  ]
-}
+### 5.7 Bob leaves room A (REST, last member -> room auto-killed)
+POST {{baseUrl}}/rooms/{{roomCodeA}}/leave
+Authorization: Bearer {{bobToken}}
 
 
 ### ============================================

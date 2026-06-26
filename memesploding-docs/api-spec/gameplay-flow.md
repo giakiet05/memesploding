@@ -18,7 +18,7 @@ Một ván đấu trải qua 4 giai đoạn chính, liên quan đến 2 kênh We
 ## 2. Giai đoạn 1: Lobby (Chuẩn bị)
 
 - **Hành động**: Người chơi tạo phòng (`POST /rooms`) hoặc vào phòng (`POST /rooms/{code}/join`).
-- **WebSocket**: Client kết nối tới `wss://api.memesploding.com/ws` (AppHub) bằng JWT Token (chuẩn bị trước khi vào phòng hoặc ngay khi vào).
+- **WebSocket**: Client kết nối tới `wss://api.memesploding.com/api/v1/ws` (AppHub) bằng JWT Token (chuẩn bị trước khi vào phòng hoặc ngay khi vào).
 - **Tương tác trong phòng**:
   - Gửi lệnh `SetReadyStatus` (true/false) để báo danh.
   - Lắng nghe các event `RoomMemberJoined`, `RoomMemberLeft`, `RoomReadyStatusChanged` để update giao diện phòng chờ theo thời gian thực.

@@ -244,8 +244,13 @@ namespace Managers.UIManager
             try
             {
                 var roomCode = RoomManager.EnsureInstance().GetRoomCode();
-                if (_roomSocket != null && !string.IsNullOrWhiteSpace(roomCode) && _roomSocket.Status == AppRoomConnectionStatus.Connected)
-                    await _roomSocket.LeaveRoomAsync(roomCode);
+                var accessToken = GameManager.EnsureInstance().AccessToken;
+                if (!string.IsNullOrWhiteSpace(roomCode) && !string.IsNullOrWhiteSpace(accessToken))
+                {
+                    var response = await RoomService.Instance.LeaveRoomAsync(roomCode, accessToken);
+                    if (response == null || !response.success)
+                        throw new InvalidOperationException(response?.message);
+                }
             }
             catch (Exception ex)
             {

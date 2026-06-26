@@ -47,11 +47,15 @@ Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
 GET {{baseUrl}}/rooms/ABC123
 Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
 
-### 8. Get room with invalid code (404)
+### 8. Leave room by code (replace ABC123 with actual code)
+POST {{baseUrl}}/rooms/ABC123/leave
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 9. Get room with invalid code (404)
 GET {{baseUrl}}/rooms/INVALID
 Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
 
-### 9. Create room without auth (401)
+### 10. Create room without auth (401)
 POST {{baseUrl}}/rooms
 Content-Type: application/json
 
@@ -61,7 +65,7 @@ Content-Type: application/json
   "cardSetIds": ["{{cardSetId}}"]
 }
 
-### 10. Create room with invalid card set (400)
+### 11. Create room with invalid card set (400)
 POST {{baseUrl}}/rooms
 Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
 Content-Type: application/json
@@ -72,7 +76,7 @@ Content-Type: application/json
   "cardSetIds": ["00000000-0000-0000-0000-000000000000"]
 }
 
-### 11. Create room with invalid maxPlayers (400 validation)
+### 12. Create room with invalid maxPlayers (400 validation)
 POST {{baseUrl}}/rooms
 Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
 Content-Type: application/json

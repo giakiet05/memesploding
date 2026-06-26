@@ -26,7 +26,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Configuration
-WS_URL="ws://localhost:5217/ws"
+WS_URL="ws://localhost:5217/api/v1/ws"
 OUTPUT_DIR="./output"
 TIMEOUT=5
 

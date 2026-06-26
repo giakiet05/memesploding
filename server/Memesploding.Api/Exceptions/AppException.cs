@@ -10,12 +10,14 @@ public class AppException : Exception
 {
     public int StatusCode { get; }
     public ErrorCode ErrorCode { get; }
+    public object? Details { get; }
 
-    public AppException(int statusCode, ErrorCode errorCode, string message)
+    public AppException(int statusCode, ErrorCode errorCode, string message, object? details = null)
         : base(message)
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;
+        Details = details;
     }
 
     // --- Factory methods ---
@@ -41,6 +43,6 @@ public class AppException : Exception
     /// <summary>
     /// 400 - Bad request với specific error code cho business logic
     /// </summary>
-    public static AppException BadRequest(ErrorCode errorCode, string message)
-        => new(400, errorCode, message);
+    public static AppException BadRequest(ErrorCode errorCode, string message, object? details = null)
+        => new(400, errorCode, message, details);
 }
