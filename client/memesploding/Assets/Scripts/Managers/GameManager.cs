@@ -135,7 +135,8 @@ namespace Managers
             }
 
             _session.ApplySnapshot(payload.Data);
-            GameplayUIManager.Instance.InitOpponentUI(_session.GameState.players);
+            if (_session.GameState != null)
+                GameplayUIManager.Instance?.InitOpponentUI(_session.GameState.players);
         }
 
         private void OnWsError(WsErrorEventPayload payload)

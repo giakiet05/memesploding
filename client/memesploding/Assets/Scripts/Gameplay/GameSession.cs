@@ -12,7 +12,7 @@ namespace Gameplay
 {
     public class GameSession
     {
-        private readonly string _matchId;
+        private string _matchId;
         private readonly string _roomCode;
         public GameState GameState { get; private set; }
         public GameClock Clock { get; } = new();
@@ -27,7 +27,14 @@ namespace Gameplay
         {
             if (snapshot == null) return;
 
-            if (snapshot.matchId != _matchId || snapshot.roomCode != _roomCode)
+            if (!string.Equals(snapshot.roomCode, _roomCode, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // matchId may be null in the Connected event; adopt it from the first snapshot.
+            if (string.IsNullOrWhiteSpace(_matchId))
+                _matchId = snapshot.matchId;
+            else if (!string.IsNullOrWhiteSpace(snapshot.matchId) &&
+                     !string.Equals(snapshot.matchId, _matchId, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (GameState != null && snapshot.stateVersion <= GameState.stateVersion)
