@@ -533,8 +533,9 @@ namespace Managers.UIManager
             headerBackButton ??= FindByPath("Canvas/Content/HeaderPanel/BackButton")?.GetComponent<Button>();
             copyButton ??= FindByPath("Canvas/Content/HeaderPanel/MiddlePanel/RoomCode/CopyButton")?.GetComponent<Button>();
             inviteButton ??= FindByPath("Canvas/Content/HeaderPanel/InviteButton")?.GetComponent<Button>();
-            actionButton ??= FindByPath("Canvas/Content/Panel/StatusPanel/BackButton")?.GetComponent<Button>();
+            actionButton ??= FindByPath("Canvas/Content/Panel/StatusPanel/ReadyButton")?.GetComponent<Button>();
             memberContentRoot ??= FindByPath("Canvas/Content/Panel/MemberPanel/Scroll View/Viewport/Content");
+            memberContentRoot ??= memberItemTemplate?.transform.parent;
             memberItemTemplate ??= FindByPath("Canvas/Content/Panel/MemberPanel/Scroll View/Viewport/Content/WaitingUserItem")?.GetComponent<WaitingRoomMemberItemView>();
 
             if (inviteButtonText == null && inviteButton != null)
