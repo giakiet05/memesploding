@@ -526,8 +526,8 @@ namespace Network.Websocket
             if (serverEvent == null)
                 return;
 
-            var eventName = serverEvent.Value<string>("event");
-            var dataToken = serverEvent["data"];
+            var eventName = serverEvent.GetValue("event", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            var dataToken = serverEvent.GetValue("data", StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(eventName) || dataToken == null)
                 return;
 
