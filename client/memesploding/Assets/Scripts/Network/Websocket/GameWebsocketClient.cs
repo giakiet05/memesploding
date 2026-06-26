@@ -826,9 +826,6 @@ namespace Network.Websocket
 
             private void Update()
             {
-#if UNITY_WEBGL && !UNITY_EDITOR
-                NativeWebSocket.WebSocket.DispatchMessageQueue();
-#endif
                 while (_queue.TryDequeue(out var action))
                 {
                     try
