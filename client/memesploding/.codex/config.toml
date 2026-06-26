@@ -1,9 +1,3 @@
-[mcp_servers.ai-game-developer]
-bearer_token_env_var = "GAME_DEV_AUTH_TOKEN"
-enabled = true
-startup_timeout_sec = 30
-tool_timeout_sec = 300
-url = "https://ai-game.dev/mcp"
 [mcp_servers.ai-game-developer.tools.scene-open]
 approval_mode = "approve"
 
@@ -24,3 +18,10 @@ approval_mode = "approve"
 
 [mcp_servers.ai-game-developer.tools.gameobject-component-modify]
 approval_mode = "approve"
+
+[mcp_servers.ai-game-developer]
+bearer_token_env_var = "GAME_DEV_AUTH_TOKEN"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+url = "https://ai-game.dev/mcp"
