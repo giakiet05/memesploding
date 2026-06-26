@@ -357,7 +357,7 @@ namespace Network.Websocket
             var builder = new UriBuilder(apiUri)
             {
                 Scheme = string.Equals(apiUri.Scheme, "https", StringComparison.OrdinalIgnoreCase) ? "wss" : "ws",
-                Path = "/ws",
+                Path = "/api/v1/ws",
                 Query = string.Empty
             };
 
