@@ -26,27 +26,33 @@ namespace UI
         public TMP_FontAsset PopupFont => messageText != null ? messageText.font : null;
 
         private Coroutine _hideRoutine;
+        private PopupPlacement _currentPlacement = PopupPlacement.TopRight;
 
         public static UniversalPopup Instance => EnsureInstance();
 
         public void ShowSuccessMessage(string message, float duration = 0f)
         {
-            Display(message, MessageKind.Success, duration);
+            Display(message, MessageKind.Success, duration, PopupPlacement.TopRight);
         }
 
         public void ShowErrorMessage(string message, float duration = 0f)
         {
-            Display(message, MessageKind.Error, duration);
+            Display(message, MessageKind.Error, duration, PopupPlacement.TopRight);
         }
 
         public void ShowInfoMessage(string message, float duration = 0f)
         {
-            Display(message, MessageKind.Info, duration);
+            Display(message, MessageKind.Info, duration, PopupPlacement.TopRight);
+        }
+
+        public void ShowCenteredInfoMessage(string message, float duration = 0f)
+        {
+            Display(message, MessageKind.Info, duration, PopupPlacement.Center);
         }
 
         public void ShowMessageInstance(string message, MessageKind kind = MessageKind.Info, float duration = 0f)
         {
-            Display(message, kind, duration);
+            Display(message, kind, duration, PopupPlacement.TopRight);
         }
 
         public static void ShowSuccess(string message, float duration = 0f)
@@ -62,6 +68,11 @@ namespace UI
         public static void ShowInfo(string message, float duration = 0f)
         {
             Instance.ShowInfoMessage(message, duration);
+        }
+
+        public static void ShowCenteredInfo(string message, float duration = 0f)
+        {
+            Instance.ShowCenteredInfoMessage(message, duration);
         }
 
         public static void ShowMessage(string message, MessageKind kind = MessageKind.Info, float duration = 0f)
@@ -185,9 +196,10 @@ namespace UI
                 DismissImmediate();
         }
 
-        private void Display(string message, MessageKind kind, float duration)
+        private void Display(string message, MessageKind kind, float duration, PopupPlacement placement)
         {
             AutoBind();
+            ApplyPlacement(placement);
 
             if (messageText != null)
                 messageText.text = string.IsNullOrWhiteSpace(message) ? string.Empty : message;
@@ -288,6 +300,31 @@ namespace UI
             }
         }
 
+        private void ApplyPlacement(PopupPlacement placement)
+        {
+            _currentPlacement = placement;
+
+            var rect = GetComponent<RectTransform>();
+            if (rect == null)
+                return;
+
+            if (placement == PopupPlacement.Center)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(640f, 110f);
+                return;
+            }
+
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-232f, -24f);
+            rect.sizeDelta = new Vector2(450f, 96f);
+        }
+
         private void AutoBind()
         {
             if (messageText == null)
@@ -302,6 +339,12 @@ namespace UI
             if (Application.isPlaying && target != null)
                 DontDestroyOnLoad(target);
         }
+    }
+
+    public enum PopupPlacement
+    {
+        TopRight,
+        Center
     }
 
     public enum MessageKind

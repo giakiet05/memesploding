@@ -167,6 +167,13 @@ namespace Managers.UIManager
                     _pendingDrawHud.text = $"PHẢI RÚT: {pendingDraw} LÁ";
             }
 
+            if (_playCardButton != null && GameManager.Instance != null)
+            {
+                var shouldShowPlayButton = GameManager.Instance.CanPlayLocalCombo() || GameManager.Instance.IsLocalFavorTarget();
+                if (_playCardButton.gameObject.activeSelf != shouldShowPlayButton)
+                    _playCardButton.gameObject.SetActive(shouldShowPlayButton);
+            }
+
             // Toggle Settings Popup on Escape key press
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
             {

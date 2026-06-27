@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using Events.GameEvents;
 using Managers.UIManager;
+using UI;
 using UnityEngine;
 using EventType = Events.EventType;
 
@@ -128,6 +129,7 @@ namespace Gameplay
                     if (IsSelf(turnContinues.userId))
                         GameManager.Instance?.NotifyLocalDrawResolved();
                     EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(turnContinues.userId));
+                    ShowTurnPopup(turnContinues.userId);
                     break;
 
                 case WsGameplayEventType.TurnTimeoutAutoDraw:
@@ -406,6 +408,7 @@ namespace Gameplay
                         $"{attackToName} phải rút {totalPending} lá",
                         "ATTACK",
                         danger: true);
+                    ShowIncomingEffectPopup(attack.fromUserId, attack.toUserId, $"{attackFromName} vừa dùng Attack lên bạn. Bạn phải rút {totalPending} lá.");
                     break;
 
                 case WsGameplayEventType.FuturePeeked:
@@ -425,6 +428,7 @@ namespace Gameplay
                     GameState.pendingFavorTargetId = favorWindow.targetId;
                     GameState.favorWindowEndsAt = favorWindow.favorWindowEndsAt;
                     GameplayUIManager.Instance?.ShowFavorWindow(favorWindow.requesterId, favorWindow.targetId, favorWindow.favorWindowEndsAt);
+                    ShowIncomingEffectPopup(favorWindow.requesterId, favorWindow.targetId, $"{ResolvePlayerName(favorWindow.requesterId)} vừa dùng Favor lên bạn.");
                     break;
 
                 case WsGameplayEventType.FavorResolved:
@@ -450,6 +454,7 @@ namespace Gameplay
                         $"{GameplayUIManager.Instance.GetPlayerDisplayName(comboTwoResolved.fromUserId)} lấy 1 lá ngẫu từ {GameplayUIManager.Instance.GetPlayerDisplayName(comboTwoResolved.toUserId)}",
                         !string.IsNullOrWhiteSpace(comboTwoResolved.cardCode) ? $"Lá lấy: {comboTwoResolved.cardCode}" : null,
                         "COMBO 2");
+                    ShowIncomingEffectPopup(comboTwoResolved.fromUserId, comboTwoResolved.toUserId, $"{ResolvePlayerName(comboTwoResolved.fromUserId)} vừa lấy ngẫu nhiên 1 lá từ bạn.");
                     break;
 
                 case WsGameplayEventType.FavorTargetEmpty:
@@ -603,6 +608,7 @@ namespace Gameplay
                             $"{c3From} lấy từ {c3To}",
                             $"Lá: {comboThreeResolved.requestedCardCode}",
                             "COMBO 3");
+                        ShowIncomingEffectPopup(comboThreeResolved.fromUserId, comboThreeResolved.toUserId, $"{ResolvePlayerName(comboThreeResolved.fromUserId)} vừa lấy lá {comboThreeResolved.requestedCardCode} từ bạn.");
                     }
                     break;
 
@@ -690,10 +696,36 @@ namespace Gameplay
 
             EventBus.Publish(EventType.TurnStart, new TurnStartEventPayload(curUserID));
             var isLocalTurn = string.Equals(curUserID, GameManager.Instance?.Player?.ID, StringComparison.OrdinalIgnoreCase);
+            if (isLocalTurn)
+                ShowTurnPopup(curUserID);
             GameplayUIManager.Instance?.ShowActionToast(
                 "ĐẾN LƯỢT",
                 isLocalTurn ? "Đến lượt của bạn" : $"Đến lượt của {GameplayUIManager.Instance.GetPlayerDisplayName(curUserID)}",
                 status: "TURN");
+        }
+
+        private void ShowTurnPopup(string userId)
+        {
+            if (!IsSelf(userId))
+                return;
+
+            UniversalPopup.ShowCenteredInfo("Đến lượt của bạn", 0.2f);
+        }
+
+        private void ShowIncomingEffectPopup(string fromUserId, string targetUserId, string message)
+        {
+            if (IsSelf(fromUserId) || !IsSelf(targetUserId) || string.IsNullOrWhiteSpace(message))
+                return;
+
+            UniversalPopup.ShowCenteredInfo(message, 0.2f);
+        }
+
+        private string ResolvePlayerName(string userId)
+        {
+            if (string.Equals(userId, GameManager.Instance?.Player?.ID, StringComparison.OrdinalIgnoreCase))
+                return "Bạn";
+
+            return GameplayUIManager.Instance?.GetPlayerDisplayName(userId) ?? "Người chơi";
         }
 
         private void UpdateTurnClock(DateTime? turnEndsAt, int turnTimerSeconds, DateTime serverTimeUtc)

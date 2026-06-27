@@ -433,11 +433,16 @@ namespace Managers.UIManager
         private void StyleComicCloseButton(Button btn)
         {
             if (btn == null) return;
+
             var img = btn.GetComponent<Image>();
-            if (img != null) img.color = Color.clear;
+            var tmp = btn.GetComponentInChildren<TextMeshProUGUI>();
+            var hasLabel = tmp != null;
+            if (img != null)
+                img.color = hasLabel ? Color.clear : Color.white;
+
             btn.colors = new ColorBlock
             {
-                normalColor      = Color.clear,
+                normalColor      = hasLabel ? Color.clear : Color.white,
                 highlightedColor = new Color(0.86f, 0.12f, 0.10f, 0.15f),
                 pressedColor     = new Color(0.86f, 0.12f, 0.10f, 0.35f),
                 selectedColor    = new Color(0.86f, 0.12f, 0.10f, 0.15f),
@@ -445,7 +450,7 @@ namespace Managers.UIManager
                 colorMultiplier  = 1f,
                 fadeDuration     = 0.1f
             };
-            var tmp = btn.GetComponentInChildren<TextMeshProUGUI>();
+
             if (tmp != null) tmp.color = ComicInk;
         }
 

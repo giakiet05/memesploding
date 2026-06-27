@@ -139,7 +139,7 @@ namespace UI.Gameplay
 
             SetStatus(model.WillActivate ? "SẼ KÍCH HOẠT" : "SẼ BỊ CHẶN", model.WillActivate);
             SetPlayCardVisible(false);
-            SetNopeVisible(true);
+            SetNopeVisible(model.CanNope);
             nopeButton.interactable = model.CanNope && !_localNopePlayed && model.EndsAtUtc.HasValue;
 
             _endsAtUtc = null;
