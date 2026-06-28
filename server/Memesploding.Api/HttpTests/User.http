@@ -1,0 +1,92 @@
+### 1. Register Guest and Save Access Token
+# @name login
+POST {{host}}/api/v1/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}"
+}
+
+> {%
+    client.test("Login guest successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.global.set("accessToken", response.body.data.accessToken);
+%}
+
+
+### 2. Get My Profile
+GET {{host}}/api/v1/users/me/profile
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Get my profile successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.username.startsWith("Guest_"), "Username should start with Guest_");
+    });
+%}
+
+
+### 3. Get My Stats
+GET {{host}}/api/v1/users/me/stats
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Get my stats successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.hasOwnProperty("globalRank"), "Missing globalRank in response");
+    });
+%}
+
+
+### 4. Update Profile
+PATCH {{host}}/api/v1/users/me/profile
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "username": "GiaKietVipPro",
+  "bio": "I am the pro master of Memesploding!",
+  "avatarUrl": "avatar_cool_01.png"
+}
+
+> {%
+    client.test("Update profile successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.username === "GiaKietVipPro", "Username not updated correctly");
+    });
+%}
+
+
+### 5. Get Users List (Leaderboard)
+GET {{host}}/api/v1/users?page=1&pageSize=10
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Get users list successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.items.length > 0, "Users list should not be empty");
+    });
+%}
+
+
+### 6. Get Leaderboard (Explicit)
+GET {{host}}/api/v1/users/leaderboard?page=1&pageSize=10
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Get leaderboard successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+
+### 7. Get Other User Profile
+GET {{host}}/api/v1/users/{{login.response.body.data.user.id}}
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Get other user profile successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}

@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:5217/api/v1
+
+### 1. Login to get token
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "test-notifications-device"
+}
+
+### 2. Get my notifications (should be empty initially)
+GET {{baseUrl}}/me/notifications?page=1&pageSize=10
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 3. Get unread count (should be 0)
+GET {{baseUrl}}/me/notifications/unread-count
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 4. Mark a notification as read (replace with actual notification ID)
+PATCH {{baseUrl}}/notifications/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 5. Delete a notification (replace with actual notification ID)
+DELETE {{baseUrl}}/notifications/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 6. Mark all notifications as read
+PATCH {{baseUrl}}/notifications/mark-all-read
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 7. Clear all notifications
+DELETE {{baseUrl}}/notifications/clear-all
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 8. Get notifications without auth (401)
+GET {{baseUrl}}/me/notifications

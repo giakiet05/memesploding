@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
+  m_Name: Exploding
+  m_EditorClassIdentifier: 
+  cardCode: ExplodingKitten
+  description: "N\u1EBFu tr\xEAn tay kh\xF4ng c\xF3 l\xE1 g\u1EE1 bom th\xEC b\u1EA1n
+    s\u1EBD b\u1ECB n\u1ED5 v\xE0 lo\u1EA1i kh\u1ECFi cu\u1ED9c ch\u01A1i"
+  artworks:
+  - {fileID: -3777340103195305945, guid: f33cd6f54e1981242b47c20a1894ec48, type: 3}
+  - {fileID: 5702851848854587823, guid: 5cd23946b48eb9e4ebbf179efde6c200, type: 3}
+  - {fileID: -4255165490685757359, guid: d04598b95f2039c439166a3f1e3320f9, type: 3}
+  - {fileID: 2512674193171950111, guid: dfb01de0c24514a45a7d6f011ddfbb42, type: 3}

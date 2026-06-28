@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
+  m_Name: Skip
+  m_EditorClassIdentifier: 
+  cardCode: Skip
+  description: "K\u1EBFt th\xFAc l\u01B0\u1EE3t c\u1EE7a b\u1EA1n m\xE0 kh\xF4ng
+    ph\u1EA3i b\u1ED1c b\xE0i"
+  artworks:
+  - {fileID: 4227242037724196521, guid: e8bb687d3602216429367a48758e31e8, type: 3}
+  - {fileID: 218003731171792296, guid: 3514631f80966a54c8a64b90ec0a5e92, type: 3}
+  - {fileID: 6210555097917683591, guid: 3074a942c82e3d14abca03a115451306, type: 3}
+  - {fileID: 241616833782075011, guid: e7eaef6cbbbe0ab43bcbff2f6a85ec20, type: 3}

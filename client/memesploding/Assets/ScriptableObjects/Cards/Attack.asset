@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8901e2eca70e62649a6517878e66819e, type: 3}
+  m_Name: Attack
+  m_EditorClassIdentifier: 
+  cardCode: Attack
+  description: "K\u1EBFt th\xFAc l\u01B0\u1EE3t c\u1EE7a b\u1EA1n v\xE0 bu\u1ED9c
+    ng\u01B0\u1EDDi ch\u01A1i k\u1EBF ti\u1EBFp ph\u1EA3i b\u1ED1c th\xEAm hai l\u01B0\u1EE3t
+    n\u1EEFa"
+  artworks:
+  - {fileID: -4068427224701400988, guid: 2d17104773bb11043bcf49ccf65b06db, type: 3}
+  - {fileID: -4853034144634224135, guid: d8bda1cede8193746b51e8a5694caed1, type: 3}
+  - {fileID: -4000499120533412545, guid: cae2a144db723d84fbbd89e803f2216f, type: 3}
+  - {fileID: -2696141270959434686, guid: 4ddf188bdec1cdc418c0dbb5f955a667, type: 3}

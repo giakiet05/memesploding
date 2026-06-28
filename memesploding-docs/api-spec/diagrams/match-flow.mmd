@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant C as Client
+    participant AppHub as AppHub (API Server)
+    participant GameHub as GameHub (Game Server)
+    participant R as Message Broker (Redis)
+
+    Note over C, AppHub: 1. Lobby Phase (Phòng Chờ)
+    C->>AppHub: Connect WebSocket (kèm JWT Token)
+    C->>AppHub: Create/Join Room (REST)
+    AppHub-->>C: Trả về chi tiết phòng
+    
+    C->>AppHub: SetReadyStatus(true)
+    AppHub-->>C: RoomReadyStatusChanged (Broadcast)
+    
+    Note over C, AppHub: 2. Handover Phase (Chuyển giao)
+    C->>AppHub: StartRoomMatch(roomCode)
+    AppHub->>R: StartMatchRequestedEvent
+    R-->>GameHub: Nhận thông tin, khởi tạo Bàn chơi
+    
+    AppHub-->>C: RoomMatchStarting (Chứa wsUrl & wsAccessToken)
+    
+    C->>GameHub: Connect WebSocket (kèm wsAccessToken)
+    C->>GameHub: SignalR Handshake {"protocol":"json","version":1}
+    GameHub-->>C: ReceiveMessage (event: "Connected")
+    GameHub-->>C: ReceiveMessage (event: "StateSnapshot")
+    
+    Note over C, GameHub: 3. Gameplay Phase (Vận hành)
+    C->>GameHub: SendCommand(PlayCard, cardCode: "Skip")
+    GameHub-->>C: ReceiveMessage (event: "Ack", stateVersion)
+    GameHub-->>C: ReceiveMessage (event: "GameplayEvent")
+    GameHub-->>C: ReceiveMessage (event: "StateSnapshot")
+
+    C->>GameHub: SendCommand(DrawCard)
+    GameHub-->>C: ReceiveMessage (event: "Ack")
+    GameHub-->>C: ReceiveMessage (event: "StateSnapshot")
+    
+    Note over GameHub, AppHub: 4. Conclusion Phase (Kết thúc)
+    GameHub->>R: MatchEndedIntegrationEvent
+    R-->>AppHub: Tính XP, cộng Elo Score, lưu vào Database
+    AppHub-->>C: ReceiveMessage (event: "MatchEnded")
+    C->>GameHub: (Client tự động ngắt kết nối Game Server)
+    AppHub-->>C: ReceiveMessage (event: "ReturnedToRoom")

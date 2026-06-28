@@ -1,0 +1,356 @@
+###
+### Memesploding Room - Edge Cases (REST + WebSocket)
+###
+
+### ============================================
+### PHASE 1: USERS + TOKENS + WS
+### ============================================
+
+### 1.1 Alice register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_edge_alice_001"
+}
+
+> {%
+    client.global.set("aliceEdgeToken", response.body.data.accessToken);
+    client.global.set("aliceEdgeUserId", response.body.data.user.id);
+%}
+
+### 1.2 Bob register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_edge_bob_002"
+}
+
+> {%
+    client.global.set("bobEdgeToken", response.body.data.accessToken);
+    client.global.set("bobEdgeUserId", response.body.data.user.id);
+%}
+
+### 1.3 Charlie register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_edge_charlie_003"
+}
+
+> {%
+    client.global.set("charlieEdgeToken", response.body.data.accessToken);
+    client.global.set("charlieEdgeUserId", response.body.data.user.id);
+%}
+
+### 1.4 Open WS Alice
+WEBSOCKET {{wsUrl}}?access_token={{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 1.5 Open WS Bob
+WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 1.6 Open WS Charlie
+WEBSOCKET {{wsUrl}}?access_token={{charlieEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### ============================================
+### PHASE 2: BASE ROOM SETUP
+### ============================================
+
+### 2.1 Load card set
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceEdgeToken}}
+
+> {%
+    const items = response.body.data?.items ?? [];
+    if (items.length > 0) {
+      client.global.set("roomEdgeCardSetId", items[0].id);
+    }
+%}
+
+### 2.2 Alice create room
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomEdgeCardSetId}}"]
+}
+
+> {%
+    client.global.set("roomEdgeCode", response.body.data.code);
+%}
+
+
+### ============================================
+### PHASE 3: REST EDGE CASES
+### ============================================
+
+### 3.1 Create room while already in room (Alice)
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomEdgeCardSetId}}"]
+}
+
+### 3.2 Join non-existing room (Bob)
+POST {{baseUrl}}/rooms/ZZZZZZ/join
+Authorization: Bearer {{bobEdgeToken}}
+
+### 3.3 Create room with invalid card set (Bob)
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["00000000-0000-0000-0000-000000000000"]
+}
+
+### 3.4 Bob joins Alice room once
+POST {{baseUrl}}/rooms/{{roomEdgeCode}}/join
+Authorization: Bearer {{bobEdgeToken}}
+
+### 3.5 Bob tries join same room second time (idempotent room detail expected)
+POST {{baseUrl}}/rooms/{{roomEdgeCode}}/join
+Authorization: Bearer {{bobEdgeToken}}
+
+
+### ============================================
+### PHASE 4: WEBSOCKET EDGE CASES
+### ============================================
+
+### 4.1 Charlie tries KickRoomMember while not host (expect NOT_ROOM_HOST/NOT_IN_ROOM)
+WEBSOCKET {{wsUrl}}?access_token={{charlieEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "KickRoomMember",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    "{{bobEdgeUserId}}"
+  ]
+}
+
+### 4.2 Alice tries kick self (expect VALIDATION_FAILED)
+WEBSOCKET {{wsUrl}}?access_token={{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "KickRoomMember",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    "{{aliceEdgeUserId}}"
+  ]
+}
+
+### 4.3 Charlie tries SetReadyStatus while not in room (expect NOT_IN_ROOM)
+WEBSOCKET {{wsUrl}}?access_token={{charlieEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    true
+  ]
+}
+
+### 4.4 Bob tries StartRoomMatch while not host (expect NOT_ROOM_HOST)
+WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "StartRoomMatch",
+  "arguments": [
+    "{{roomEdgeCode}}"
+  ]
+}
+
+### 4.5 Alice tries StartRoomMatch when Bob not ready (expect VALIDATION_FAILED)
+WEBSOCKET {{wsUrl}}?access_token={{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "StartRoomMatch",
+  "arguments": [
+    "{{roomEdgeCode}}"
+  ]
+}
+
+### 4.6 Bob sets ready true
+WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    true
+  ]
+}
+
+### 4.7 Alice starts match successfully
+WEBSOCKET {{wsUrl}}?access_token={{aliceEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "StartRoomMatch",
+  "arguments": [
+    "{{roomEdgeCode}}"
+  ]
+}
+
+### 4.8 Bob tries SetReadyStatus after room is playing (expect MATCH_ALREADY_STARTED)
+WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    false
+  ]
+}
+
+### 4.9 Bob tries LeaveRoom in wrong room code (expect NOT_IN_ROOM)
+POST {{baseUrl}}/rooms/ABC123/leave
+Authorization: Bearer {{bobEdgeToken}}
+
+
+### ============================================
+### PHASE 5: MISSING EDGE CASES (REST + WS)
+### ============================================
+
+### 5.1 Charlie tries join a room that is already playing (expect MATCH_ALREADY_STARTED)
+POST {{baseUrl}}/rooms/{{roomEdgeCode}}/join
+Authorization: Bearer {{charlieEdgeToken}}
+
+### 5.2 Charlie creates another room C
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{charlieEdgeToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomEdgeCardSetId}}"]
+}
+
+> {%
+    client.global.set("roomEdgeCodeC", response.body.data.code);
+%}
+
+### 5.3 Charlie tries join roomEdge while already in another room (expect VALIDATION_FAILED)
+POST {{baseUrl}}/rooms/{{roomEdgeCode}}/join
+Authorization: Bearer {{charlieEdgeToken}}
+
+### 5.4 Bob tries InviteToRoom Charlie but they are not friends (expect NOT_FRIENDS)
+WEBSOCKET {{wsUrl}}?access_token={{bobEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "InviteToRoom",
+  "arguments": [
+    "{{roomEdgeCode}}",
+    "{{charlieEdgeUserId}}"
+  ]
+}
+
+### 5.5 Charlie requests join public room via WS (expect ROOM_PUBLIC)
+WEBSOCKET {{wsUrl}}?access_token={{charlieEdgeToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "RequestJoinRoom",
+  "arguments": [
+    "{{roomEdgeCode}}"
+  ]
+}
