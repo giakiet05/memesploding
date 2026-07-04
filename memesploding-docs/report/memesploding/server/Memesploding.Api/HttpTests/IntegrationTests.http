@@ -1,0 +1,217 @@
+###
+### Memesploding API - Comprehensive Integration Test Suite
+###
+
+### ============================================
+### PHASE 1: REGISTRATION & AUTHENTICATION
+### ============================================
+
+### 1.1 Alice registers (Guest)
+# @name aliceRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "alice_device_001"
+}
+
+> {%
+    client.test("Alice guest registration successful", function() {
+        client.assert(response.status === 200, "Registration failed");
+        client.assert(response.body.data.accessToken !== undefined, "No access token");
+    });
+    
+    client.global.set("aliceToken", response.body.data.accessToken);
+    client.global.set("aliceUserId", response.body.data.user.id);
+%}
+
+
+### 1.2 Alice updates profile
+# @name aliceUpdateProfile
+PATCH {{baseUrl}}/users/me/profile
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "username": "alice_test",
+  "bio": "I am Alice",
+  "avatarUrl": "http://avatar.com/alice"
+}
+
+
+### 1.2.1 Alice connects to WebSocket
+# @name aliceWS
+WEBSOCKET {{wsUrl}}?access_token={{aliceToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### 1.3 Bob registers (Guest)
+# @name bobRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "bob_device_002"
+}
+
+> {%
+    client.global.set("bobToken", response.body.data.accessToken);
+    client.global.set("bobUserId", response.body.data.user.id);
+%}
+
+
+### 1.4 Bob updates profile
+# @name bobUpdateProfile
+PATCH {{baseUrl}}/users/me/profile
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{
+  "username": "bob_test"
+}
+
+
+### 1.4.1 Bob connects to WebSocket
+# @name bobWS
+WEBSOCKET {{wsUrl}}?access_token={{bobToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### 1.5 Charlie registers (Guest)
+# @name charlieRegister
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "charlie_device_003"
+}
+
+> {%
+    client.global.set("charlieToken", response.body.data.accessToken);
+    client.global.set("charlieUserId", response.body.data.user.id);
+%}
+
+
+### ============================================
+### PHASE 2: SOCIAL DISCOVERY & PROFILES
+### ============================================
+
+### 2.1 Alice view own profile
+GET {{baseUrl}}/users/me/profile
+Authorization: Bearer {{aliceToken}}
+
+
+### 2.2 Alice view own stats
+GET {{baseUrl}}/users/me/stats
+Authorization: Bearer {{aliceToken}}
+
+
+### 2.3 Bob search for Alice
+# @name searchAlice
+GET {{baseUrl}}/users?SearchQuery=alice_test
+Authorization: Bearer {{bobToken}}
+
+
+### 2.4 Bob view Alice's public profile
+GET {{baseUrl}}/users/{{aliceUserId}}
+Authorization: Bearer {{bobToken}}
+
+
+### ============================================
+### PHASE 3: FRIENDSHIP MANAGEMENT
+### ============================================
+
+### 3.1 Alice send friend request to Bob
+# @name sendFriendRequest
+POST {{baseUrl}}/me/friends/invitations
+Authorization: Bearer {{aliceToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{bobUserId}}"
+}
+
+
+### 3.2 Bob view pending friend invitations
+# @name bobPendingFriends
+GET {{baseUrl}}/me/friends?Status=Pending
+Authorization: Bearer {{bobToken}}
+
+
+### 3.3 Bob accept Alice's friend request
+# @name acceptFriend
+PATCH {{baseUrl}}/me/friends/invitations/{{aliceUserId}}
+Authorization: Bearer {{bobToken}}
+Content-Type: application/json
+
+{
+  "accept": true
+}
+
+
+### 3.4 Alice check friends list
+GET {{baseUrl}}/me/friends?Status=Accepted
+Authorization: Bearer {{aliceToken}}
+
+### 3.5 Bob check friends list
+GET {{baseUrl}}/me/friends?Status=Accepted
+Authorization: Bearer {{bobToken}}
+
+### ============================================
+### PHASE 4: CONTENT EXPLORATION
+### ============================================
+
+### 4.1 Alice browse all card sets
+# @name browseCardSets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceToken}}
+
+> {%
+    if (response.body.data.items && response.body.data.items.length > 0) {
+        client.global.set("cardSetId", response.body.data.items[0].id);
+    }
+%}
+
+
+### 4.2 Alice view cards in specific set
+GET {{baseUrl}}/card-sets/{{cardSetId}}/cards
+Authorization: Bearer {{aliceToken}}
+
+
+### ============================================
+### PHASE 5: SYSTEM NOTIFICATIONS
+### ============================================
+
+### 5.1 Bob view system notifications
+GET {{baseUrl}}/me/notifications
+Authorization: Bearer {{bobToken}}
+
+
+### 5.2 Alice view match history
+GET {{baseUrl}}/me/match-history
+Authorization: Bearer {{aliceToken}}
+
+
+### 5.3 Check leaderboard
+GET {{baseUrl}}/users/leaderboard?PageSize=10
+Authorization: Bearer {{aliceToken}}
+
+### ============================================
+### ROOM SCENARIOS MOVED OUT
+### ============================================
+
+### Room happy-path scenarios:
+### - Run: HttpTests/Room.HappyPath.http
+
+### Room edge-cases scenarios:
+### - Run: HttpTests/Room.EdgeCases.http

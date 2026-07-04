@@ -1,0 +1,44 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram for Memesploding Game System
+
+Person(player, "Player", "A user who plays the game on their mobile or web browser.")
+
+System_Boundary(c1, "Memesploding System") {
+    Container(client, "Game Client", "Godot Engine", "Provides the game interface, renders meme cards, and handles user interactions.")
+    
+    Container(api_server, "API Server", "Go, Echo", "Handles authentication, user profiles, ranking, social features, and match history.")
+    
+    Container(game_server, "Game Server", "Go, Gorilla WebSocket", "Manages real-time game logic, rooms, and player turns using Actor Model.")
+    
+    ContainerDb(postgres, "Database", "PostgreSQL", "Stores persistent data: user profiles, ranking, friend lists, and match history.")
+    
+    ContainerDb(redis, "Cache & Message Broker", "Redis", "Handles inter-service communication (Pub/Sub) and caches temporary room states.")
+}
+
+System_Ext(google, "Google OAuth", "Authenticates users via Google.")
+System_Ext(facebook, "Facebook Login", "Authenticates users via Facebook.")
+System_Ext(email_service, "Email Service", "Sends notification and verification emails.")
+System_Ext(cdn, "CDN", "Delivers game assets and meme card images.")
+
+' Relationships
+Rel(player, client, "Plays game, views profile, interacts with friends", "Godot UI")
+
+Rel(client, api_server, "Manages profile, logs in, manages friends", "HTTPS/JSON")
+Rel(client, game_server, "Real-time game interactions, turns, chat", "WSS (WebSocket)")
+Rel(client, cdn, "Fetches meme card assets", "HTTPS")
+
+Rel(api_server, postgres, "Reads/Writes user data", "SQL/sqlc")
+Rel(game_server, postgres, "Writes match results", "SQL/sqlc")
+
+Rel(api_server, redis, "Publishes inter-service events", "Redis Protocol")
+Rel(game_server, redis, "Subscribes to events & caches room state", "Redis Protocol")
+
+Rel(api_server, google, "Authenticates", "OAuth 2.0")
+Rel(api_server, facebook, "Authenticates", "OAuth 2.0")
+Rel(api_server, email_service, "Triggers emails", "API")
+
+@enduml

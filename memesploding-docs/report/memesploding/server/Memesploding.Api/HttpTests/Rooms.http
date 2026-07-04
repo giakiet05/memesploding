@@ -1,0 +1,99 @@
+@baseUrl = http://localhost:5217/api/v1
+@cardSetId = 550e8400-e29b-41d4-a716-446655440001
+
+### 1. Login to get token
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "test-rooms-device"
+}
+
+### 2. Create a public room
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "maxPlayers": 6,
+  "isPublic": true,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+### 3. Create a private room
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "maxPlayers": 4,
+  "isPublic": false,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+### 4. Get public rooms (should return public rooms only)
+GET {{baseUrl}}/rooms?page=1&pageSize=10
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 5. Get public rooms with filters (maxPlayers=6)
+GET {{baseUrl}}/rooms?page=1&pageSize=10&maxPlayers=6
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 6. Get public rooms with card set filter
+GET {{baseUrl}}/rooms?page=1&pageSize=10&cardSetIds={{cardSetId}}
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 7. Get room by code (replace ABC123 with actual code from create response)
+GET {{baseUrl}}/rooms/ABC123
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 8. Leave room by code (replace ABC123 with actual code)
+POST {{baseUrl}}/rooms/ABC123/leave
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 9. Get room with invalid code (404)
+GET {{baseUrl}}/rooms/INVALID
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### 10. Create room without auth (401)
+POST {{baseUrl}}/rooms
+Content-Type: application/json
+
+{
+  "maxPlayers": 6,
+  "isPublic": true,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+### 11. Create room with invalid card set (400)
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "maxPlayers": 6,
+  "isPublic": true,
+  "cardSetIds": ["00000000-0000-0000-0000-000000000000"]
+}
+
+### 12. Create room with invalid maxPlayers (400 validation)
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "maxPlayers": 15,
+  "isPublic": true,
+  "cardSetIds": ["{{cardSetId}}"]
+}
+
+### 12. Try to create another room while already in one (400)
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "maxPlayers": 6,
+  "isPublic": true,
+  "cardSetIds": ["{{cardSetId}}"]
+}

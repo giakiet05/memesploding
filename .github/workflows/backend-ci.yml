@@ -43,3 +43,27 @@ jobs:
 
       - name: Run tests
         run: dotnet test server/Memesploding.sln --configuration Release --no-build
+
+  build-images:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build API Server image
+        run: >
+          docker build
+          --file server/Memesploding.Api/Dockerfile
+          --tag memesploding-api:ci
+          .
+
+      - name: Build Game Server image
+        run: >
+          docker build
+          --file server/Memesploding.Game/Dockerfile
+          --tag memesploding-game:ci
+          .

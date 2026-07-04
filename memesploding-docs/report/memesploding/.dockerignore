@@ -1,0 +1,23 @@
+# Build output
+**/bin/
+**/obj/
+
+# VCS / IDE
+.git/
+**/.git/
+**/.idea/
+**/.vscode/
+**/*.user
+**/*.suo
+
+# Node/JS
+**/node_modules/
+
+# Unity client (large)
+client/
+
+# Docs (not needed for runtime images)
+memesploding-docs/
+
+# Misc
+**/.DS_Store
