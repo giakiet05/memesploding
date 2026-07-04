@@ -1,0 +1,146 @@
+### 1. Login User A (Device 01)
+# @name loginA
+POST {{host}}/api/v1/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "{{deviceId}}"
+}
+
+> {%
+    client.test("Login User A successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.global.set("tokenA", response.body.data.accessToken);
+    client.global.set("userAId", response.body.data.user.id);
+%}
+
+
+### 2. Login User B (Device 02)
+# @name loginB
+POST {{host}}/api/v1/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "device-test-02"
+}
+
+> {%
+    client.test("Login User B successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.global.set("tokenB", response.body.data.accessToken);
+    client.global.set("userBId", response.body.data.user.id);
+%}
+
+
+### 3. User A sends friend request to User B
+POST {{host}}/api/v1/me/friends/invitations
+Authorization: Bearer {{tokenA}}
+Content-Type: application/json
+
+{
+  "userId": "{{userBId}}"
+}
+
+> {%
+    client.test("Send invitation successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.relationship === "PendingSent", "Relationship should be PendingSent");
+    });
+%}
+
+
+### 3a. User B sends friend request back to User A (Duplicate test)
+POST {{host}}/api/v1/me/friends/invitations
+Authorization: Bearer {{tokenB}}
+Content-Type: application/json
+
+{
+  "userId": "{{userAId}}"
+}
+
+> {%
+    client.test("Duplicate request should fail", function() {
+        client.assert(response.status === 400 || response.status === 500, "Should fail with 400 or 500");
+    });
+%}
+
+
+### 4. User B checks pending requests
+GET {{host}}/api/v1/me/friends?status=Pending
+Authorization: Bearer {{tokenB}}
+
+> {%
+    client.test("Get pending requests successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.items.length > 0, "Should have at least one pending request");
+        client.assert(response.body.data.items[0].relationship === "PendingReceived", "Should be PendingReceived for User B");
+    });
+%}
+
+
+### 5. User B accepts request from User A
+PATCH {{host}}/api/v1/me/friends/invitations/{{userAId}}
+Authorization: Bearer {{tokenB}}
+Content-Type: application/json
+
+{
+  "accept": true
+}
+
+> {%
+    client.test("Accept invitation successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.relationship === "Accepted", "Relationship should be Accepted");
+    });
+%}
+
+
+### 6. User A checks friend list
+GET {{host}}/api/v1/me/friends?status=Accepted
+Authorization: Bearer {{tokenA}}
+
+> {%
+    client.test("Get friend list successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.items.length > 0, "Should have at least one friend");
+    });
+%}
+
+
+### 7. User B rejects new request from User A (Create new request first)
+POST {{host}}/api/v1/me/friends/invitations
+Authorization: Bearer {{tokenA}}
+Content-Type: application/json
+
+{
+  "userId": "{{userBId}}"
+}
+
+### 7a. Wait a bit, then User B rejects
+PATCH {{host}}/api/v1/me/friends/invitations/{{userAId}}
+Authorization: Bearer {{tokenB}}
+Content-Type: application/json
+
+{
+  "accept": false
+}
+
+> {%
+    client.test("Reject invitation successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.relationship === "None", "Relationship should be None after rejection");
+    });
+%}
+
+
+### 8. User A removes (unfriends) User B
+DELETE {{host}}/api/v1/me/friends/{{userBId}}
+Authorization: Bearer {{tokenA}}
+
+> {%
+    client.test("Remove friend successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}

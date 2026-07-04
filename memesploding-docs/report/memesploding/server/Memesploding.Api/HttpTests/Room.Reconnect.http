@@ -1,0 +1,200 @@
+###
+### Memesploding Room - Reconnect Scenarios (REST + WebSocket)
+###
+
+### ============================================
+### PHASE 1: USERS + TOKENS
+### ============================================
+
+### 1.1 Alice register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_reconnect_alice_001"
+}
+
+> {%
+    client.global.set("aliceReconnectToken", response.body.data.accessToken);
+    client.global.set("aliceReconnectUserId", response.body.data.user.id);
+%}
+
+### 1.2 Bob register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_reconnect_bob_002"
+}
+
+> {%
+    client.global.set("bobReconnectToken", response.body.data.accessToken);
+    client.global.set("bobReconnectUserId", response.body.data.user.id);
+%}
+
+### 1.3 Charlie register
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "room_reconnect_charlie_003"
+}
+
+> {%
+    client.global.set("charlieReconnectToken", response.body.data.accessToken);
+    client.global.set("charlieReconnectUserId", response.body.data.user.id);
+%}
+
+
+### ============================================
+### PHASE 2: ROOM SETUP
+### ============================================
+
+### 2.1 Load card set
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{aliceReconnectToken}}
+
+> {%
+    const items = response.body.data?.items ?? [];
+    if (items.length > 0) {
+      client.global.set("roomReconnectCardSetId", items[0].id);
+    }
+%}
+
+### 2.2 Alice creates room
+POST {{baseUrl}}/rooms
+Authorization: Bearer {{aliceReconnectToken}}
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxPlayers": 4,
+  "cardSetIds": ["{{roomReconnectCardSetId}}"]
+}
+
+> {%
+    client.global.set("roomReconnectCode", response.body.data.code);
+%}
+
+### 2.3 Bob joins room
+POST {{baseUrl}}/rooms/{{roomReconnectCode}}/join
+Authorization: Bearer {{bobReconnectToken}}
+
+### 2.4 Charlie joins room
+POST {{baseUrl}}/rooms/{{roomReconnectCode}}/join
+Authorization: Bearer {{charlieReconnectToken}}
+
+
+### PHASE 3: CASE A - RECONNECT TRONG GRACE (<=120s)
+
+### 3.1 Charlie WS connect (để đổi state phòng khi Bob offline)
+WEBSOCKET {{wsUrl}}?access_token={{charlieReconnectToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 3.2 Bob WS connect (session A)
+WEBSOCKET {{wsUrl}}?access_token={{bobReconnectToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 3.3 MANUAL STEP: Ngắt mạng Bob <120s
+### - Tắt request WS Bob ở trên (disconnect).
+### - Chờ khoảng 5-20 giây.
+
+### 3.4 Trong lúc Bob offline: Charlie set ready = true (state phòng thay đổi)
+WEBSOCKET {{wsUrl}}?access_token={{charlieReconnectToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+=== wait-for-server
+{
+  "type": 1,
+  "target": "SetReadyStatus",
+  "arguments": [
+    "{{roomReconnectCode}}",
+    true
+  ]
+}
+
+### 3.5 Bob WS reconnect (session B)
+WEBSOCKET {{wsUrl}}?access_token={{bobReconnectToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+
+### 3.6 Bob resync snapshot room sau reconnect
+GET {{baseUrl}}/rooms/{{roomReconnectCode}}
+Authorization: Bearer {{bobReconnectToken}}
+
+> {%
+    const participants = response.body.data?.currentParticipants ?? [];
+    const bobId = client.global.get("bobReconnectUserId");
+    const charlieId = client.global.get("charlieReconnectUserId");
+    const exists = participants.some(p => p.userId === bobId);
+    const charlie = participants.find(p => p.userId === charlieId);
+    client.test("Bob vẫn còn trong room khi reconnect trong grace", function () {
+      client.assert(exists, "Bob phải còn trong room");
+    });
+    client.test("Bob thấy state mới khi reconnect (Charlie đã ready)", function () {
+      client.assert(!!charlie, "Charlie phải còn trong room");
+      client.assert(charlie.isReady === true, "Charlie phải đang ready=true");
+    });
+%}
+
+
+### PHASE 4: CASE B - QUÁ GRACE (>120s) => AUTO REMOVE
+### ============================================
+
+### 4.1 Bob WS connect lại để chuẩn bị test timeout
+WEBSOCKET {{wsUrl}}?access_token={{bobReconnectToken}}
+Content-Type: application/json
+
+{
+  "protocol": "json",
+  "version": 1
+}
+
+### 4.2 MANUAL STEP: Ngắt mạng Bob >120s
+### - Tắt request WS Bob ở trên (disconnect).
+### - Chờ ít nhất 130 giây để worker auto-remove chạy.
+
+### 4.3 Alice peek room kiểm tra Bob đã bị remove
+GET {{baseUrl}}/rooms/{{roomReconnectCode}}
+Authorization: Bearer {{aliceReconnectToken}}
+
+> {%
+    const participants = response.body.data?.currentParticipants ?? [];
+    const bobId = client.global.get("bobReconnectUserId");
+    const exists = participants.some(p => p.userId === bobId);
+    client.test("Bob bị remove khỏi room sau khi quá reconnect grace", function () {
+      client.assert(!exists, "Bob không được còn trong room");
+    });
+%}
+
+### 4.4 (Optional) Bob thử resync room sau khi bị remove
+GET {{baseUrl}}/rooms/{{roomReconnectCode}}
+Authorization: Bearer {{bobReconnectToken}}
+
+> {%
+    const participants = response.body.data?.currentParticipants ?? [];
+    const bobId = client.global.get("bobReconnectUserId");
+    const exists = participants.some(p => p.userId === bobId);
+    client.test("Bob không còn trong participants sau timeout", function () {
+      client.assert(!exists, "Bob không nên còn trong room");
+    });
+%}

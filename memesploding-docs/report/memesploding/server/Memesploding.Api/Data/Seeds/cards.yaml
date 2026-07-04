@@ -1,0 +1,153 @@
+# Cards data seed file
+# Source of truth cho tất cả card sets và cards trong game
+
+card_sets:
+  - id: "550e8400-e29b-41d4-a716-446655440001"
+    name: "Original"
+    description: "Bộ bài gốc Exploding Kittens với 56 lá bài cơ bản"
+    is_active: true
+    image_url: "https://cdn.memesploding.com/card-sets/original.jpg"
+    cards:
+      # Bomb Cards
+      - code: ExplodingKitten
+        name: "Mèo Nổ"
+        description: "Nếu rút được lá này và không có lá Defuse, bạn thua ngay lập tức!"
+        type: Bomb
+        image_url: "https://cdn.memesploding.com/cards/exploding-kitten.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/exploding-kitten.png"
+
+      # Defuse Cards
+      - code: Defuse
+        name: "Vô Hiệu Hoá"
+        description: "Dùng để vô hiệu hoá lá Mèo Nổ. Sau khi dùng, cắm lá Mèo Nổ vào vị trí bất kỳ trong bộ bài."
+        type: Defuse
+        image_url: "https://cdn.memesploding.com/cards/defuse.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/defuse.png"
+
+      # Action Cards
+      - code: Skip
+        name: "Bỏ Lượt"
+        description: "Kết thúc lượt ngay lập tức mà không cần rút bài."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/skip.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/skip.png"
+
+      - code: Attack
+        name: "Tấn Công"
+        description: "Kết thúc lượt của bạn. Người chơi tiếp theo phải chơi 2 lượt liên tiếp."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/attack.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/attack.png"
+
+      - code: Favor
+        name: "Xin Ơn"
+        description: "Chọn một người chơi và lấy 1 lá bài ngẫu nhiên từ tay họ."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/favor.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/favor.png"
+
+      - code: Shuffle
+        name: "Xáo Trộn"
+        description: "Xáo trộn lại bộ bài rút."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/shuffle.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/shuffle.png"
+
+      - code: SeeTheFuture
+        name: "Thấy Tương Lai"
+        description: "Xem 3 lá bài trên cùng của bộ bài rút mà không thay đổi thứ tự."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/see-the-future.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/see-the-future.png"
+
+      - code: Nope
+        name: "Không Đâu"
+        description: "Chặn hành động của bất kỳ người chơi nào (trừ Defuse và Mèo Nổ). Có thể chặn lại Nope khác."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/nope.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/nope.png"
+
+      # Cat Cards (combo để lấy bài từ discard pile)
+      - code: Cat1
+        name: "Mèo Râu Ria"
+        description: "Dùng 2 lá cùng loại để lấy 1 lá bài ngẫu nhiên từ người chơi khác. Dùng 3 lá để chỉ định lá bài muốn lấy."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/cat1.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/cat1.png"
+
+      - code: Cat2
+        name: "Mèo Khoai Tây"
+        description: "Dùng 2 lá cùng loại để lấy 1 lá bài ngẫu nhiên từ người chơi khác. Dùng 3 lá để chỉ định lá bài muốn lấy."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/cat2.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/cat2.png"
+
+      - code: Cat3
+        name: "Mèo Cầu Vồng"
+        description: "Dùng 2 lá cùng loại để lấy 1 lá bài ngẫu nhiên từ người chơi khác. Dùng 3 lá để chỉ định lá bài muốn lấy."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/cat3.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/cat3.png"
+
+      - code: Cat4
+        name: "Mèo Tacocat"
+        description: "Dùng 2 lá cùng loại để lấy 1 lá bài ngẫu nhiên từ người chơi khác. Dùng 3 lá để chỉ định lá bài muốn lấy."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/cat4.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/cat4.png"
+
+      - code: Cat5
+        name: "Mèo Dưa Hấu"
+        description: "Dùng 2 lá cùng loại để lấy 1 lá bài ngẫu nhiên từ người chơi khác. Dùng 3 lá để chỉ định lá bài muốn lấy."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/cat5.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/cat5.png"
+
+  # Imploding expansion (có thể thêm sau)
+  - id: "550e8400-e29b-41d4-a716-446655440002"
+    name: "Imploding Kittens"
+    description: "Bộ mở rộng Imploding với Mèo Nổ Sấp và các lá bài đặc biệt"
+    is_active: false
+    image_url: "https://cdn.memesploding.com/card-sets/imploding.jpg"
+    cards:
+      - code: ImplodingKitten
+        name: "Mèo Nổ Sấp"
+        description: "Không thể vô hiệu hoá bằng Defuse. Khi rút được, lật ngửa và cắm lại vào bộ bài."
+        type: Bomb
+        image_url: "https://cdn.memesploding.com/cards/imploding-kitten.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/imploding-kitten.png"
+
+      - code: AlterTheFuture
+        name: "Thay Đổi Tương Lai"
+        description: "Xem 3 lá trên cùng và sắp xếp lại theo thứ tự bất kỳ."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/alter-the-future.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/alter-the-future.png"
+
+      - code: TargetedAttack
+        name: "Tấn Công Mục Tiêu"
+        description: "Chọn 1 người chơi. Họ phải chơi 2 lượt liên tiếp."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/targeted-attack.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/targeted-attack.png"
+
+      - code: DrawFromBottom
+        name: "Rút Từ Đáy"
+        description: "Kết thúc lượt bằng cách rút lá bài từ đáy bộ bài thay vì trên cùng."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/draw-from-bottom.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/draw-from-bottom.png"
+
+      - code: Reverse
+        name: "Đảo Ngược"
+        description: "Đảo ngược thứ tự chơi (thuận kim đồng hồ ⇄ ngược kim đồng hồ)."
+        type: Action
+        image_url: "https://cdn.memesploding.com/cards/reverse.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/reverse.png"
+
+      - code: FeralCat
+        name: "Mèo Hoang"
+        description: "Có thể dùng như bất kỳ loại mèo nào để tạo combo."
+        type: Cat
+        image_url: "https://cdn.memesploding.com/cards/feral-cat.jpg"
+        icon_url: "https://cdn.memesploding.com/icons/feral-cat.png"

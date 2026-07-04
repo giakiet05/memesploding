@@ -1,0 +1,13 @@
+.agents/skills/inputsystem-action-add/
+.agents/skills/inputsystem-action-remove/
+.agents/skills/inputsystem-actionmap-add/
+.agents/skills/inputsystem-actionmap-remove/
+.agents/skills/inputsystem-asset-create/
+.agents/skills/inputsystem-binding-add/
+.agents/skills/inputsystem-binding-composite-add/
+.agents/skills/inputsystem-binding-remove/
+.agents/skills/inputsystem-binding-set/
+.agents/skills/inputsystem-controlscheme-add/
+.agents/skills/inputsystem-get/
+.agents/skills/inputsystem-modify/
+.agents/skills/inputsystem-save/

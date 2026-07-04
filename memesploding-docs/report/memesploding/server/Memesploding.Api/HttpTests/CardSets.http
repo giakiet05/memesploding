@@ -1,0 +1,48 @@
+### CardSets API Tests
+### Base URL
+@baseUrl = http://localhost:5217/api/v1
+@accessToken = {{login.response.body.data.accessToken}}
+
+### 1. Login để lấy token
+# @name login
+POST {{baseUrl}}/auth/guest
+Content-Type: application/json
+
+{
+  "deviceId": "test-device-cardsets"
+}
+
+### 2. GET /card-sets - List all active card sets
+GET {{baseUrl}}/card-sets
+Authorization: Bearer {{accessToken}}
+
+### 3. GET /card-sets?page=1&pageSize=10 - With pagination
+GET {{baseUrl}}/card-sets?page=1&pageSize=10
+Authorization: Bearer {{accessToken}}
+
+### 4. GET /card-sets/:id/cards - Get cards in Original set
+# Replace with actual card set ID from step 2
+@cardSetId = 550e8400-e29b-41d4-a716-446655440001
+GET {{baseUrl}}/card-sets/{{cardSetId}}/cards
+Authorization: Bearer {{accessToken}}
+
+### 5. GET /card-sets/:id/cards?page=1&pageSize=5 - Cards with pagination
+GET {{baseUrl}}/card-sets/{{cardSetId}}/cards?page=1&pageSize=5
+Authorization: Bearer {{accessToken}}
+
+### 6. GET /card-sets/:id/cards - Invalid card set ID (404)
+@invalidId = 00000000-0000-0000-0000-000000000000
+GET {{baseUrl}}/card-sets/{{invalidId}}/cards
+Authorization: Bearer {{accessToken}}
+
+### 7. GET /card-sets - Without auth token (401)
+GET {{baseUrl}}/card-sets
+
+### Expected Results:
+# Test 1: 200 OK, returns accessToken
+# Test 2: 200 OK, returns list of active card sets (Original)
+# Test 3: 200 OK, pagination metadata correct
+# Test 4: 200 OK, returns cards (ExplodingKitten, Defuse, Skip, etc.)
+# Test 5: 200 OK, only 5 cards, hasMore = true if more than 5
+# Test 6: 404 NOT_FOUND, error_code: "NOT_FOUND", message: "Card set not found"
+# Test 7: 401 UNAUTHORIZED
