@@ -41,6 +41,20 @@ data "aws_iam_policy_document" "github_actions_permissions" {
   }
 
   statement {
+    sid    = "TagTaskDefinitions"
+    effect = "Allow"
+
+    actions = [
+      "ecs:TagResource"
+    ]
+
+    resources = [
+      "${aws_ecs_task_definition.api.arn_without_revision}:*",
+      "${aws_ecs_task_definition.game.arn_without_revision}:*"
+    ]
+  }
+
+  statement {
     sid    = "DeployECSServices"
     effect = "Allow"
 
