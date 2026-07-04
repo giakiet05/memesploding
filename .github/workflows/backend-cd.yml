@@ -1,0 +1,120 @@
+name: Backend CD
+
+on:
+  workflow_run:
+    workflows:
+      - Backend CI
+    types:
+      - completed
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: backend-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+
+  API_ECR_REPOSITORY: ${{ vars.API_ECR_REPOSITORY }}
+  API_TASK_FAMILY: ${{ vars.API_TASK_FAMILY }}
+  API_SERVICE: ${{ vars.API_SERVICE }}
+  API_CONTAINER: api-container
+
+  GAME_ECR_REPOSITORY: ${{ vars.GAME_ECR_REPOSITORY }}
+  GAME_TASK_FAMILY: ${{ vars.GAME_TASK_FAMILY }}
+  GAME_SERVICE: ${{ vars.GAME_SERVICE }}
+  GAME_CONTAINER: game-container
+
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  deploy:
+    name: Deploy backend to ECS
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: MemesplodingBackendDeploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker images
+        id: build-images
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          API_IMAGE="$ECR_REGISTRY/$API_ECR_REPOSITORY:$DEPLOY_SHA"
+          GAME_IMAGE="$ECR_REGISTRY/$GAME_ECR_REPOSITORY:$DEPLOY_SHA"
+
+          docker build \
+            --file server/Memesploding.Api/Dockerfile \
+            --tag "$API_IMAGE" \
+            .
+
+          docker build \
+            --file server/Memesploding.Game/Dockerfile \
+            --tag "$GAME_IMAGE" \
+            .
+
+          docker push "$API_IMAGE"
+          docker push "$GAME_IMAGE"
+
+          echo "api-image=$API_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "game-image=$GAME_IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Render API task definition
+        id: render-api-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.8.5
+        with:
+          task-definition-family: ${{ env.API_TASK_FAMILY }}
+          container-name: ${{ env.API_CONTAINER }}
+          image: ${{ steps.build-images.outputs.api-image }}
+
+      - name: Render Game task definition
+        id: render-game-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.8.5
+        with:
+          task-definition-family: ${{ env.GAME_TASK_FAMILY }}
+          container-name: ${{ env.GAME_CONTAINER }}
+          image: ${{ steps.build-images.outputs.game-image }}
+
+      - name: Deploy API service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-api-task.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.API_SERVICE }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
+
+      - name: Deploy Game service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-game-task.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.GAME_SERVICE }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
