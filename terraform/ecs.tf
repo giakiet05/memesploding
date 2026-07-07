@@ -5,7 +5,6 @@ resource "aws_ecs_cluster" "main" {
     Name = "Memesploding-ECS-Cluster"
   }
 }
-
 # 2. IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "memesploding-ecs-task-execution-role"
@@ -43,6 +42,15 @@ resource "aws_ecs_task_definition" "api" {
       name      = "api-container"
       image     = "${aws_ecr_repository.api_server_repo.repository_url}:latest" # Use the latest image from ECR
       essential = true
+      logConfiguration = {
+        logDriver = "awslogs"
+
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.api.name
+          "awslogs-region"        = "ap-southeast-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
 
       # Open port 5217 for the API Server for communication with the ALB
       portMappings = [
@@ -143,6 +151,15 @@ resource "aws_ecs_task_definition" "game" {
       image     = "${aws_ecr_repository.game_server_repo.repository_url}:latest" # Use the latest image from ECR
       essential = true
 
+      logConfiguration = {
+        logDriver = "awslogs"
+
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.game.name
+          "awslogs-region"        = "ap-southeast-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
       # Open port 5204 for the Game Server for communication with the ALB
       portMappings = [
         {
